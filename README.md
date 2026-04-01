@@ -6,15 +6,24 @@ A multi-designer React Native prototyping environment for SiteMinder Platform Pr
 
 1. Install dependencies:
 ```bash
-npm install
+npm install --legacy-peer-deps
 ```
 
-2. Start the development server (web):
+2. Start the development server:
+
+**Web browser:**
 ```bash
 npm run dev
 ```
-
 The app will be available at `http://localhost:8081`
+
+**On your phone (Expo Go):**
+1. Install [Expo Go](https://expo.dev/go) on your iOS or Android device
+2. Run:
+```bash
+npm run dev:native
+```
+3. Scan the QR code with your camera (iOS) or the Expo Go app (Android) — the playground opens on your phone with live reload
 
 ## Project Structure
 
@@ -73,5 +82,6 @@ Add `HEROKU_API_KEY` to GitHub repository secrets (Settings → Secrets → Acti
 ## Scripts
 
 - `npm run dev` — Start Expo dev server (web mode, port 8081)
+- `npm run dev:native` — Start Expo dev server for Expo Go (scan QR code on phone)
 - `npm run build` — Export for web (`dist/`)
 - `npm start` — Start production Express server

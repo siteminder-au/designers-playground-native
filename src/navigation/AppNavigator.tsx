@@ -2,10 +2,12 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import PlaygroundHomeScreen from '../HomeScreen';
 import RadhaSmMobileApp from '../designers/radha/sm-mobile/App';
+import PaulLHHousekeepingApp from '../designers/paul/lh-housekeeping/App';
 
 export type RootParamList = {
   PlaygroundHome: undefined;
   RadhaSmMobile: undefined;
+  PaulLHHousekeeping: undefined;
   // Add new designer screens here
 };
 
@@ -29,6 +31,11 @@ export default function AppNavigator() {
           headerTintColor: '#ffffff',
           headerTitleStyle: { fontWeight: '600' },
         }}
+      />
+      <Stack.Screen
+        name="PaulLHHousekeeping"
+        component={PaulLHHousekeepingApp}
+        options={{ headerShown: false }}
       />
       {/* Add new designer screens here */}
     </Stack.Navigator>

@@ -1,12 +1,20 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { ApolloServer } from '@apollo/server';
+import { expressMiddleware } from '@apollo/server/express4';
+import { typeDefs } from './src/graphql/paul/typeDefs.js';
+import { resolvers } from './src/graphql/paul/resolvers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+
+// ── Paul's GraphQL server ──────────────────────────────────────────────────────
+const paulGraphQL = new ApolloServer({ typeDefs, resolvers });
+await paulGraphQL.start();
 
 app.use(express.json());
 
@@ -15,10 +23,16 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static files from the dist directory
+app.use('/graphql', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+}, expressMiddleware(paulGraphQL));
+
+// ── Static / SPA ──────────────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// Handle all other routes by serving index.html (for SPA routing)
 app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });

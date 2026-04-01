@@ -1,0 +1,25 @@
+/**
+ * Feature flags for demo/presentation purposes.
+ * Toggle these to show/hide UI elements on the Housekeeping screen.
+ */
+const FLAGS = {
+  /** Guest name + ID card icon in the guest info row */
+  showGuestName: true,
+
+  /** Pax counts (adults, children, infants) in the guest info row */
+  showGuestPax: true,
+
+  /** Check-in / check-out dates in the guest info row */
+  showGuestDates: true,
+
+  /** Bed configuration row (only visible for extra bed / rollaway / king bed) */
+  showBedConfig: true,
+
+  /** Late checkout badge on room number row */
+  showLateCheckout: true,
+
+  /** Assign housekeeper section in the notes footer */
+  showAssignHousekeeper: true,
+} as const;
+
+export default FLAGS;

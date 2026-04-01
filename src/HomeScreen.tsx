@@ -20,6 +20,11 @@ const designers: {
   prototypes: { screenName: keyof RootParamList; label: string }[];
 }[] = [
   {
+    name: 'Paul Fang',
+    initials: 'PF',
+    prototypes: [{ screenName: 'PaulLHHousekeeping', label: 'LH Housekeeping' }],
+  },
+  {
     name: 'Radha Ranaware',
     initials: 'RR',
     prototypes: [{ screenName: 'RadhaSmMobile', label: 'SM Mobile' }],

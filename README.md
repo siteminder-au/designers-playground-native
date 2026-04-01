@@ -59,7 +59,7 @@ designers-playground-native/
 Push to `main` — GitHub Actions builds (`expo export --platform web`) and deploys to Heroku automatically.
 
 **Heroku app:** `sm-native`
-**URL:** `https://sm-native.herokuapp.com/`
+**URL:** `https://sm-native-5c5b643660da.herokuapp.com/`
 
 ### First-time Heroku setup (Pat only)
 

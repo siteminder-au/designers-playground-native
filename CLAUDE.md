@@ -115,7 +115,7 @@ The app deploys as a **React Native Web** app to Heroku (`sm-native`), exactly l
 - CI/CD: GitHub Actions builds and pushes to Heroku on every push to `main`
 
 **Heroku app:** `sm-native`
-**Deployed URL:** `https://sm-native.herokuapp.com/`
+**Deployed URL:** `https://sm-native-5c5b643660da.herokuapp.com/`
 
 ############################################################################################################################
 # Overarching directives

@@ -73,6 +73,6 @@
    ```
 
 9. Confirm to Pat:
-   - Playground URL: `https://sm-native.herokuapp.com/`
+   - Playground URL: `https://sm-native-5c5b643660da.herokuapp.com/`
    - Designer's branch: `{slug}`
    - Files in `src/designers/{slug}/{proto-slug}/`

@@ -41,4 +41,4 @@ Stage, commit, and deploy the designer's changes.
 
 8. Confirm to the user:
    - Their changes are deployed
-   - The playground URL: `https://sm-native.herokuapp.com/`
+   - The playground URL: `https://sm-native-5c5b643660da.herokuapp.com/`

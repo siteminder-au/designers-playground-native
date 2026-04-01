@@ -1,6 +1,6 @@
 # Commit
 
-Stage, commit, and deploy the designer's changes.
+Save the designer's current changes — commits to their branch and pushes. Then asks whether to deploy.
 
 ## Steps
 
@@ -19,26 +19,25 @@ Stage, commit, and deploy the designer's changes.
    ```
    Never stage files outside the designer's folder unless you are Pat on `main`.
 
-4. Write a concise commit message describing the changes. Use the diff to understand what changed.
+4. If there is nothing to stage, tell the designer there are no changes to commit and stop.
 
-5. Commit:
+5. Write a concise commit message describing the changes. Use the diff to understand what changed.
+
+6. Commit and push to the current branch:
    ```
    git commit -m "{message}"
-   ```
-
-6. Push to the current branch:
-   ```
    git push origin {branch}
    ```
 
-7. If on a designer branch, merge into `main` and push to trigger deployment:
+7. Ask the designer: **"Changes committed and pushed to your branch. Would you like to deploy to production now?"**
+
+8. If yes, merge into `main` and push to trigger deployment:
    ```
    git checkout main
    git merge {branch} --no-edit
    git push origin main
    git checkout {branch}
    ```
+   Then confirm: "Your changes are live at `https://sm-native-5c5b643660da.herokuapp.com/`"
 
-8. Confirm to the user:
-   - Their changes are deployed
-   - The playground URL: `https://sm-native-5c5b643660da.herokuapp.com/`
+   If no, confirm: "Changes saved to your branch. You can deploy any time by running `/commit` again."

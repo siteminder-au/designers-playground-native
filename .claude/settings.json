@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
+    },
+    "confluence": {
+      "command": "npx",
+      "args": ["-y", "mcp-atlassian"],
+      "env": {
+        "ATLASSIAN_BASE_URL": "https://siteminder-jira.atlassian.net",
+        "ATLASSIAN_EMAIL": "your.name@siteminder.com",
+        "ATLASSIAN_API_TOKEN": "your-api-token-here"
+      }
+    }
+  }
+}

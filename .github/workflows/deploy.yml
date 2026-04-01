@@ -1,0 +1,35 @@
+name: Deploy to Heroku
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web export
+        run: npx expo export --platform web
+
+      - name: Commit dist and push to Heroku
+        run: |
+          git config user.email "github-actions@github.com"
+          git config user.name "GitHub Actions"
+          git add dist/ --force
+          git diff --cached --quiet || git commit -m "Built dist for deployment"
+          git push --force https://heroku:${{ secrets.HEROKU_API_KEY }}@git.heroku.com/sm-native.git HEAD:main

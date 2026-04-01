@@ -5,6 +5,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "expo start --web",
+    "dev:native": "expo start",
     "build": "npx expo export --platform web",
     "heroku-postbuild": "echo 'Build handled by GitHub Actions'"
   },

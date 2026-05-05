@@ -26,9 +26,6 @@ jobs:
       - name: Build web export
         run: npx expo export --platform web
 
-      - name: Install Heroku CLI
-        run: curl https://cli-assets.heroku.com/install.sh | sh
-
       - name: Commit dist and push to Heroku
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
@@ -37,5 +34,6 @@ jobs:
           git config user.name "GitHub Actions"
           git add dist/ --force
           git diff --cached --quiet || git commit -m "Built dist for deployment"
-          heroku git:remote -a sm-native
-          git push heroku HEAD:main --force
+          printf 'machine git.heroku.com\n  login heroku\n  password %s\n' "$HEROKU_API_KEY" > ~/.netrc
+          chmod 600 ~/.netrc
+          git push --force https://git.heroku.com/sm-native.git HEAD:main

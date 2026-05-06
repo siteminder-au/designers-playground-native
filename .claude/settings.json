@@ -13,5 +13,8 @@
         "ATLASSIAN_API_TOKEN": "your-api-token-here"
       }
     }
+  },
+  "enabledPlugins": {
+    "design@product-claude-plugins": true
   }
 }

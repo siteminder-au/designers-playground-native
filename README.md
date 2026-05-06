@@ -54,6 +54,8 @@ designers-playground-native/
 
 ## Claude Slash Commands
 
+Repo-local commands live in `.claude/commands/`. Skills marked **(plugin)** come from `siteminder-au/product-claude-plugins` — see [Claude Plugins](#claude-plugins) for setup.
+
 | Command | Who | Description |
 |---|---|---|
 | `/sync` | Everyone | Pull latest from `main` into your branch |
@@ -61,7 +63,45 @@ designers-playground-native/
 | `/import-prototype` | Pat only | Import an existing React Native app |
 | `/delete-prototype` | Pat only | Remove a prototype from the playground |
 | `/commit` | Everyone | Stage, commit, and deploy changes |
-| `/ask` | Everyone | Ask about the code without making changes |
+| `/figma` **(plugin)** | Everyone | Connect to Figma — Design-to-Code, Code-to-Design, FigJam, Code Connect |
+| `/learn-sds` **(plugin)** | Everyone | Fetch SDS docs from Confluence and compile to local `.claude/sds.md` |
+| `/ask` **(plugin)** | Everyone | Ask about the code without making changes |
+
+## Claude Plugins
+
+This repo enables the [`design`](https://github.com/siteminder-au/product-claude-plugins/tree/main/plugins/design) plugin from the [`product-claude-plugins`](https://github.com/siteminder-au/product-claude-plugins) marketplace (see `.claude/settings.json` → `enabledPlugins`).
+
+The plugin also ships `/capture-to-figma` and `/vue-ui-design-decomposer`, but both target Vue + SUI and won't be useful in this React Native repo.
+
+### First-time setup (per designer)
+
+If you've never used these plugins on this machine, do this once:
+
+```
+/plugin marketplace add siteminder-au/product-claude-plugins
+```
+
+Then **restart Claude Code**. The plugin auto-installs on next session start because it's listed in `enabledPlugins`.
+
+> **Auth note:** `siteminder-au` is a private org. If the marketplace add fails, you need a GitHub PAT with `read:org` and `repo` scopes. Generate one at https://github.com/settings/tokens.
+
+### After Pat updates the plugin
+
+```
+/plugin marketplace update product-claude-plugins
+```
+
+Then restart Claude Code.
+
+### Optional — Figma cloud MCP
+
+`/figma` needs the Figma cloud MCP server. One-time setup:
+
+```bash
+claude mcp add --transport http figma https://mcp.figma.com/mcp
+```
+
+Then `/mcp` → figma → Authenticate.
 
 ## Deployment
 

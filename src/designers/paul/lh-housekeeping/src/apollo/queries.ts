@@ -51,6 +51,7 @@ export const GET_HOUSEKEEPING_SCHEDULE = gql`
       date
       rooms {
         isOccupied
+        hasCheckoutToday
         guestCount
         adults
         children
@@ -59,13 +60,18 @@ export const GET_HOUSEKEEPING_SCHEDULE = gql`
         guestName
         checkIn
         checkOut
+        checkInTime
+        checkOutTime
         lateCheckout
+        earlyCheckout
         bedConfiguration
+        guestComments
         room {
           id
           number
           type
           status
+          notes
         }
       }
     }

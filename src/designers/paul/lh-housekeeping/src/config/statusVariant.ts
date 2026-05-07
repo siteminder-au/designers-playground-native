@@ -16,7 +16,7 @@
  *             Text label is the primary signal; a coloured left border is secondary.
  */
 export type StatusVariant = 'icon' | 'symbol' | 'abbr';
-export const STATUS_VARIANT: StatusVariant = 'symbol';
+export const STATUS_VARIANT: StatusVariant = 'icon';
 
 /**
  * SYMBOL_CONTAINER applies when STATUS_VARIANT === 'symbol'.

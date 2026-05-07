@@ -15,6 +15,7 @@ import {
   Dimensions,
   Animated,
   Switch,
+  PanResponder,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Calendar } from 'react-native-calendars';
@@ -24,9 +25,11 @@ import { GET_HOUSEKEEPING_SCHEDULE } from '../../apollo/queries';
 import { useHousekeepingStatus, RoomStatus } from '../../context/HousekeepingStatus';
 import { STATUS_VARIANT, SYMBOL_CONTAINER } from '../../config/statusVariant';
 import FLAGS from '../../config/featureFlags';
+import { COLORS } from '../../config/colors';
 
 interface RoomDaySchedule {
   isOccupied: boolean;
+  hasCheckoutToday: boolean;
   guestCount: number;
   adults: number;
   children: number;
@@ -35,9 +38,13 @@ interface RoomDaySchedule {
   guestName: string | null;
   checkIn: string | null;
   checkOut: string | null;
+  checkInTime: string | null;
+  checkOutTime: string | null;
   lateCheckout: boolean;
+  earlyCheckout: boolean;
   bedConfiguration: string;
-  room: { id: string; number: string; type: string; status: RoomStatus };
+  guestComments: string | null;
+  room: { id: string; number: string; type: string; status: RoomStatus; notes: string | null };
 }
 
 interface DaySchedule {
@@ -47,13 +54,16 @@ interface DaySchedule {
 
 const ORANGE = '#e8722a';
 const NUM_DAYS = 5;
+const WINDOW_HEIGHT = Dimensions.get('window').height;
 
 const HOUSEKEEPERS = ['Maria S.', 'James T.', 'Jacqueline W.'];
 
-const STATUS_CONFIG: Record<RoomStatus, { label: string; bg: string; text: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = {
-  CLEANED:       { label: 'Clean',         bg: '#dcfce7', text: '#15803d', icon: 'checkmark-circle'  },
-  UNCLEANED:     { label: 'Dirty',         bg: '#fee2e2', text: '#b91c1c', icon: 'alert-circle'      },
-  SKIP_CLEANING: { label: 'Skip Clean', bg: '#fef9c3', text: '#a16207', icon: 'remove-circle'     },
+const STATUS_CONFIG: Record<RoomStatus, { label: string; bg: string; border: string; text: string; icon: React.ComponentProps<typeof MaterialIcons>['name'] }> = {
+  CLEANED:              { label: 'Clean',              bg: '#9AE0BD',               border: '#258548',               text: '#258548',               icon: 'auto-awesome'    },
+  UNCLEANED:            { label: 'Needs clean',        bg: '#f1bfbf',               border: '#b81919',               text: '#b81919',               icon: 'auto-awesome'    },
+  DEEP_CLEAN:           { label: 'Needs deep clean',   bg: '#f1bfbf',               border: '#b81919',               text: '#b81919',               icon: 'auto-awesome'    },
+  SKIP_CLEANING:        { label: 'Skip clean',         bg: '#fef9c3',               border: '#d97706',               text: '#a16207',               icon: 'do-not-disturb'  },
+  AWAITING_INSPECTION:  { label: 'Awaiting inspection',bg: COLORS.Blue[600],        border: COLORS.Blue[200],        text: COLORS.Blue[200],        icon: 'auto-fix-high'   },
 };
 
 // 'symbol' variant — MaterialCommunityIcons with housekeeping-semantic meaning
@@ -63,9 +73,11 @@ type SymbolEntry =
   | { set: 'MCI'; name: React.ComponentProps<typeof MaterialCommunityIcons>['name']; color: string; tint: string };
 
 const STATUS_SYMBOL: Record<RoomStatus, SymbolEntry> = {
-  CLEANED:       { set: 'MI',  name: 'auto-awesome',      color: '#2d7d46', tint: '#dcfce7' },
-  UNCLEANED:     { set: 'MI',  name: 'cleaning-services', color: '#b91c1c', tint: '#fee2e2' },
-  SKIP_CLEANING: { set: 'MCI', name: 'sleep',             color: '#d97706', tint: '#fef9c3' },
+  CLEANED:             { set: 'MI',  name: 'auto-awesome',      color: '#258548',        tint: '#9AE0BD'        },
+  UNCLEANED:           { set: 'MI',  name: 'cleaning-services', color: '#b81919',        tint: '#f1bfbf'        },
+  DEEP_CLEAN:          { set: 'MCI', name: 'broom',             color: '#b81919',        tint: '#f1bfbf'        },
+  SKIP_CLEANING:       { set: 'MCI', name: 'sleep',             color: '#d97706',        tint: '#fef9c3'        },
+  AWAITING_INSPECTION: { set: 'MI',  name: 'auto-fix-high',     color: COLORS.Blue[200], tint: COLORS.Blue[600] },
 };
 
 function SymbolIcon({ entry, size }: { entry: SymbolEntry; size: number }) {
@@ -77,9 +89,11 @@ function SymbolIcon({ entry, size }: { entry: SymbolEntry; size: number }) {
 
 // 'abbr' variant — text label is primary, border colour is secondary
 const STATUS_ABBR: Record<RoomStatus, { label: string; fullLabel: string; color: string }> = {
-  CLEANED:       { label: 'CLN',  fullLabel: 'Clean',         color: '#2d7d46' },
-  UNCLEANED:     { label: 'DRT',  fullLabel: 'Dirty',         color: '#b91c1c' },
-  SKIP_CLEANING: { label: 'SKP',  fullLabel: 'Skip Clean', color: '#d97706' },
+  CLEANED:             { label: 'CLN', fullLabel: 'Clean',               color: '#258548'        },
+  UNCLEANED:           { label: 'DRT', fullLabel: 'Needs clean',         color: '#b81919'        },
+  DEEP_CLEAN:          { label: 'DPC', fullLabel: 'Needs deep clean',    color: '#b81919'        },
+  SKIP_CLEANING:       { label: 'SKP', fullLabel: 'Skip Clean',          color: '#d97706'        },
+  AWAITING_INSPECTION: { label: 'AWI', fullLabel: 'Awaiting inspection', color: COLORS.Blue[200] },
 };
 
 type SortField = 'room_number' | 'room_type' | 'occupancy' | 'guest_count' | 'notes' | 'cleanliness';
@@ -99,9 +113,11 @@ const DEFAULT_SORT: SortState = { field: 'room_number', direction: 'asc' };
 
 
 const STATUS_SORT_ORDER: Record<RoomStatus, number> = {
-  UNCLEANED:     0,
-  SKIP_CLEANING: 1,
-  CLEANED:       2,
+  UNCLEANED:           0,
+  DEEP_CLEAN:          1,
+  SKIP_CLEANING:       2,
+  AWAITING_INSPECTION: 3,
+  CLEANED:             4,
 };
 
 function sortRooms(
@@ -149,6 +165,79 @@ function sortRooms(
   });
 }
 
+interface FilterState {
+  statuses: RoomStatus[];
+  roomTypes: string[];
+  roomStatuses: string[];
+  cleaningStatuses: string[];
+  includeStaffNotes: boolean;
+  includeGuestComments: boolean;
+  lateCheckout: boolean;
+  earlyCheckout: boolean;
+}
+const ROOM_TYPE_OPTIONS = ['Bridge Room', 'Deluxe Suite', 'Family Room'];
+const ROOM_STATUS_OPTIONS = ['Occupied', 'Unoccupied', 'Check-in only', 'Check-out only', 'Check-out/in'];
+const CLEANING_STATUS_OPTIONS = ['Clean', 'Need cleaning', 'Need deep cleaning', 'Skip cleaning', 'Awaiting inspection'];
+const CLEANING_STATUS_MAP: Record<string, RoomStatus | null> = {
+  'Clean':               'CLEANED',
+  'Need cleaning':       'UNCLEANED',
+  'Need deep cleaning':  'DEEP_CLEAN',
+  'Skip cleaning':       'SKIP_CLEANING',
+  'Awaiting inspection': 'AWAITING_INSPECTION',
+};
+const DEFAULT_FILTERS: FilterState = { statuses: [], roomTypes: [], roomStatuses: [], cleaningStatuses: [], includeStaffNotes: false, includeGuestComments: false, lateCheckout: false, earlyCheckout: false };
+
+function getRoomStatusCategory(item: RoomDaySchedule, date: string): string {
+  const isCheckIn     = item.checkIn === date;
+  const hasCheckout   = item.hasCheckoutToday;
+  if (isCheckIn && hasCheckout) return 'Check-out/in';   // turnaround: departing + arriving
+  if (isCheckIn)                return 'Check-in only';  // empty room, new arrival only
+  if (hasCheckout)              return 'Check-out only'; // departing guest, no new arrival
+  if (!item.isOccupied)         return 'Unoccupied';
+  return 'Occupied';
+}
+
+function applyFilters(
+  rooms: RoomDaySchedule[],
+  filters: FilterState,
+  notes: Record<string, string>,
+  overrides: Record<string, RoomStatus>,
+  date: string,
+): RoomDaySchedule[] {
+  const { statuses, roomTypes, roomStatuses, cleaningStatuses, includeStaffNotes, includeGuestComments, lateCheckout, earlyCheckout } = filters;
+  if (!statuses.length && !roomTypes.length && !roomStatuses.length && !cleaningStatuses.length && !includeStaffNotes && !includeGuestComments && !lateCheckout && !earlyCheckout) return rooms;
+  return rooms.filter(item => {
+    const noteKey = item.reservationId ?? item.room.id;
+    const effectiveStatus = overrides[item.room.id] ?? item.room.status;
+    if (statuses.length > 0 && !statuses.includes(effectiveStatus)) return false;
+    if (roomTypes.length > 0 && !roomTypes.includes(item.room.type)) return false;
+    if (roomStatuses.length > 0 && !roomStatuses.includes(getRoomStatusCategory(item, date))) return false;
+    if (cleaningStatuses.length > 0) {
+      const mapped = cleaningStatuses.map(s => CLEANING_STATUS_MAP[s]).filter(Boolean) as RoomStatus[];
+      if (!mapped.includes(effectiveStatus)) return false;
+    }
+    if (includeStaffNotes || includeGuestComments) {
+      const hasStaffNote = !!(notes[noteKey] || item.room.notes);
+      const hasGuestComment = !!item.guestComments;
+      const passes = (includeStaffNotes && hasStaffNote) || (includeGuestComments && hasGuestComment);
+      if (!passes) return false;
+    }
+    if (lateCheckout && !item.lateCheckout) return false;
+    if (earlyCheckout && !item.earlyCheckout) return false;
+    return true;
+  });
+}
+
+function activeFilterCount(filters: FilterState): number {
+  let n = 0;
+  if (filters.statuses.length > 0) n++;
+  if (filters.includeStaffNotes) n++;
+  if (filters.includeGuestComments) n++;
+  if (filters.lateCheckout) n++;
+  if (filters.earlyCheckout) n++;
+  return n;
+}
+
 function addDays(dateStr: string, n: number): string {
   const d = new Date(dateStr + 'T12:00:00');
   d.setDate(d.getDate() + n);
@@ -185,6 +274,23 @@ function formatCardDate(dateStr: string): string {
   return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
 }
 
+// Derives a stable 8-digit booking reference from any reservation ID string
+function toBookingRef(id: string): string {
+  let h = 5381;
+  for (let i = 0; i < id.length; i++) {
+    h = (((h << 5) + h) ^ id.charCodeAt(i)) >>> 0;
+  }
+  return String(10000000 + (h % 90000000));
+}
+
+// "14:00" → "2pm", "11:30" → "11:30am"
+function formatTime(t: string): string {
+  const [h, m] = t.split(':').map(Number);
+  const suffix = h >= 12 ? 'pm' : 'am';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return m === 0 ? `${h12}${suffix}` : `${h12}:${String(m).padStart(2, '0')}${suffix}`;
+}
+
 // ── Shared row components ─────────────────────────────────────────────────────
 
 type BadgeRect = { x: number; y: number; width: number; height: number };
@@ -197,7 +303,7 @@ function CleaningControl({
   onPress: (rect: BadgeRect) => void;
 }) {
   const ref = useRef<View>(null);
-  const { label, bg, text, icon } = STATUS_CONFIG[status];
+  const { label, bg, border, text, icon } = STATUS_CONFIG[status];
 
   function handlePress() {
     ref.current?.measure((_x, _y, width, height, pageX, pageY) => {
@@ -249,17 +355,19 @@ function CleaningControl({
     );
   }
 
-  // 'icon' — default/current
+  // 'icon' — Figma pill design
   return (
     <TouchableOpacity
       activeOpacity={0.7}
       hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
       onPress={handlePress}
     >
-      <View ref={ref} style={[styles.badge, styles.badgeInteractive, { backgroundColor: bg }]}>
-        <Ionicons name={icon} size={14} color={text} style={{ marginRight: 5 }} />
-        <Text style={[styles.badgeText, { color: text }]}>{label}</Text>
-        <Ionicons name="chevron-down" size={10} color={text} style={{ marginLeft: 3 }} />
+      <View ref={ref} style={[styles.cleaningBtn, { backgroundColor: bg, borderColor: border }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <MaterialIcons name={icon} size={18} color={text} />
+          <Text style={[styles.cleaningBtnText, { color: text }]}>{label}</Text>
+        </View>
+        <Ionicons name="chevron-down" size={12} color={text} />
       </View>
     </TouchableOpacity>
   );
@@ -339,12 +447,13 @@ function RoomRow({
             </Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <MaterialIcons name="hotel" size={13} color="#111" />
-            <Text style={styles.roomType}>{item.room.type}</Text>
-            <View style={styles.roomTitleSep} />
-            <Text style={[styles.occupancyStatusText, { color: item.isOccupied ? '#b91c1c' : '#2d7d46' }]}>
-              {item.isOccupied ? 'Occupied' : 'Unoccupied'}
-            </Text>
+            <Text style={styles.roomType}>{item.room.type.toUpperCase()}</Text>
+            {item.isOccupied && (
+              <>
+                <View style={styles.roomTitleSep} />
+                <Text style={[styles.occupancyStatusText, { color: '#b81919' }]}>Occupied</Text>
+              </>
+            )}
           </View>
         </View>
         <View style={styles.rowRight}>
@@ -362,53 +471,65 @@ function RoomRow({
         </View>
       )}
 
-      {/* Row 3 (occupied): guest name · pax counts · dates — individually flagged */}
-      {item.isOccupied && (flags.showGuestName || flags.showGuestPax || flags.showGuestDates) && (
+      {/* Row 3 (occupied or arriving today): guest name · reservation ID · badges · pax — individually flagged */}
+      {(item.isOccupied || item.guestName !== null) && (flags.showGuestName || flags.showGuestPax || flags.showGuestDates || flags.showReservationId || flags.showLateCheckout) && (
         <View style={styles.guestInfoSection}>
-          <View style={styles.guestDatesRow}>
-            {flags.showGuestName && item.guestName && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <MaterialCommunityIcons name="card-account-details-outline" size={13} color="#111" />
-                <Text style={styles.guestNameText}>{item.guestName}</Text>
-              </View>
-            )}
-            {flags.showGuestName && flags.showGuestPax && <View style={styles.bedConfigPipe} />}
-            {flags.showGuestPax && (
-              <>
-                {item.adults > 0 && (
-                  <View style={styles.occupancyItem}>
-                    <MaterialCommunityIcons name="account" size={13} color="#6b7280" />
-                    <Text style={styles.occupancyCount}>{item.adults}</Text>
-                  </View>
-                )}
-                {item.children > 0 && (
-                  <View style={styles.occupancyItem}>
-                    <MaterialCommunityIcons name="human-child" size={13} color="#6b7280" />
-                    <Text style={styles.occupancyCount}>{item.children}</Text>
-                  </View>
-                )}
-                {item.infants > 0 && (
-                  <View style={styles.occupancyItem}>
-                    <MaterialCommunityIcons name="baby-carriage" size={13} color="#6b7280" />
-                    <Text style={styles.occupancyCount}>{item.infants}</Text>
-                  </View>
-                )}
-              </>
-            )}
-          </View>
-          {(flags.showGuestDates || flags.showLateCheckout) && (
-            <View style={styles.guestBadgeRow}>
-              {flags.showGuestDates && item.checkIn && item.checkOut && (
+          {/* Main row: left (name + resID) | right (badges) */}
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {/* Left column — name + reservation ID */}
+            <View style={{ flex: 1, gap: 12 }}>
+              {flags.showGuestName && item.guestName && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <Ionicons name="calendar-outline" size={12} color="#111" />
-                  <Text style={styles.guestDatesText}>
-                    {formatCardDate(item.checkIn)} → {formatCardDate(item.checkOut)}
-                  </Text>
+                  <MaterialCommunityIcons name="card-account-details-outline" size={12} color="#333333" />
+                  <Text style={styles.guestNameText}>{item.guestName}</Text>
                 </View>
               )}
-              {flags.showLateCheckout && item.lateCheckout && (
-                <View style={styles.lateCheckoutBadge}>
-                  <Text style={styles.lateCheckoutText}>Late checkout</Text>
+              {flags.showReservationId && item.reservationId && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <MaterialCommunityIcons name="tag-outline" size={12} color="#333333" />
+                  <Text style={styles.reservationIdText}>#{toBookingRef(item.reservationId)}</Text>
+                </View>
+              )}
+            </View>
+            {/* Right column — check-in / check-out badges */}
+            {flags.showLateCheckout && ((item.hasCheckoutToday && item.isOccupied) || (!item.isOccupied && item.guestName !== null)) && (
+              <View style={{ gap: 6, alignItems: 'flex-end' }}>
+                {item.hasCheckoutToday && item.isOccupied && (
+                  <View style={item.checkOutTime ? styles.lateCheckoutBadge : styles.standardBadge}>
+                    <Text style={item.checkOutTime ? styles.lateCheckoutText : styles.standardBadgeText}>
+                      {item.checkOutTime ? `${formatTime(item.checkOutTime).toUpperCase()} check-out` : 'Checking out'}
+                    </Text>
+                  </View>
+                )}
+                {!item.isOccupied && item.guestName !== null && (
+                  <View style={item.checkInTime ? styles.lateCheckoutBadge : styles.standardBadge}>
+                    <Text style={item.checkInTime ? styles.lateCheckoutText : styles.standardBadgeText}>
+                      {item.checkInTime ? `${formatTime(item.checkInTime).toUpperCase()} check-in` : 'Checking in'}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+          {/* Pax counts row */}
+          {flags.showGuestPax && (
+            <View style={[styles.guestDatesRow, { marginTop: 12 }]}>
+              {item.adults > 0 && (
+                <View style={styles.occupancyItem}>
+                  <MaterialCommunityIcons name="account-outline" size={13} color={COLORS.Black[200]} />
+                  <Text style={styles.occupancyCount}>{item.adults}</Text>
+                </View>
+              )}
+              {item.children > 0 && (
+                <View style={styles.occupancyItem}>
+                  <MaterialCommunityIcons name="account-child-outline" size={13} color={COLORS.Black[200]} />
+                  <Text style={styles.occupancyCount}>{item.children}</Text>
+                </View>
+              )}
+              {item.infants > 0 && (
+                <View style={styles.occupancyItem}>
+                  <MaterialCommunityIcons name="baby-face-outline" size={13} color={COLORS.Black[200]} />
+                  <Text style={styles.occupancyCount}>{item.infants}</Text>
                 </View>
               )}
             </View>
@@ -416,20 +537,34 @@ function RoomRow({
         </View>
       )}
 
-      <View style={styles.noteArea}>
+      <TouchableOpacity style={styles.noteArea} onPress={onNotePress} activeOpacity={0.7}>
         <View style={styles.noteActionRow}>
-          {note ? (
-            <TouchableOpacity onPress={onNotePress} style={[styles.noteRow, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
-              <Text numberOfLines={2} style={[styles.noteText, { flex: 1 }]}>{note}</Text>
-              <Ionicons name="pencil-outline" size={14} color={ORANGE} />
-            </TouchableOpacity>
+          {item.guestComments ? (
+            <View style={{ flex: 1, gap: 6 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Text style={styles.guestCommentsLabel}>Guest comments:</Text>
+                <Text numberOfLines={1} style={[styles.guestCommentsText, { flex: 1 }]}>{item.guestComments}</Text>
+              </View>
+              {note ? (
+                <Text numberOfLines={2} style={[styles.noteText, { flex: 1 }]}>
+                  <Text style={styles.staffNoteLabel}>Staff note: </Text>{note}
+                </Text>
+              ) : (
+                <Text style={styles.addNoteText}>+ Staff notes</Text>
+              )}
+            </View>
+          ) : note ? (
+            <View style={styles.noteRow}>
+              <Text numberOfLines={2} style={[styles.noteText, { flex: 1 }]}>
+                <Text style={styles.staffNoteLabel}>Staff note: </Text>{note}
+              </Text>
+            </View>
           ) : (
-            <TouchableOpacity onPress={onNotePress} style={styles.noteRow}>
-              <Text style={styles.addNoteText}>+ Notes</Text>
-            </TouchableOpacity>
+            <View style={styles.noteRow}>
+              <Text style={styles.addNoteText}>+ Staff notes</Text>
+            </View>
           )}
-          {flags.showAssignHousekeeper && <View style={styles.noteAssignDivider} />}
-          {flags.showAssignHousekeeper && <TouchableOpacity style={styles.assignBtn} onPress={onAssignPress}>
+          {false && <TouchableOpacity style={styles.assignBtn} onPress={onAssignPress}>
             {assignedTo ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Text style={[styles.assignBtnText, { maxWidth: 58, textAlign: 'left' }]} numberOfLines={1}>{assignedTo}</Text>
@@ -443,14 +578,14 @@ function RoomRow({
             )}
           </TouchableOpacity>}
         </View>
-      </View>
+      </TouchableOpacity>
     </View>
   );
 }
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 
-export default function HousekeepingScreen() {
+export default function HousekeepingScreen({ navigation }: { navigation: any }) {
   const insets = useSafeAreaInsets();
   const today = new Date().toISOString().split('T')[0];
 
@@ -468,7 +603,7 @@ export default function HousekeepingScreen() {
   const [pendingEnd, setPendingEnd] = useState<string | null>(null);
 
   // Status overrides (shared via context for cross-screen sync)
-  const { statusOverrides, setStatusOverride } = useHousekeepingStatus();
+  const { statusOverrides, setStatusOverride, housekeeperMode, setHousekeeperMode } = useHousekeepingStatus();
   const [statusDropdown, setStatusDropdown] = useState<{
     roomId: string;
     currentStatus: RoomStatus;
@@ -479,51 +614,172 @@ export default function HousekeepingScreen() {
   const [flags, setFlags] = useState({ ...FLAGS });
   const [demoSheetVisible, setDemoSheetVisible] = useState(false);
   const demoSheetAnim = useRef(new Animated.Value(0)).current;
+  const demoTranslateY = useRef(new Animated.Value(400)).current;
 
   useEffect(() => {
     if (demoSheetVisible) {
-      Animated.spring(demoSheetAnim, { toValue: 1, useNativeDriver: false, friction: 8 }).start();
+      demoTranslateY.setValue(400);
+      demoSheetAnim.setValue(0);
+      Animated.parallel([
+        Animated.spring(demoTranslateY, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }),
+        Animated.spring(demoSheetAnim,  { toValue: 1, useNativeDriver: true, damping: 22, stiffness: 220 }),
+      ]).start();
     }
   }, [demoSheetVisible]);
 
   function closeDemoSheet() {
-    Animated.timing(demoSheetAnim, { toValue: 0, duration: 200, useNativeDriver: false }).start(() => setDemoSheetVisible(false));
+    Animated.parallel([
+      Animated.timing(demoTranslateY, { toValue: 400, duration: 200, useNativeDriver: true }),
+      Animated.timing(demoSheetAnim,  { toValue: 0,   duration: 200, useNativeDriver: true }),
+    ]).start(() => setDemoSheetVisible(false));
   }
+
+  const demoPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, g) => { if (g.dy > 0) demoTranslateY.setValue(g.dy); },
+      onPanResponderRelease: (_, g) => {
+        if (g.dy > 80) { closeDemoSheet(); }
+        else { Animated.spring(demoTranslateY, { toValue: 0, useNativeDriver: true }).start(); }
+      },
+    })
+  ).current;
+
+  // Filter state
+  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  const [filterSheetVisible, setFilterSheetVisible] = useState(false);
+  const filterSheetAnim = useRef(new Animated.Value(0)).current;
+  // Single translateY value: drives both open/close animation and drag offset
+  const filterTranslateY = useRef(new Animated.Value(500)).current;
+
+  useEffect(() => {
+    if (filterSheetVisible) {
+      filterTranslateY.setValue(500);
+      filterSheetAnim.setValue(0);
+      Animated.parallel([
+        Animated.spring(filterTranslateY, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }),
+        Animated.spring(filterSheetAnim, { toValue: 1, useNativeDriver: true, damping: 22, stiffness: 220 }),
+      ]).start();
+    }
+  }, [filterSheetVisible]);
+
+  function closeFilterSheet() {
+    Animated.parallel([
+      Animated.timing(filterTranslateY, { toValue: 500, duration: 200, useNativeDriver: true }),
+      Animated.timing(filterSheetAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start(() => {
+      setFilterSheetVisible(false);
+    });
+  }
+
+  const filterPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, g) => {
+        if (g.dy > 0) filterTranslateY.setValue(g.dy);
+      },
+      onPanResponderRelease: (_, g) => {
+        if (g.dy > 80) {
+          closeFilterSheet();
+        } else {
+          Animated.spring(filterTranslateY, { toValue: 0, useNativeDriver: true }).start();
+        }
+      },
+    })
+  ).current;
+
+  // Automations sheet state
+  const [autoSheetVisible, setAutoSheetVisible] = useState(false);
+  const autoSheetAnim = useRef(new Animated.Value(0)).current;
+  const autoTranslateY = useRef(new Animated.Value(500)).current;
+  const [deepCleanDays, setDeepCleanDays] = useState('3');
+  const [nightlyResetOccupied, setNightlyResetOccupied] = useState(false);
+  const [resetAfterCheckout, setResetAfterCheckout] = useState(true);
+  const [resetAfterClosure, setResetAfterClosure] = useState(true);
+
+  useEffect(() => {
+    if (autoSheetVisible) {
+      autoTranslateY.setValue(500);
+      autoSheetAnim.setValue(0);
+      Animated.parallel([
+        Animated.spring(autoTranslateY, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }),
+        Animated.spring(autoSheetAnim,  { toValue: 1, useNativeDriver: true, damping: 22, stiffness: 220 }),
+      ]).start();
+    }
+  }, [autoSheetVisible]);
+
+  function closeAutoSheet() {
+    Animated.parallel([
+      Animated.timing(autoTranslateY, { toValue: 500, duration: 200, useNativeDriver: true }),
+      Animated.timing(autoSheetAnim,  { toValue: 0,   duration: 200, useNativeDriver: true }),
+    ]).start(() => setAutoSheetVisible(false));
+  }
+
+  const autoPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, g) => { if (g.dy > 0) autoTranslateY.setValue(g.dy); },
+      onPanResponderRelease: (_, g) => {
+        if (g.dy > 80) { closeAutoSheet(); }
+        else { Animated.spring(autoTranslateY, { toValue: 0, useNativeDriver: true }).start(); }
+      },
+    })
+  ).current;
 
   // Sort state
   const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const sortSheetAnim = useRef(new Animated.Value(0)).current;
+  const sortTranslateY = useRef(new Animated.Value(400)).current;
 
   useEffect(() => {
     if (sortModalVisible) {
+      sortTranslateY.setValue(400);
       sortSheetAnim.setValue(0);
-      Animated.spring(sortSheetAnim, {
-        toValue: 1, useNativeDriver: true,
-        damping: 22, stiffness: 220,
-      }).start();
+      Animated.parallel([
+        Animated.spring(sortTranslateY, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }),
+        Animated.spring(sortSheetAnim,  { toValue: 1, useNativeDriver: true, damping: 22, stiffness: 220 }),
+      ]).start();
     }
   }, [sortModalVisible]);
 
   function closeSortModal() {
-    Animated.timing(sortSheetAnim, {
-      toValue: 0, duration: 200, useNativeDriver: true,
-    }).start(() => setSortModalVisible(false));
+    Animated.parallel([
+      Animated.timing(sortTranslateY, { toValue: 400, duration: 200, useNativeDriver: true }),
+      Animated.timing(sortSheetAnim,  { toValue: 0,   duration: 200, useNativeDriver: true }),
+    ]).start(() => setSortModalVisible(false));
   }
+
+  const sortPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, g) => { if (g.dy > 0) sortTranslateY.setValue(g.dy); },
+      onPanResponderRelease: (_, g) => {
+        if (g.dy > 80) { closeSortModal(); }
+        else { Animated.spring(sortTranslateY, { toValue: 0, useNativeDriver: true }).start(); }
+      },
+    })
+  ).current;
 
   // Assign housekeeper state
   const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [assignModalVisible, setAssignModalVisible] = useState(false);
   const [assigningRoomId, setAssigningRoomId] = useState<string | null>(null);
   const assignSheetAnim = useRef(new Animated.Value(0)).current;
+  const assignTranslateY = useRef(new Animated.Value(400)).current;
 
   useEffect(() => {
     if (assignModalVisible) {
+      assignTranslateY.setValue(400);
       assignSheetAnim.setValue(0);
-      Animated.spring(assignSheetAnim, {
-        toValue: 1, useNativeDriver: true,
-        damping: 22, stiffness: 220,
-      }).start();
+      Animated.parallel([
+        Animated.spring(assignTranslateY, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }),
+        Animated.spring(assignSheetAnim,  { toValue: 1, useNativeDriver: true, damping: 22, stiffness: 220 }),
+      ]).start();
     }
   }, [assignModalVisible]);
 
@@ -533,10 +789,23 @@ export default function HousekeepingScreen() {
   }
 
   function closeAssignModal() {
-    Animated.timing(assignSheetAnim, {
-      toValue: 0, duration: 200, useNativeDriver: true,
-    }).start(() => setAssignModalVisible(false));
+    Animated.parallel([
+      Animated.timing(assignTranslateY, { toValue: 400, duration: 200, useNativeDriver: true }),
+      Animated.timing(assignSheetAnim,  { toValue: 0,   duration: 200, useNativeDriver: true }),
+    ]).start(() => setAssignModalVisible(false));
   }
+
+  const assignPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, g) => { if (g.dy > 0) assignTranslateY.setValue(g.dy); },
+      onPanResponderRelease: (_, g) => {
+        if (g.dy > 80) { closeAssignModal(); }
+        else { Animated.spring(assignTranslateY, { toValue: 0, useNativeDriver: true }).start(); }
+      },
+    })
+  ).current;
 
   function confirmAssignment() {
     closeAssignModal();
@@ -546,20 +815,39 @@ export default function HousekeepingScreen() {
   const [printPreviewVisible, setPrintPreviewVisible] = useState(false);
   const [moreSettingsExpanded, setMoreSettingsExpanded] = useState(false);
   const [headersAndFooters, setHeadersAndFooters] = useState(true);
-  const [settingsSheetOpen, setSettingsSheetOpen] = useState(false);
-  const settingsSheetAnim = useRef(new Animated.Value(0)).current;
 
-  function toggleSettingsSheet() {
-    setSettingsSheetOpen(v => {
-      const next = !v;
-      Animated.spring(settingsSheetAnim, {
-        toValue: next ? 1 : 0,
-        useNativeDriver: false,
-        friction: 8,
-      }).start();
-      return next;
-    });
-  }
+  // Print settings sheet — standard bottom sheet pattern
+  const [printSettingsVisible, setPrintSettingsVisible] = useState(false);
+  const printSettingsSheetAnim = useRef(new Animated.Value(0)).current;
+  const printSettingsTranslateY = useRef(new Animated.Value(500)).current;
+
+  useEffect(() => {
+    if (printSettingsVisible) {
+      printSettingsTranslateY.setValue(500);
+      printSettingsSheetAnim.setValue(0);
+      Animated.parallel([
+        Animated.spring(printSettingsTranslateY, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }),
+        Animated.spring(printSettingsSheetAnim,  { toValue: 1, useNativeDriver: true, damping: 22, stiffness: 220 }),
+      ]).start();
+    }
+  }, [printSettingsVisible]);
+
+  useEffect(() => {
+    if (printPreviewVisible) setPrintSettingsVisible(true);
+    else setPrintSettingsVisible(false);
+  }, [printPreviewVisible]);
+
+  const printSettingsPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder:  () => true,
+      onPanResponderMove:   (_, g) => { if (g.dy > 0) printSettingsTranslateY.setValue(g.dy); },
+      onPanResponderRelease:(_, g) => {
+        if (g.dy > 80) closePrintSettings();
+        else Animated.spring(printSettingsTranslateY, { toValue: 0, useNativeDriver: true }).start();
+      },
+    })
+  ).current;
 
   // Notes state
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -567,28 +855,102 @@ export default function HousekeepingScreen() {
   const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
   const [draftNote, setDraftNote] = useState('');
 
+  // Notes detail sheet state
+  const [notesSheetVisible, setNotesSheetVisible] = useState(false);
+  const [notesSheetItem, setNotesSheetItem] = useState<RoomDaySchedule | null>(null);
+  const [notesSheetKey, setNotesSheetKey] = useState<string | null>(null);
+  const [notesSheetEditing, setNotesSheetEditing] = useState(false);
+  const [notesSheetDraft, setNotesSheetDraft] = useState('');
+  const notesSheetAnim = useRef(new Animated.Value(0)).current;
+  const notesSheetTranslateY = useRef(new Animated.Value(400)).current;
+
+  useEffect(() => {
+    if (notesSheetVisible) {
+      notesSheetTranslateY.setValue(400);
+      notesSheetAnim.setValue(0);
+      Animated.parallel([
+        Animated.spring(notesSheetTranslateY, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }),
+        Animated.spring(notesSheetAnim,       { toValue: 1, useNativeDriver: true, damping: 22, stiffness: 220 }),
+      ]).start();
+    }
+  }, [notesSheetVisible]);
+
+  const notesSheetPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder:  () => true,
+      onPanResponderMove:   (_, g) => { if (g.dy > 0) notesSheetTranslateY.setValue(g.dy); },
+      onPanResponderRelease:(_, g) => {
+        if (g.dy > 80) closeNotesSheet();
+        else Animated.spring(notesSheetTranslateY, { toValue: 0, useNativeDriver: true }).start();
+      },
+    })
+  ).current;
+
   // Query: either the current week or the selected range
   const queryStart = dateRange?.start ?? weekStart;
   const queryEnd   = dateRange?.end   ?? addDays(weekStart, NUM_DAYS - 1);
 
   const { data, loading, error } = useQuery(GET_HOUSEKEEPING_SCHEDULE, {
     variables: { startDate: queryStart, endDate: queryEnd },
+    pollInterval: 3000,
   });
 
   const schedule: DaySchedule[] = data?.housekeepingSchedule ?? [];
   const visibleDates = Array.from({ length: NUM_DAYS }, (_, i) => addDays(weekStart, i));
 
+  // Automation: nightly reset — set all today's occupied rooms to Need Cleaning once per toggle-on
+  const nightlyResetApplied = useRef(false);
+  useEffect(() => {
+    if (!nightlyResetOccupied) { nightlyResetApplied.current = false; return; }
+    if (!schedule.length || nightlyResetApplied.current) return;
+    const todaySchedule = schedule.find(d => d.date === today);
+    if (!todaySchedule) return;
+    todaySchedule.rooms.forEach(item => {
+      if (item.isOccupied) setStatusOverride(item.room.id, 'UNCLEANED');
+    });
+    nightlyResetApplied.current = true;
+  }, [schedule, nightlyResetOccupied]);
+
+  // Automation: flag occupied rooms as Needs Deep Clean after N consecutive days
+  useEffect(() => {
+    const n = parseInt(deepCleanDays, 10);
+    if (!n || n <= 0 || !schedule.length) return;
+    schedule.forEach(day => {
+      if (day.date > today) return;
+      day.rooms.forEach(item => {
+        if (!item.isOccupied || !item.checkIn) return;
+        const stayDays = Math.floor(
+          (new Date(day.date + 'T12:00:00').getTime() - new Date(item.checkIn + 'T12:00:00').getTime())
+          / 86400000,
+        );
+        if (stayDays < n) return;
+        const effective = statusOverrides[item.room.id] ?? item.room.status;
+        if (effective === 'UNCLEANED') {
+          setStatusOverride(item.room.id, 'DEEP_CLEAN');
+        }
+      });
+    });
+  }, [schedule, deepCleanDays, statusOverrides]);
+
+  const filterCount = activeFilterCount(filters);
+
   // Single-day view
   const selectedDay = schedule.find(d => d.date === selectedDate);
-  const singleRooms: RoomDaySchedule[] = sortRooms(selectedDay?.rooms ?? [], sort, statusOverrides, notes);
+  const singleRooms: RoomDaySchedule[] = applyFilters(
+    sortRooms(selectedDay?.rooms ?? [], sort, statusOverrides, notes),
+    filters, notes, statusOverrides, selectedDate,
+  );
   const printTotalRows = (dateRange ? schedule.flatMap(d => d.rooms) : singleRooms).length;
   const printPageCount = Math.max(1, Math.ceil(printTotalRows / 22));
 
-  // Range view sections
-  const rangeSections = schedule.map(day => ({
-    title: formatSectionHeader(day.date, today),
-    data: sortRooms(day.rooms, sort, statusOverrides, notes),
-  }));
+  // Range view sections (empty sections hidden when filters active)
+  const rangeSections = schedule
+    .map(day => ({
+      title: formatSectionHeader(day.date, today),
+      data: applyFilters(sortRooms(day.rooms, sort, statusOverrides, notes), filters, notes, statusOverrides, day.date),
+    }))
+    .filter(s => s.data.length > 0);
 
   function openModal() {
     setPendingStart(null);
@@ -620,6 +982,43 @@ export default function HousekeepingScreen() {
   }
 
 
+  function openPrintSettings() {
+    setPrintSettingsVisible(true);
+  }
+
+  function closePrintSettings() {
+    Animated.parallel([
+      Animated.timing(printSettingsTranslateY, { toValue: 500, duration: 200, useNativeDriver: true }),
+      Animated.timing(printSettingsSheetAnim,  { toValue: 0,   duration: 200, useNativeDriver: true }),
+    ]).start(() => setPrintSettingsVisible(false));
+  }
+
+  function openNotesSheet(item: RoomDaySchedule, noteKey: string) {
+    setNotesSheetItem(item);
+    setNotesSheetKey(noteKey);
+    setNotesSheetEditing(false);
+    setNotesSheetDraft('');
+    setNotesSheetVisible(true);
+  }
+
+  function saveSheetNote() {
+    if (!notesSheetKey) return;
+    const trimmed = notesSheetDraft.trim();
+    if (trimmed) {
+      setNotes(prev => ({ ...prev, [notesSheetKey!]: trimmed }));
+    } else {
+      setNotes(prev => { const next = { ...prev }; delete next[notesSheetKey!]; return next; });
+    }
+    setNotesSheetEditing(false);
+  }
+
+  function closeNotesSheet() {
+    Animated.parallel([
+      Animated.timing(notesSheetTranslateY, { toValue: 400, duration: 200, useNativeDriver: true }),
+      Animated.timing(notesSheetAnim,       { toValue: 0,   duration: 200, useNativeDriver: true }),
+    ]).start(() => setNotesSheetVisible(false));
+  }
+
   function openNotesModal(noteKey: string) {
     setEditingRoomId(noteKey);
     setDraftNote(notes[noteKey] ?? '');
@@ -642,72 +1041,44 @@ export default function HousekeepingScreen() {
     <View style={styles.container}>
       {/* ── Header ── */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.headerLabel}>HOUSEKEEPING</Text>
-          <Text style={styles.headerDate} numberOfLines={1}>{headerText}</Text>
+        <View style={styles.headerTop}>
+          {!housekeeperMode && (
+            <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()}>
+              <Ionicons name="close" size={22} color="#484b4b" />
+            </TouchableOpacity>
+          )}
+          <Text style={styles.headerLabel} pointerEvents="none">Housekeeping</Text>
+          <TouchableOpacity style={{ padding: 4, marginLeft: 'auto' }} onPress={() => setDemoSheetVisible(true)}>
+            <Ionicons name="flask-outline" size={18} color="#9ca3af" />
+          </TouchableOpacity>
         </View>
-        {dateRange && (
-          <TouchableOpacity onPress={clearRange} style={styles.clearBtn}>
-            <Ionicons name="close-circle" size={18} color="#9ca3af" />
-            <Text style={styles.clearBtnText}>Clear</Text>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity style={styles.printBtn} onPress={() => setPrintPreviewVisible(true)}>
-          <Ionicons name="print-outline" size={24} color="#374151" />
-        </TouchableOpacity>
-      </View>
-
-      {/* ── Controls row: date strip (60%) + select dates (40%) ── */}
-      <View style={styles.controlsRow}>
-
-        {/* Date strip — 60% */}
-        <View style={styles.stripContainer}>
-          <TouchableOpacity
-            style={styles.arrow}
-            onPress={() => {
-              const s = addDays(weekStart, -NUM_DAYS);
-              setWeekStart(s);
-              if (!dateRange) setSelectedDate(s);
-            }}
-          >
-            <Text style={styles.arrowText}>‹</Text>
-          </TouchableOpacity>
-
-          {visibleDates.map(d => {
-            const { day, date } = formatDayStrip(d);
-            const isSelected = !dateRange && d === selectedDate;
-            return (
+        <View style={styles.headerBottom}>
+          <Text style={[styles.headerDate, dateRange && { fontSize: 15 }]} numberOfLines={1}>{headerText}</Text>
+          {dateRange && (
+            <TouchableOpacity onPress={openModal} style={styles.clearBtn}>
+              <Ionicons name="pencil-outline" size={18} color="#9ca3af" />
+            </TouchableOpacity>
+          )}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginLeft: 'auto' }}>
+            {(selectedDate !== today || dateRange) && (
               <TouchableOpacity
-                key={d}
-                style={styles.dayBtn}
-                onPress={() => { setSelectedDate(d); setDateRange(null); }}
+                style={{ paddingHorizontal: 12, height: 32, backgroundColor: '#f4f4f4', borderRadius: 4, justifyContent: 'center' }}
+                onPress={() => { setSelectedDate(today); setWeekStart(today); setDateRange(null); }}
               >
-                <Text style={[styles.dayLabel, isSelected && styles.activeText]}>{day}</Text>
-                <Text style={[styles.dayNum, isSelected && styles.activeText]}>{date}</Text>
-                {isSelected && <View style={styles.dayUnderline} />}
+                <Text style={{ fontSize: 14, color: '#333', fontWeight: '500' }}>Today</Text>
               </TouchableOpacity>
-            );
-          })}
+            )}
 
-          <TouchableOpacity
-            style={styles.arrow}
-            onPress={() => {
-              const s = addDays(weekStart, NUM_DAYS);
-              setWeekStart(s);
-              if (!dateRange) setSelectedDate(s);
-            }}
-          >
-            <Text style={styles.arrowText}>›</Text>
-          </TouchableOpacity>
+            {!dateRange && (
+              <TouchableOpacity style={{ padding: 4 }} onPress={openModal}>
+                <Ionicons name="calendar-outline" size={20} color="#333" />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={{ padding: 4 }} onPress={() => setAutoSheetVisible(true)}>
+              <MaterialCommunityIcons name="cog-sync-outline" size={22} color="#374151" />
+            </TouchableOpacity>
+          </View>
         </View>
-
-        {/* Vertical divider */}
-        <View style={styles.verticalDivider} />
-
-        {/* Select dates — 40% */}
-        <TouchableOpacity style={styles.selectDatesBtn} onPress={openModal}>
-          <Text style={styles.selectDatesText}>Select dates</Text>
-        </TouchableOpacity>
       </View>
 
       {/* ── Sort toolbar ── */}
@@ -728,9 +1099,18 @@ export default function HousekeepingScreen() {
           />
         </TouchableOpacity>
         <View style={styles.sortToolbarSep} />
-        <TouchableOpacity style={styles.demoBtn} onPress={() => setDemoSheetVisible(true)}>
-          <Ionicons name="flask-outline" size={14} color="#6b7280" style={{ marginRight: 4 }} />
-          <Text style={styles.demoBtnText}>Demo</Text>
+        <TouchableOpacity style={styles.filterBtn} onPress={() => setFilterSheetVisible(true)}>
+          <Ionicons name="options-outline" size={15} color={ORANGE} />
+          <Text style={styles.filterBtnText}>Filter</Text>
+          {filterCount > 0 && (
+            <View style={styles.filterBadge}>
+              <Text style={styles.filterBadgeText}>{filterCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.sortToolbarPrint} onPress={() => setPrintPreviewVisible(true)}>
+          <Ionicons name="print-outline" size={15} color={ORANGE} />
+          <Text style={styles.sortToolbarPrintText}>Print</Text>
         </TouchableOpacity>
       </View>
 
@@ -759,7 +1139,7 @@ export default function HousekeepingScreen() {
                 note={notes[noteKey] ?? ''}
                 bedConfig={bedConfig}
                 flags={flags}
-                onNotePress={() => openNotesModal(noteKey)}
+                onNotePress={() => openNotesSheet(item, noteKey)}
                 onStatusPress={(rect) => openStatusDropdown(item.room.id, effectiveStatus, rect)}
                 assignedTo={assignments[item.room.id] ?? null}
                 onAssignPress={() => openAssignModal(item.room.id)}
@@ -767,8 +1147,13 @@ export default function HousekeepingScreen() {
             );
           }}
           ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>
+              {filterCount > 0 ? 'No rooms match the current filters.' : 'No room data for this range.'}
+            </Text>
+          }
           stickySectionHeadersEnabled
-          style={{ backgroundColor: '#f5f5f5' }}
+          style={{ backgroundColor: '#f2f3f3' }}
           contentContainerStyle={{ paddingTop: 0, paddingBottom: 32 }}
         />
       ) : (
@@ -786,7 +1171,7 @@ export default function HousekeepingScreen() {
                 note={notes[noteKey] ?? ''}
                 bedConfig={bedConfig}
                 flags={flags}
-                onNotePress={() => openNotesModal(noteKey)}
+                onNotePress={() => openNotesSheet(item, noteKey)}
                 onStatusPress={(rect) => openStatusDropdown(item.room.id, effectiveStatus, rect)}
                 assignedTo={assignments[item.room.id] ?? null}
                 onAssignPress={() => openAssignModal(item.room.id)}
@@ -794,9 +1179,13 @@ export default function HousekeepingScreen() {
             );
           }}
           ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-          style={{ backgroundColor: '#f5f5f5' }}
+          style={{ backgroundColor: '#f2f3f3' }}
           contentContainerStyle={{ paddingTop: 8, paddingBottom: 32 }}
-          ListEmptyComponent={<Text style={styles.emptyText}>No room data for this date.</Text>}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>
+              {filterCount > 0 ? 'No rooms match the current filters.' : 'No room data for this date.'}
+            </Text>
+          }
         />
       )}
 
@@ -812,7 +1201,7 @@ export default function HousekeepingScreen() {
                 const isActive = (statusOverrides[statusDropdown.roomId] ?? statusDropdown.currentStatus) === s;
                 return (
                   <React.Fragment key={s}>
-                    {i > 0 && <View style={styles.dropdownDivider} />}
+  
                     <TouchableOpacity
                       style={[styles.dropdownItem, isActive && styles.dropdownItemActive]}
                       onPress={() => applyStatusChange(s)}
@@ -865,12 +1254,77 @@ export default function HousekeepingScreen() {
         </View>
       </Modal>
 
+      {/* ── Notes detail sheet ── */}
+      <Modal visible={notesSheetVisible} animationType="none" transparent onRequestClose={closeNotesSheet}>
+        <Animated.View style={[styles.sortSheetOverlay, { opacity: notesSheetAnim }]}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeNotesSheet} />
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <Animated.View style={[styles.sortSheet, { paddingBottom: 0, transform: [{ translateY: notesSheetTranslateY }] }]}>
+              <View style={styles.sheetHandleArea} {...notesSheetPanResponder.panHandlers}>
+                <View style={styles.sortSheetHandle} />
+              </View>
+              <View style={styles.sortSheetHeader}>
+                <Text style={styles.sortSheetTitle}>Notes</Text>
+                <TouchableOpacity onPress={closeNotesSheet}>
+                  <Text style={styles.sortResetText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 24 }} keyboardShouldPersistTaps="handled">
+                {notesSheetItem?.guestComments ? (
+                  <>
+                    <Text style={styles.notesSheetSectionLabel}>Guest comments</Text>
+                    <Text style={styles.notesSheetBody}>{notesSheetItem.guestComments}</Text>
+                    <View style={styles.notesSheetDivider} />
+                  </>
+                ) : null}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <Text style={styles.notesSheetSectionLabel}>Staff note</Text>
+                  {!notesSheetEditing && notesSheetKey && notes[notesSheetKey] && (
+                    <TouchableOpacity onPress={() => { setNotesSheetDraft(notes[notesSheetKey!] ?? ''); setNotesSheetEditing(true); }}>
+                      <Ionicons name="pencil-outline" size={16} color={ORANGE} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {notesSheetEditing ? (
+                  <>
+                    <TextInput
+                      style={styles.notesSheetInput}
+                      value={notesSheetDraft}
+                      onChangeText={setNotesSheetDraft}
+                      multiline
+                      autoFocus
+                      placeholder="Add a note for housekeeping..."
+                      placeholderTextColor={COLORS.Black[600]}
+                      textAlignVertical="top"
+                    />
+                    <View style={styles.notesSheetSaveRow}>
+                      <TouchableOpacity onPress={() => setNotesSheetEditing(false)}>
+                        <Text style={styles.notesSheetCancel}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.notesSheetSaveBtn} onPress={saveSheetNote}>
+                        <Text style={styles.notesSheetSaveBtnText}>Save</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                ) : notesSheetKey && notes[notesSheetKey] ? (
+                  <Text style={styles.notesSheetBody}>{notes[notesSheetKey]}</Text>
+                ) : (
+                  <TouchableOpacity onPress={() => { setNotesSheetDraft(''); setNotesSheetEditing(true); }}>
+                    <Text style={styles.addNoteText}>+ Add staff note</Text>
+                  </TouchableOpacity>
+                )}
+              </ScrollView>
+            </Animated.View>
+          </KeyboardAvoidingView>
+        </Animated.View>
+      </Modal>
+
       {/* ── Sort bottom sheet ── */}
       <Modal visible={sortModalVisible} animationType="none" transparent onRequestClose={closeSortModal}>
         <Animated.View style={[styles.sortSheetOverlay, { opacity: sortSheetAnim }]}>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeSortModal} />
-          <Animated.View style={[styles.sortSheet, { transform: [{ translateY: sortSheetAnim.interpolate({ inputRange: [0, 1], outputRange: [400, 0] }) }] }]}>
-            <View style={styles.sortSheetHandle} />
+          <Animated.View style={[styles.sortSheet, { transform: [{ translateY: sortTranslateY }] }]}>
+            <View style={styles.sheetHandleArea} {...sortPanResponder.panHandlers}><View style={styles.sortSheetHandle} /></View>
             <View style={styles.sortSheetHeader}>
               <Text style={styles.sortSheetTitle}>Sort by</Text>
               <TouchableOpacity onPress={() => { setSort(DEFAULT_SORT); closeSortModal(); }}>
@@ -881,7 +1335,7 @@ export default function HousekeepingScreen() {
               const isSelected = sort.field === option.value;
               return (
                 <React.Fragment key={option.value}>
-                  {i > 0 && <View style={styles.dropdownDivider} />}
+
                   <TouchableOpacity
                     style={[styles.sortOptionRow, isSelected && styles.sortOptionRowActive]}
                     onPress={() => { setSort(prev => ({ ...prev, field: option.value })); closeSortModal(); }}
@@ -904,8 +1358,8 @@ export default function HousekeepingScreen() {
       <Modal visible={assignModalVisible} animationType="none" transparent onRequestClose={closeAssignModal}>
         <Animated.View style={[styles.sortSheetOverlay, { opacity: assignSheetAnim }]}>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeAssignModal} />
-          <Animated.View style={[styles.sortSheet, { transform: [{ translateY: assignSheetAnim.interpolate({ inputRange: [0, 1], outputRange: [400, 0] }) }] }]}>
-            <View style={styles.sortSheetHandle} />
+          <Animated.View style={[styles.sortSheet, { transform: [{ translateY: assignTranslateY }] }]}>
+            <View style={styles.sheetHandleArea} {...assignPanResponder.panHandlers}><View style={styles.sortSheetHandle} /></View>
             <View style={styles.sortSheetHeader}>
               <Text style={styles.sortSheetTitle}>Assign housekeeper</Text>
               <TouchableOpacity onPress={confirmAssignment}>
@@ -916,7 +1370,7 @@ export default function HousekeepingScreen() {
               const isSelected = assigningRoomId ? assignments[assigningRoomId] === name : false;
               return (
                 <React.Fragment key={name}>
-                  {i > 0 && <View style={styles.dropdownDivider} />}
+
                   <TouchableOpacity
                     style={[styles.sortOptionRow, isSelected && styles.sortOptionRowActive]}
                     onPress={() => {
@@ -937,25 +1391,180 @@ export default function HousekeepingScreen() {
         </Animated.View>
       </Modal>
 
+      {/* ── Filter bottom sheet ── */}
+      <Modal visible={filterSheetVisible} animationType="none" transparent onRequestClose={closeFilterSheet}>
+        <Animated.View style={[styles.sortSheetOverlay, { opacity: filterSheetAnim }]}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeFilterSheet} />
+          <Animated.View style={[styles.sortSheet, { height: WINDOW_HEIGHT * 0.85, paddingBottom: 0, transform: [{ translateY: filterTranslateY }] }]}>
+            <View style={styles.sheetHandleArea} {...filterPanResponder.panHandlers}>
+              <View style={styles.sortSheetHandle} />
+            </View>
+            <View style={styles.sortSheetHeader}>
+              <Text style={styles.sortSheetTitle}>Filter</Text>
+              <TouchableOpacity onPress={() => setFilters(DEFAULT_FILTERS)}>
+                <Text style={styles.sortResetText}>Reset</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
+            {/* Room type — multi-select chips */}
+            <View style={styles.filterSection}>
+                <Text style={styles.filterSectionLabel}>ROOM TYPE</Text>
+                <View style={styles.filterChipRow}>
+                  {ROOM_TYPE_OPTIONS.map(type => {
+                    const isActive = filters.roomTypes.includes(type);
+                    return (
+                      <TouchableOpacity
+                        key={type}
+                        activeOpacity={0.75}
+                        style={[styles.filterChip, { borderColor: isActive ? '#ff6842' : '#d1d5db', backgroundColor: isActive ? '#fff5ee' : '#fff' }]}
+                        onPress={() => setFilters(prev => ({
+                          ...prev,
+                          roomTypes: isActive ? prev.roomTypes.filter(x => x !== type) : [...prev.roomTypes, type],
+                        }))}
+                      >
+                        <Text style={[styles.filterChipText, { color: isActive ? '#ff6842' : '#333', fontWeight: isActive ? '600' : '400' }]}>{type}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Room status — multi-select chips */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionLabel}>ROOM STATUS</Text>
+                <View style={styles.filterChipRow}>
+                  {ROOM_STATUS_OPTIONS.map(status => {
+                    const isActive = filters.roomStatuses.includes(status);
+                    return (
+                      <TouchableOpacity
+                        key={status}
+                        activeOpacity={0.75}
+                        style={[styles.filterChip, { borderColor: isActive ? '#ff6842' : '#d1d5db', backgroundColor: isActive ? '#fff5ee' : '#fff' }]}
+                        onPress={() => setFilters(prev => ({
+                          ...prev,
+                          roomStatuses: isActive ? prev.roomStatuses.filter(x => x !== status) : [...prev.roomStatuses, status],
+                        }))}
+                      >
+                        <Text style={[styles.filterChipText, { color: isActive ? '#ff6842' : '#333', fontWeight: isActive ? '600' : '400' }]}>{status}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Cleaning status — multi-select chips */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionLabel}>CLEANING STATUS</Text>
+                <View style={styles.filterChipRow}>
+                  {CLEANING_STATUS_OPTIONS.map(s => {
+                    const isActive = filters.cleaningStatuses.includes(s);
+                    return (
+                      <TouchableOpacity
+                        key={s}
+                        activeOpacity={0.75}
+                        style={[styles.filterChip, { borderColor: isActive ? '#ff6842' : '#d1d5db', backgroundColor: isActive ? '#fff5ee' : '#fff' }]}
+                        onPress={() => setFilters(prev => ({
+                          ...prev,
+                          cleaningStatuses: isActive ? prev.cleaningStatuses.filter(x => x !== s) : [...prev.cleaningStatuses, s],
+                        }))}
+                      >
+                        <Text style={[styles.filterChipText, { color: isActive ? '#ff6842' : '#333', fontWeight: isActive ? '600' : '400' }]}>{s}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Checkouts — chips */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionLabel}>CHECKOUTS</Text>
+                <View style={styles.filterChipRow}>
+                  {([
+                    { key: 'lateCheckout',  label: 'Late'  },
+                    { key: 'earlyCheckout', label: 'Early' },
+                  ] as { key: 'lateCheckout' | 'earlyCheckout'; label: string }[]).map(item => {
+                    const isActive = filters[item.key];
+                    return (
+                      <TouchableOpacity
+                        key={item.key}
+                        activeOpacity={0.75}
+                        style={[styles.filterChip, isActive ? styles.filterChipActive : styles.filterChipInactive]}
+                        onPress={() => setFilters(prev => ({ ...prev, [item.key]: !prev[item.key] }))}
+                      >
+                        <Text style={[styles.filterChipText, { color: isActive ? '#ff6842' : '#333', fontWeight: isActive ? '600' : '400' }]}>{item.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Notes — chips */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionLabel}>NOTES</Text>
+                <View style={styles.filterChipRow}>
+                  {([
+                    { key: 'includeStaffNotes',    label: 'Staff notes'     },
+                    { key: 'includeGuestComments', label: 'Guest comments'  },
+                  ] as { key: 'includeStaffNotes' | 'includeGuestComments'; label: string }[]).map(opt => {
+                    const isActive = filters[opt.key];
+                    return (
+                      <TouchableOpacity
+                        key={opt.key}
+                        activeOpacity={0.75}
+                        style={[styles.filterChip, isActive ? styles.filterChipActive : styles.filterChipInactive]}
+                        onPress={() => setFilters(prev => ({ ...prev, [opt.key]: !prev[opt.key] }))}
+                      >
+                        <Text style={[styles.filterChipText, { color: isActive ? '#ff6842' : '#333', fontWeight: isActive ? '600' : '400' }]}>{opt.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* Save — pinned footer */}
+            <View style={[styles.autoFooter, styles.filterSaveFooter, { paddingBottom: insets.bottom + 16 }]}>
+              <TouchableOpacity style={styles.autoDoneBtn} onPress={closeFilterSheet}>
+                <Text style={styles.autoDoneBtnText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </Animated.View>
+      </Modal>
+
       {/* ── Demo flags bottom sheet ── */}
       <Modal visible={demoSheetVisible} animationType="none" transparent onRequestClose={closeDemoSheet}>
         <Animated.View style={[styles.sortSheetOverlay, { opacity: demoSheetAnim }]}>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeDemoSheet} />
-          <Animated.View style={[styles.sortSheet, { transform: [{ translateY: demoSheetAnim.interpolate({ inputRange: [0, 1], outputRange: [400, 0] }) }] }]}>
-            <View style={styles.sortSheetHandle} />
+          <Animated.View style={[styles.sortSheet, { transform: [{ translateY: demoTranslateY }] }]}>
+            <View style={styles.sheetHandleArea} {...demoPanResponder.panHandlers}><View style={styles.sortSheetHandle} /></View>
             <View style={styles.sortSheetHeader}>
               <Text style={styles.sortSheetTitle}>Demo flags</Text>
-              <TouchableOpacity onPress={() => setFlags({ ...FLAGS })}>
+              <TouchableOpacity onPress={() => { setFlags({ ...FLAGS }); setHousekeeperMode(false); }}>
                 <Text style={styles.sortResetText}>Reset</Text>
               </TouchableOpacity>
             </View>
+
+            {/* View mode */}
+            <View style={styles.demoFlagRow}>
+              <Text style={styles.demoFlagLabel}>Housekeeper view</Text>
+              <Switch
+                value={housekeeperMode}
+                onValueChange={setHousekeeperMode}
+                trackColor={{ false: '#e5e7eb', true: ORANGE }}
+                thumbColor="#fff"
+              />
+            </View>
+            <View style={styles.dropdownDivider} />
+            <View style={[styles.dropdownDivider, { marginBottom: 8 }]} />
+
             {([
               { key: 'showGuestName',         label: 'Guest name' },
               { key: 'showGuestPax',          label: 'Pax counts' },
-              { key: 'showGuestDates',        label: 'Check-in / check-out dates' },
               { key: 'showBedConfig',         label: 'Bed configuration' },
-              { key: 'showLateCheckout',      label: 'Late checkout badge' },
-              { key: 'showAssignHousekeeper', label: 'Assign housekeeper' },
+              { key: 'showLateCheckout',      label: 'Early check-in & late check-out badge' },
+              { key: 'showReservationId',    label: 'Reservation ID' },
             ] as { key: keyof typeof FLAGS; label: string }[]).map((item, i) => (
               <React.Fragment key={item.key}>
                 {i > 0 && <View style={styles.dropdownDivider} />}
@@ -970,6 +1579,68 @@ export default function HousekeepingScreen() {
                 </View>
               </React.Fragment>
             ))}
+          </Animated.View>
+        </Animated.View>
+      </Modal>
+
+      {/* ── Automations bottom sheet ── */}
+      <Modal visible={autoSheetVisible} animationType="none" transparent onRequestClose={closeAutoSheet}>
+        <Animated.View style={[styles.sortSheetOverlay, { opacity: autoSheetAnim }]}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeAutoSheet} />
+          <Animated.View style={[styles.sortSheet, { paddingBottom: 0, transform: [{ translateY: autoTranslateY }] }]}>
+            <View style={styles.sheetHandleArea} {...autoPanResponder.panHandlers}><View style={styles.sortSheetHandle} /></View>
+            <View style={styles.sortSheetHeader}>
+              <Text style={styles.sortSheetTitle}>Automations</Text>
+              <TouchableOpacity onPress={() => { setDeepCleanDays('3'); setNightlyResetOccupied(false); setResetAfterCheckout(true); setResetAfterClosure(true); }}>
+                <Text style={styles.sortResetText}>Reset</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.autoSheetSubtitle}>Rules that run on page load to keep cleaning statuses up to date.</Text>
+
+            {/* Deep clean section */}
+            <View style={styles.autoSection}>
+              <Text style={styles.autoSectionTitle}>Deep clean after N days of occupancy</Text>
+              <Text style={styles.autoSectionDesc}>Flags rooms occupied for N or more consecutive days as Need Deep Cleaning.</Text>
+              <View style={styles.autoInputRow}>
+                <TextInput
+                  style={styles.autoInput}
+                  value={deepCleanDays}
+                  onChangeText={setDeepCleanDays}
+                  keyboardType="numeric"
+                  maxLength={3}
+                />
+                <Text style={styles.autoInputSuffix}>days</Text>
+              </View>
+            </View>
+
+            <View style={styles.autoSeparator} />
+
+            {/* Checkbox rows */}
+            {([
+              { key: 'nightlyResetOccupied',  label: 'Nightly reset for occupied rooms',         desc: 'Resets all occupied rooms to Need Cleaning each day.',                            value: nightlyResetOccupied, set: setNightlyResetOccupied },
+              { key: 'resetAfterCheckout',    label: 'Reset to Need Cleaning after check-out',   desc: 'Sets departing rooms to Need Cleaning on check-out day.',                        value: resetAfterCheckout,   set: setResetAfterCheckout },
+              { key: 'resetAfterClosure',     label: 'Reset to Need Cleaning after room closure ends', desc: 'Clears rooms returning from maintenance or renovation closures.',           value: resetAfterClosure,    set: setResetAfterClosure },
+            ] as const).map(({ key, label, desc, value, set }) => (
+              <TouchableOpacity key={key} style={styles.autoCheckRow} onPress={() => (set as (v: boolean) => void)(!value)} activeOpacity={0.7}>
+                <MaterialIcons
+                  name={value ? 'check-box' : 'check-box-outline-blank'}
+                  size={22}
+                  color={value ? '#e8722a' : '#9ca3af'}
+                  style={{ marginTop: 1 }}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.autoCheckLabel}>{label}</Text>
+                  <Text style={styles.autoCheckDesc}>{desc}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+
+            {/* Done button */}
+            <View style={[styles.autoFooter, { paddingBottom: insets.bottom + 16 }]}>
+              <TouchableOpacity style={styles.autoDoneBtn} onPress={closeAutoSheet}>
+                <Text style={styles.autoDoneBtnText}>Save</Text>
+              </TouchableOpacity>
+            </View>
           </Animated.View>
         </Animated.View>
       </Modal>
@@ -1031,125 +1702,126 @@ export default function HousekeepingScreen() {
 
           </ScrollView>
 
-          {/* ── Bottom sheet: print settings ── */}
-          <View style={styles.printSheet}>
-            {/* Tappable header */}
-            <TouchableOpacity style={styles.printSheetHeader} onPress={toggleSettingsSheet} activeOpacity={0.8}>
-              <View style={styles.printSheetHandlePill} />
-              <View style={styles.printSheetTitleRow}>
-                <Text style={styles.printSheetTitleText}>Print Settings</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={styles.printSheetPageCount}>{printPageCount} page{printPageCount !== 1 ? 's' : ''}</Text>
-                  <Ionicons name={settingsSheetOpen ? 'chevron-down' : 'chevron-up'} size={16} color="#6b7280" />
-                </View>
-              </View>
-            </TouchableOpacity>
-
-            {/* Expandable settings */}
+          {/* ── Print settings sheet — standard bottom sheet overlay ── */}
+          {printSettingsVisible && (
             <Animated.View style={{
-              maxHeight: settingsSheetAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 500] }),
-              overflow: 'hidden',
+              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+              justifyContent: 'flex-end',
+              backgroundColor: 'rgba(0,0,0,0.35)',
+              opacity: printSettingsSheetAnim,
             }}>
-              <View style={styles.printSheetDivider} />
-
-              <View style={styles.printSettingsRow}>
-                <Text style={styles.printSettingsLabel}>Destination</Text>
-                <View style={styles.printSettingsSelect}>
-                  <Ionicons name="document-outline" size={15} color="#6b7280" />
-                  <Text style={styles.printSettingsSelectText}>Save as PDF</Text>
-                  <Ionicons name="chevron-down" size={13} color="#6b7280" />
+              <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closePrintSettings} />
+              <Animated.View style={[styles.printSheet, { paddingBottom: 0, transform: [{ translateY: printSettingsTranslateY }] }]}>
+                <View style={styles.sheetHandleArea} {...printSettingsPanResponder.panHandlers}>
+                  <View style={styles.sortSheetHandle} />
                 </View>
-              </View>
-
-              <View style={styles.printSettingsRow}>
-                <Text style={styles.printSettingsLabel}>Pages</Text>
-                <View style={styles.printSettingsSelect}>
-                  <Text style={styles.printSettingsSelectText}>All</Text>
-                  <Ionicons name="chevron-down" size={13} color="#6b7280" />
+                <View style={styles.printSheetTitleRow}>
+                  <Text style={styles.printSheetTitleText}>Print Settings</Text>
+                  <Text style={styles.printSheetPageCount}>{printPageCount} page{printPageCount !== 1 ? 's' : ''}</Text>
                 </View>
-              </View>
 
-              <View style={styles.printSettingsRow}>
-                <Text style={styles.printSettingsLabel}>Layout</Text>
-                <View style={styles.printSettingsSelect}>
-                  <Text style={styles.printSettingsSelectText}>Portrait</Text>
-                  <Ionicons name="chevron-down" size={13} color="#6b7280" />
-                </View>
-              </View>
+                <ScrollView contentContainerStyle={{ paddingBottom: 8 }}>
+                  <View style={styles.printSheetDivider} />
 
-              <View style={styles.printSettingsDivider} />
+                  <View style={styles.printSettingsRow}>
+                    <Text style={styles.printSettingsLabel}>Destination</Text>
+                    <View style={styles.printSettingsSelect}>
+                      <Ionicons name="document-outline" size={15} color={COLORS.Black[400]} />
+                      <Text style={styles.printSettingsSelectText}>Save as PDF</Text>
+                      <Ionicons name="chevron-down" size={13} color={COLORS.Black[400]} />
+                    </View>
+                  </View>
 
-              <TouchableOpacity style={styles.printSettingsRow} onPress={() => setMoreSettingsExpanded(v => !v)}>
-                <Text style={styles.printSettingsLabel}>More settings</Text>
-                <Ionicons name={moreSettingsExpanded ? 'chevron-up' : 'chevron-down'} size={16} color="#111" />
-              </TouchableOpacity>
+                  <View style={styles.printSettingsRow}>
+                    <Text style={styles.printSettingsLabel}>Pages</Text>
+                    <View style={styles.printSettingsSelect}>
+                      <Text style={styles.printSettingsSelectText}>All</Text>
+                      <Ionicons name="chevron-down" size={13} color={COLORS.Black[400]} />
+                    </View>
+                  </View>
 
-              {moreSettingsExpanded && (
-                <>
                   <View style={styles.printSettingsRow}>
-                    <Text style={styles.printSettingsLabel}>Paper size</Text>
+                    <Text style={styles.printSettingsLabel}>Layout</Text>
                     <View style={styles.printSettingsSelect}>
-                      <Text style={styles.printSettingsSelectText}>A4</Text>
-                      <Ionicons name="chevron-down" size={13} color="#6b7280" />
+                      <Text style={styles.printSettingsSelectText}>Portrait</Text>
+                      <Ionicons name="chevron-down" size={13} color={COLORS.Black[400]} />
                     </View>
                   </View>
-                  <View style={styles.printSettingsRow}>
-                    <Text style={styles.printSettingsLabel}>Pages per sheet</Text>
-                    <View style={styles.printSettingsSelect}>
-                      <Text style={styles.printSettingsSelectText}>1</Text>
-                      <Ionicons name="chevron-down" size={13} color="#6b7280" />
-                    </View>
-                  </View>
-                  <View style={styles.printSettingsRow}>
-                    <Text style={styles.printSettingsLabel}>Margins</Text>
-                    <View style={styles.printSettingsSelect}>
-                      <Text style={styles.printSettingsSelectText}>Default</Text>
-                      <Ionicons name="chevron-down" size={13} color="#6b7280" />
-                    </View>
-                  </View>
-                  <View style={styles.printSettingsRow}>
-                    <Text style={styles.printSettingsLabel}>Scale</Text>
-                    <View style={styles.printSettingsSelect}>
-                      <Text style={styles.printSettingsSelectText}>Default</Text>
-                      <Ionicons name="chevron-down" size={13} color="#6b7280" />
-                    </View>
-                  </View>
-                  <View style={[styles.printSettingsRow, { alignItems: 'flex-start' }]}>
-                    <Text style={styles.printSettingsLabel}>Options</Text>
-                    <View>
-                      <TouchableOpacity style={styles.printCheckRow} onPress={() => setHeadersAndFooters(v => !v)}>
-                        <View style={[styles.printCheckbox, headersAndFooters && styles.printCheckboxChecked]}>
-                          {headersAndFooters && <Ionicons name="checkmark" size={11} color="#fff" />}
-                        </View>
-                        <Text style={styles.printCheckLabel}>Headers and footers</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.printCheckRow}>
-                        <View style={styles.printCheckbox} />
-                        <Text style={styles.printCheckLabel}>Background graphics</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
+
                   <View style={styles.printSettingsDivider} />
-                  <TouchableOpacity style={styles.printExternalRow}>
-                    <Text style={styles.printExternalText}>Print using system dialogue...</Text>
-                    <Ionicons name="open-outline" size={14} color="#374151" />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.printExternalRow}>
-                    <Text style={styles.printExternalText}>Open PDF in Preview</Text>
-                    <Ionicons name="open-outline" size={14} color="#374151" />
-                  </TouchableOpacity>
-                </>
-              )}
-            </Animated.View>
 
-            {/* Print button */}
-            <View style={[styles.printPreviewFooter, { paddingBottom: insets.bottom + 12 }]}>
-              <TouchableOpacity style={styles.printConfirmBtn}>
-                <Ionicons name="print-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={styles.printConfirmBtnText}>Print</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+                  <TouchableOpacity style={styles.printSettingsRow} onPress={() => setMoreSettingsExpanded(v => !v)}>
+                    <Text style={styles.printSettingsLabel}>More settings</Text>
+                    <Ionicons name={moreSettingsExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={COLORS.Black[100]} />
+                  </TouchableOpacity>
+
+                  {moreSettingsExpanded && (
+                    <>
+                      <View style={styles.printSettingsRow}>
+                        <Text style={styles.printSettingsLabel}>Paper size</Text>
+                        <View style={styles.printSettingsSelect}>
+                          <Text style={styles.printSettingsSelectText}>A4</Text>
+                          <Ionicons name="chevron-down" size={13} color={COLORS.Black[400]} />
+                        </View>
+                      </View>
+                      <View style={styles.printSettingsRow}>
+                        <Text style={styles.printSettingsLabel}>Pages per sheet</Text>
+                        <View style={styles.printSettingsSelect}>
+                          <Text style={styles.printSettingsSelectText}>1</Text>
+                          <Ionicons name="chevron-down" size={13} color={COLORS.Black[400]} />
+                        </View>
+                      </View>
+                      <View style={styles.printSettingsRow}>
+                        <Text style={styles.printSettingsLabel}>Margins</Text>
+                        <View style={styles.printSettingsSelect}>
+                          <Text style={styles.printSettingsSelectText}>Default</Text>
+                          <Ionicons name="chevron-down" size={13} color={COLORS.Black[400]} />
+                        </View>
+                      </View>
+                      <View style={styles.printSettingsRow}>
+                        <Text style={styles.printSettingsLabel}>Scale</Text>
+                        <View style={styles.printSettingsSelect}>
+                          <Text style={styles.printSettingsSelectText}>Default</Text>
+                          <Ionicons name="chevron-down" size={13} color={COLORS.Black[400]} />
+                        </View>
+                      </View>
+                      <View style={[styles.printSettingsRow, { alignItems: 'flex-start' }]}>
+                        <Text style={styles.printSettingsLabel}>Options</Text>
+                        <View>
+                          <TouchableOpacity style={styles.printCheckRow} onPress={() => setHeadersAndFooters(v => !v)}>
+                            <View style={[styles.printCheckbox, headersAndFooters && styles.printCheckboxChecked]}>
+                              {headersAndFooters && <Ionicons name="checkmark" size={11} color="#fff" />}
+                            </View>
+                            <Text style={styles.printCheckLabel}>Headers and footers</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={styles.printCheckRow}>
+                            <View style={styles.printCheckbox} />
+                            <Text style={styles.printCheckLabel}>Background graphics</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                      <View style={styles.printSettingsDivider} />
+                      <TouchableOpacity style={styles.printExternalRow}>
+                        <Text style={styles.printExternalText}>Print using system dialogue...</Text>
+                        <Ionicons name="open-outline" size={14} color={COLORS.Black[300]} />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.printExternalRow}>
+                        <Text style={styles.printExternalText}>Open PDF in Preview</Text>
+                        <Ionicons name="open-outline" size={14} color={COLORS.Black[300]} />
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </ScrollView>
+
+                <View style={[styles.printPreviewFooter, { paddingBottom: insets.bottom + 12 }]}>
+                  <TouchableOpacity style={styles.printConfirmBtn}>
+                    <Ionicons name="print-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
+                    <Text style={styles.printConfirmBtnText}>Print</Text>
+                  </TouchableOpacity>
+                </View>
+              </Animated.View>
+            </Animated.View>
+          )}
         </View>
       </Modal>
 
@@ -1165,6 +1837,7 @@ export default function HousekeepingScreen() {
             <Text style={styles.modalTitle}>Select dates</Text>
             <View style={{ width: 24 }} />
           </View>
+          <Text style={styles.dateModalHelper}>Date ranges are limited to 28 days from today.</Text>
 
           <ScrollView>
             {/* Start date field */}
@@ -1187,6 +1860,7 @@ export default function HousekeepingScreen() {
 
             {expandedField === 'start' && (
               <Calendar
+                maxDate={addDays(today, 28)}
                 onDayPress={(day: { dateString: string }) => {
                   setPendingStart(day.dateString);
                   setExpandedField('end');
@@ -1220,6 +1894,7 @@ export default function HousekeepingScreen() {
             {expandedField === 'end' && (
               <Calendar
                 minDate={pendingStart ?? undefined}
+                maxDate={addDays(today, 28)}
                 onDayPress={(day: { dateString: string }) => {
                   setPendingEnd(day.dateString);
                   setExpandedField(null);
@@ -1252,23 +1927,37 @@ export default function HousekeepingScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  container: { flex: 1, backgroundColor: '#f2f3f3' },
 
   // Header
-  header: {
+  closeBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  headerBottom: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    justifyContent: 'space-between',
+  },
+  header: {
+    flexDirection: 'column',
     backgroundColor: '#fff',
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 12,
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderColor: '#e5e7eb',
   },
-  headerLabel: { fontSize: 11, color: '#9ca3af', fontWeight: '600', letterSpacing: 1 },
-  headerDate:  { fontSize: 22, fontWeight: '700', color: '#111', marginTop: 2 },
-  clearBtn:    { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 8 },
+  headerLabel: { fontSize: 16, color: '#333', fontWeight: '600', position: 'absolute', left: 0, right: 0, textAlign: 'center' },
+  headerDate:  { fontSize: 22, fontFamily: 'ValueSerifTrial-Medium', color: '#111', marginTop: 2, lineHeight: 30 },
+  clearBtn:    { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 4, alignSelf: 'center' },
   clearBtnText: { fontSize: 13, color: '#9ca3af' },
   printBtn: { padding: 4, marginLeft: 8 },
   sortToolbar: {
@@ -1278,13 +1967,51 @@ const styles = StyleSheet.create({
     paddingLeft: 16,
     paddingTop: 16,
     paddingBottom: 4,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f2f3f3',
   },
   sortBtn:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
   sortBtnText: { fontSize: 13, color: ORANGE, fontWeight: '600' },
-  sortToolbarSep: { width: 1, height: 14, backgroundColor: '#d1d5db', marginHorizontal: 12 },
+  sortToolbarSep: { width: 1, height: 14, backgroundColor: '#d1d5db', marginHorizontal: 4 },
+  sortToolbarPrint: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 6, marginRight: 16 },
+  sortToolbarPrintText: { fontSize: 13, color: ORANGE, fontWeight: '600' },
   demoBtn:     { flexDirection: 'row', alignItems: 'center' },
   demoBtnText: { fontSize: 13, color: '#6b7280', fontWeight: '500' },
+
+  // Filter button
+  filterBtn:      { flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 6 },
+  filterBtnText:  { fontSize: 13, color: ORANGE, fontWeight: '600' },
+  filterBadge:    { minWidth: 16, height: 16, borderRadius: 8, backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
+  filterBadgeText: { fontSize: 10, color: '#fff', fontWeight: '700' },
+
+  // Filter sheet
+  filterSection:      { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20 },
+  filterSectionLabel: { fontSize: 11, fontWeight: '700', color: '#9ca3af', letterSpacing: 0.8, marginBottom: 16 },
+  filterChipRow:      { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  // Segmented control
+  segmentedControl: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 10,
+    padding: 3,
+  },
+  segmentedSegment: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  segmentedSegmentActive: {
+    borderWidth: 2,
+    borderColor: '#111',
+  },
+  segmentedText:       { fontSize: 15, color: '#6b7280', fontWeight: '400' },
+  segmentedTextActive: { color: '#111', fontWeight: '600' },
+
+  filterChip:         { borderWidth: 1, borderRadius: 4, paddingHorizontal: 16, height: 34, minWidth: 48, alignItems: 'center', justifyContent: 'center' },
+  filterChipActive:   { borderColor: '#ff6842', backgroundColor: '#fff5ee' },
+  filterChipInactive: { borderColor: '#ccd1d1', backgroundColor: '#fff' },
+  filterChipText:     { fontSize: 14, fontWeight: '400' },
 
   // Demo flags sheet
   demoFlagRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14 },
@@ -1330,32 +2057,36 @@ const styles = StyleSheet.create({
   // Room rows
   row: {
     backgroundColor: '#fff',
-    marginHorizontal: 8,
-    borderRadius: 12,
+    marginHorizontal: 16,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#f3f4f6',
+    borderColor: '#E5E8E8',
     paddingHorizontal: 12,
-    paddingTop: 14,
-    paddingBottom: 12,
+    paddingTop: 20,
+    paddingBottom: 0,
+    overflow: 'hidden',
   },
   rowTop:   { flexDirection: 'row', alignItems: 'center' },
-  rowLeft:  { flex: 1, gap: 6 },
+  rowLeft:  { flex: 1, gap: 4 },
   rowRight: { flexDirection: 'row', gap: 24, alignItems: 'center' },
 
   cardDivider: { height: 1, backgroundColor: '#f3f4f6', marginHorizontal: -16, marginTop: 12 },
 
   // Notes area
-  noteArea: { marginTop: 16, borderTopWidth: 1, borderColor: '#e5e7eb', marginHorizontal: -12, paddingHorizontal: 12, paddingTop: 12 },
-  noteActionRow: { flexDirection: 'row', alignItems: 'center' },
-  noteRow:  { flex: 1 },
+  noteArea: { marginTop: 16, borderTopWidth: 1, borderColor: '#F2F2F7', marginHorizontal: -12, paddingHorizontal: 12, paddingTop: 8, paddingBottom: 8 },
+  guestCommentsLabel: { fontSize: 11, color: '#9ca3af', fontWeight: '600' as const, flexShrink: 0 },
+  staffNoteLabel:     { fontSize: 11, color: '#9ca3af', fontWeight: '600' as const, fontStyle: 'normal' as const },
+  guestCommentsText: { fontSize: 12, color: '#9ca3af', fontStyle: 'italic' as const },
+  noteActionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  noteRow:  { flex: 1, height: 24, justifyContent: 'center' },
   noteAssignDivider: { width: 1, alignSelf: 'stretch', backgroundColor: '#e5e7eb', marginHorizontal: 12 },
   noteActionDivider: { width: 1, height: 16, backgroundColor: '#d1d5db', marginHorizontal: 8 },
-  assignBtn: { width: 80, alignItems: 'flex-end' },
-  assignBtnText: { fontSize: 13, color: ORANGE, fontWeight: '600', textAlign: 'right' },
-  noteText: { fontSize: 13, color: '#374151', fontStyle: 'italic', lineHeight: 18 },
+  assignBtn: { width: 80, height: 24, alignItems: 'flex-end', justifyContent: 'center' },
+  assignBtnText: { fontSize: 12, color: ORANGE, fontWeight: '700', textAlign: 'right' },
+  noteText: { fontSize: 12, color: '#9ca3af', fontStyle: 'italic' as const },
   editNoteBtn:     { paddingLeft: 4 },
   editNoteBtnText: { fontSize: 13, color: ORANGE, fontWeight: '600' },
-  addNoteText:     { fontSize: 13, color: ORANGE, fontWeight: '600' },
+  addNoteText:     { fontSize: 12, color: ORANGE, fontWeight: '700' },
 
   // Notes input
   notesInput: {
@@ -1371,27 +2102,46 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   roomTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
-  roomNumber:   { fontSize: 14, fontWeight: '600', color: '#111' },
+  roomNumber:   { fontSize: 16, fontWeight: '600', color: '#212323' },
   roomTitleSep: { width: 2, height: 2, borderRadius: 1, backgroundColor: '#9ca3af' },
-  roomType:     { fontSize: 12, fontWeight: '500', color: '#111', flexShrink: 1 },
+  roomType:     { fontSize: 11, fontWeight: '700', color: '#9BA0A0', flexShrink: 1 },
 
   // Guest info section
   guestInfoSection: {
-    marginTop: 16,
+    marginTop: 12,
   },
-  guestNameText: { fontSize: 12, fontWeight: '500', color: '#111' },
+  guestNameText:     { fontSize: 12, fontWeight: '400', color: '#333333' },
+  reservationIdText: { fontSize: 12, color: '#333333' },
   guestDatesRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  guestBadgeRow: { flexDirection: 'row', gap: 16, marginTop: 16 },
+  guestBadgeRow: { flexDirection: 'row', gap: 4, marginTop: 16 },
   guestDatesText: { fontSize: 12, color: '#111' },
   lateCheckoutBadge: {
-    backgroundColor: '#fff7ed',
-    borderWidth: 1,
-    borderColor: '#fed7aa',
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    backgroundColor: '#FFE2D7',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    alignSelf: 'flex-start',
   },
-  lateCheckoutText: { fontSize: 11, fontWeight: '600', color: '#c2410c' },
+  lateCheckoutText: { fontSize: 11, fontWeight: '600', color: '#FF6842', letterSpacing: -0.1, lineHeight: 20 },
+  standardBadge: {
+    backgroundColor: COLORS.Background.Brown,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    alignSelf: 'flex-start',
+  },
+  standardBadgeText: { fontSize: 11, fontWeight: '600', color: COLORS.Black[400], letterSpacing: -0.1, lineHeight: 20 },
+  notesSheetSectionLabel: { fontSize: 11, fontWeight: '700' as const, color: COLORS.Black[500], letterSpacing: 0.5, textTransform: 'uppercase' as const, marginBottom: 8 },
+  notesSheetBody: { fontSize: 14, color: COLORS.Black[200], lineHeight: 21 },
+  notesSheetDivider: { height: 1, backgroundColor: COLORS.Background.Stroke, marginVertical: 20 },
+  notesSheetInput: {
+    borderWidth: 1, borderColor: COLORS.Background.Stroke, borderRadius: 8,
+    paddingHorizontal: 12, paddingVertical: 10,
+    fontSize: 14, color: COLORS.Black[200], lineHeight: 21,
+    minHeight: 80, textAlignVertical: 'top' as const,
+  },
+  notesSheetSaveRow: { flexDirection: 'row' as const, justifyContent: 'flex-end' as const, alignItems: 'center' as const, gap: 16, marginTop: 12 },
+  notesSheetCancel: { fontSize: 14, color: COLORS.Black[400] },
+  notesSheetSaveBtn: { backgroundColor: ORANGE, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 8 },
+  notesSheetSaveBtnText: { fontSize: 14, fontWeight: '600' as const, color: '#fff' },
 
   // Bed config
   bedConfigRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },
@@ -1406,7 +2156,7 @@ const styles = StyleSheet.create({
   occupancyRow:   { flexDirection: 'row', alignItems: 'center', gap: 8 },
   occupancyLabel: { fontSize: 12, color: '#6b7280', fontWeight: '500' },
   occupancyItem:  { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  occupancyCount: { fontSize: 12, color: '#6b7280', fontWeight: '500' },
+  occupancyCount: { fontSize: 12, color: COLORS.Black[200], fontWeight: '400' },
   unoccupiedText: { fontSize: 12, color: '#6b7280', fontWeight: '500' },
 
   // symbol container styles — all 30×30 so every icon sits in the same footprint
@@ -1430,6 +2180,20 @@ const styles = StyleSheet.create({
   badgeInteractive: { flexDirection: 'row', alignItems: 'center', height: 40, paddingLeft: 4, paddingRight: 8 },
   badgeText:        { fontSize: 11, fontWeight: '600' },
   badgeNeutral:     { backgroundColor: '#f3f4f6', borderRadius: 8 },
+
+  // Figma pill-style cleaning status button (icon variant)
+  cleaningBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 34,
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    overflow: 'hidden',
+  },
+  cleaningBtnText: { fontSize: 12, fontWeight: '700', lineHeight: 16 },
 
   // Occupancy status text (plain, inline with room number)
   occupancyStatusText: { fontSize: 12, fontWeight: '700' },
@@ -1462,7 +2226,7 @@ const styles = StyleSheet.create({
   separator:       { height: 1, backgroundColor: '#f3f4f6' },
   errorText:       { textAlign: 'center', color: 'red', marginTop: 40 },
   emptyText:       { textAlign: 'center', color: '#9ca3af', marginTop: 40 },
-  sectionHeader:   { backgroundColor: '#f5f5f5', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10 },
+  sectionHeader:   { backgroundColor: '#f2f3f3', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10 },
   sectionHeaderText: { fontSize: 11, fontWeight: '700', color: '#6b7280', letterSpacing: 0.8 },
 
   // Modal
@@ -1477,6 +2241,7 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   modalTitle: { fontSize: 16, fontWeight: '700', color: '#111' },
+  dateModalHelper: { fontSize: 12, color: '#9ca3af', textAlign: 'center', paddingTop: 16, paddingBottom: 12 },
 
   // Date fields
   dateField: {
@@ -1494,7 +2259,7 @@ const styles = StyleSheet.create({
   fieldDivider: { height: 1, backgroundColor: '#f3f4f6', marginHorizontal: 16 },
 
   // Sort toolbar direction toggle
-  sortDirToggle: { padding: 6, marginLeft: 0 },
+  sortDirToggle: { padding: 6, marginLeft: 0, marginRight: -2 },
 
   // Sort bottom sheet
   sortSheetOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.35)' },
@@ -1507,8 +2272,10 @@ const styles = StyleSheet.create({
   sortSheetHandle: {
     width: 36, height: 4, borderRadius: 2,
     backgroundColor: '#d1d5db',
-    alignSelf: 'center',
-    marginTop: 10, marginBottom: 2,
+  },
+  sheetHandleArea: {
+    width: '100%', paddingVertical: 14,
+    alignItems: 'center', justifyContent: 'center',
   },
   sortSheetHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -1544,7 +2311,7 @@ const styles = StyleSheet.create({
   applyBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
   // Print preview
-  printPreviewSafe: { flex: 1, backgroundColor: '#f5f5f5' },
+  printPreviewSafe: { flex: 1, backgroundColor: '#f2f3f3' },
   printPreviewHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 12,
@@ -1607,7 +2374,7 @@ const styles = StyleSheet.create({
   },
   printSheetTitleRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    width: '100%',
+    paddingHorizontal: 20, paddingBottom: 14,
   },
   printSheetTitleText: { fontSize: 16, fontWeight: '700', color: '#111' },
   printSheetPageCount: { fontSize: 14, color: '#6b7280' },
@@ -1646,4 +2413,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
   },
   printConfirmBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+
+  // Automations sheet
+  autoSheetSubtitle: { fontSize: 13, color: '#6b7280', paddingHorizontal: 20, paddingBottom: 16, lineHeight: 18 },
+  autoSection:       { paddingHorizontal: 20, paddingBottom: 16 },
+  autoSectionTitle:  { fontSize: 14, fontWeight: '600', color: '#111', marginBottom: 4 },
+  autoSectionDesc:   { fontSize: 13, color: '#6b7280', lineHeight: 18, marginBottom: 12 },
+  autoInputRow:      { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  autoInput: {
+    width: 72, height: 36, borderWidth: 1, borderColor: '#d1d5db',
+    borderRadius: 8, paddingHorizontal: 10, fontSize: 15, color: '#111',
+    backgroundColor: '#fff',
+  },
+  autoInputSuffix:   { fontSize: 14, color: '#6b7280' },
+  autoSeparator:     { height: 1, backgroundColor: '#f3f4f6', marginHorizontal: 20, marginBottom: 4 },
+  autoCheckRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+    paddingHorizontal: 20, paddingVertical: 14,
+  },
+  autoCheckLabel:    { fontSize: 14, fontWeight: '600', color: '#111', marginBottom: 2 },
+  autoCheckDesc:     { fontSize: 13, color: '#6b7280', lineHeight: 18 },
+  autoFooter:        { paddingHorizontal: 20, paddingTop: 8 },
+
+  filterSaveFooter:  { backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f3f4f6' },
+  autoDoneBtn: {
+    backgroundColor: '#e8722a', borderRadius: 8, height: 44,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  autoDoneBtnText:   { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

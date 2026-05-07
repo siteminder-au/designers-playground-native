@@ -14,6 +14,7 @@ import { GET_CALENDAR_DATA } from '../../apollo/queries';
 import { useHousekeepingStatus, RoomStatus } from '../../context/HousekeepingStatus';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { STATUS_VARIANT, SYMBOL_CONTAINER } from '../../config/statusVariant';
+import { COLORS } from '../../config/colors';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const ROOM_COL_WIDTH = 90;
@@ -23,11 +24,10 @@ const DAY_WIDTH = (SCREEN_WIDTH - ROOM_COL_WIDTH - RIGHT_ARROW_WIDTH) / NUM_DAYS
 const ROW_HEIGHT = 58;
 const GROUP_HEADER_HEIGHT = 36;
 
-const ORANGE = '#e8722a';
-const CONFIRMED_BG = '#d4edda';
-const CONFIRMED_TEXT = '#2e7d32';
-const TENTATIVE_BG = '#fde8d0';
-const TENTATIVE_TEXT = '#b84a00';
+const ORANGE = '#ff6842';
+const CONFIRMED_BG = '#d9ebc7';
+const CONFIRMED_BORDER = '#5b9361';
+const TENTATIVE_BG = '#ffe0bc';
 
 type ReservationStatus = 'CONFIRMED' | 'TENTATIVE';
 
@@ -48,9 +48,11 @@ interface CalendarRoom {
 }
 
 const STATUS_ICON: Record<RoomStatus, { name: React.ComponentProps<typeof Ionicons>['name']; color: string }> = {
-  CLEANED:       { name: 'checkmark-circle',  color: '#2d7d46' },
-  UNCLEANED:     { name: 'alert-circle',       color: '#b91c1c' },
-  SKIP_CLEANING: { name: 'remove-circle',      color: '#a16207' },
+  CLEANED:             { name: 'checkmark-circle', color: '#2d7d46'        },
+  UNCLEANED:           { name: 'alert-circle',     color: '#b91c1c'        },
+  DEEP_CLEAN:          { name: 'alert-circle',     color: '#b91c1c'        },
+  SKIP_CLEANING:       { name: 'remove-circle',    color: '#a16207'        },
+  AWAITING_INSPECTION: { name: 'help-circle',      color: COLORS.Blue[200] },
 };
 
 // 'symbol' variant — MaterialCommunityIcons with housekeeping-semantic meaning
@@ -60,10 +62,11 @@ type SymbolEntry =
   | { set: 'MCI'; name: React.ComponentProps<typeof MaterialCommunityIcons>['name']; color: string; tint: string };
 
 const STATUS_SYMBOL: Record<RoomStatus, SymbolEntry> = {
-  CLEANED:       { set: 'MI',  name: 'auto-awesome',      color: '#2d7d46', tint: '#dcfce7' },
-  UNCLEANED:     { set: 'MI',  name: 'cleaning-services', color: '#b91c1c', tint: '#fee2e2' },
-  SKIP_CLEANING: { set: 'MCI', name: 'sleep',             color: '#d97706', tint: '#fef9c3' },
-
+  CLEANED:             { set: 'MI',  name: 'auto-awesome',      color: '#2d7d46',        tint: '#dcfce7'        },
+  UNCLEANED:           { set: 'MI',  name: 'cleaning-services', color: '#b91c1c',        tint: '#fee2e2'        },
+  DEEP_CLEAN:          { set: 'MCI', name: 'broom',             color: '#b91c1c',        tint: '#fee2e2'        },
+  SKIP_CLEANING:       { set: 'MCI', name: 'sleep',             color: '#d97706',        tint: '#fef9c3'        },
+  AWAITING_INSPECTION: { set: 'MI',  name: 'auto-fix-high',     color: COLORS.Blue[200], tint: COLORS.Blue[600] },
 };
 
 function SymbolIcon({ entry, size }: { entry: SymbolEntry; size: number }) {
@@ -75,9 +78,11 @@ function SymbolIcon({ entry, size }: { entry: SymbolEntry; size: number }) {
 
 // 'abbr' variant — text label is primary, border colour is secondary
 const STATUS_ABBR: Record<RoomStatus, { label: string; color: string }> = {
-  CLEANED:       { label: 'CLN',  color: '#2d7d46' },
-  UNCLEANED:     { label: 'UNC',  color: '#b91c1c' },
-  SKIP_CLEANING: { label: 'SKP',  color: '#d97706' },
+  CLEANED:             { label: 'CLN', color: '#2d7d46'        },
+  UNCLEANED:           { label: 'UNC', color: '#b91c1c'        },
+  DEEP_CLEAN:          { label: 'DPC', color: '#b91c1c'        },
+  SKIP_CLEANING:       { label: 'SKP', color: '#d97706'        },
+  AWAITING_INSPECTION: { label: 'AWI', color: COLORS.Blue[200] },
 };
 
 interface RoomGroup {
@@ -124,6 +129,7 @@ export default function CalendarScreen() {
 
   const { data, loading } = useQuery(GET_CALENDAR_DATA, {
     variables: { startDate: queryStart, endDate: queryEnd },
+    pollInterval: 3000,
   });
 
   const visibleDates = Array.from({ length: NUM_DAYS }, (_, i) => addDays(weekStart, i));
@@ -182,8 +188,9 @@ export default function CalendarScreen() {
               style={styles.weekDay}
               onPress={() => setSelectedDate(d)}
             >
-              <Text style={[styles.weekDayLabel, isSelected && { color: ORANGE }]}>{day}</Text>
-              <Text style={[styles.weekDayNum, isSelected && { color: ORANGE }]}>{date}</Text>
+              <Text style={styles.weekDayLabel}>{day}</Text>
+              <Text style={[styles.weekDayNum, isSelected && { fontWeight: '700' }]}>{date}</Text>
+              {isSelected && <View style={styles.weekDayUnderline} />}
             </TouchableOpacity>
           );
         })}
@@ -201,16 +208,6 @@ export default function CalendarScreen() {
         <ActivityIndicator style={{ marginTop: 40 }} color={ORANGE} />
       ) : (
         <ScrollView style={styles.grid}>
-          {/* Date column headers */}
-          <View style={styles.gridDateHeaderRow}>
-            <View style={{ width: ROOM_COL_WIDTH }} />
-            {visibleDates.map(d => (
-              <View key={d} style={[styles.gridDateHeader, { width: DAY_WIDTH }]}>
-                <View style={[styles.gridDateLine, d === selectedDate && { backgroundColor: ORANGE }]} />
-              </View>
-            ))}
-          </View>
-
           {groups.map(group => (
             <View key={group.type}>
               {/* Group header */}
@@ -233,12 +230,11 @@ export default function CalendarScreen() {
                 <View key={room.id} style={styles.roomRow}>
                   {/* Room label */}
                   <View style={[styles.roomLabel, { width: ROOM_COL_WIDTH }]}>
-                    {isNumeric && <Text style={styles.roomLabelText}>Room</Text>}
                     <View style={styles.roomLabelRow}>
                       <Text
-                        style={isNumeric ? styles.roomLabelNum : styles.roomLabelName}
+                        style={styles.roomLabelName}
                         numberOfLines={2}
-                      >{room.number}</Text>
+                      >{isNumeric ? `Room ${room.number}` : room.number}</Text>
                       {STATUS_VARIANT === 'icon' && (
                         <Ionicons
                           name={STATUS_ICON[effectiveStatus].name}
@@ -302,15 +298,16 @@ export default function CalendarScreen() {
                               left: block.left,
                               width: block.width,
                               backgroundColor: block.isConfirmed ? CONFIRMED_BG : TENTATIVE_BG,
+                              borderColor: block.isConfirmed ? CONFIRMED_BORDER : ORANGE,
                             },
                           ]}
                         >
                           {block.startsInView && (
-                            <View style={[styles.resFlag, { backgroundColor: block.isConfirmed ? '#2e7d32' : ORANGE }]} />
+                            <View style={[styles.resFlag, { backgroundColor: block.isConfirmed ? CONFIRMED_BORDER : ORANGE }]} />
                           )}
                           <View style={styles.resContent}>
                             <Text
-                              style={[styles.resName, { color: block.isConfirmed ? CONFIRMED_TEXT : TENTATIVE_TEXT }]}
+                              style={styles.resName}
                               numberOfLines={1}
                             >
                               {res.guestName}
@@ -359,53 +356,51 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#e5e7eb',
   },
-  headerLabel: { fontSize: 11, color: '#9ca3af', fontWeight: '600', letterSpacing: 1 },
-  headerDate: { fontSize: 22, fontWeight: '700', color: '#111', marginTop: 2 },
+  headerLabel: { fontSize: 12, color: '#484b4b', fontWeight: '600', letterSpacing: 0.24, textTransform: 'uppercase' },
+  headerDate: { fontSize: 20, fontFamily: 'ValueSerifTrial-Medium', color: '#000', marginTop: 2 },
   headerButtons: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   todayButton: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 6,
+    height: 32,
+    backgroundColor: '#f4f4f4',
+    borderRadius: 4,
+    justifyContent: 'center',
   },
-  todayButtonText: { fontSize: 13, color: '#374151', fontWeight: '500' },
-  addButton: { paddingHorizontal: 4 },
-  addButtonText: { fontSize: 13, color: ORANGE, fontWeight: '600' },
+  todayButtonText: { fontSize: 14, color: '#333', fontWeight: '500' },
+  addButton: {
+    paddingHorizontal: 12,
+    height: 32,
+    backgroundColor: '#fff5ee',
+    borderRadius: 4,
+    justifyContent: 'center',
+  },
+  addButtonText: { fontSize: 14, color: '#ff6842', fontWeight: '600' },
 
   // Week strip
   weekStrip: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'stretch',
     backgroundColor: '#fff',
-    paddingVertical: 8,
     borderBottomWidth: 1,
     borderColor: '#e5e7eb',
   },
-  weekArrowLeft: { width: ROOM_COL_WIDTH, alignItems: 'flex-end', alignSelf: 'stretch', justifyContent: 'center', paddingRight: 14 },
+  weekArrowLeft: { width: ROOM_COL_WIDTH, alignItems: 'flex-end', justifyContent: 'center', paddingRight: 14 },
   weekArrowRight: { position: 'absolute', right: 0, width: 28, alignItems: 'center', top: 0, bottom: 0, justifyContent: 'center' },
   weekArrowText: { fontSize: 22, color: '#9ca3af', lineHeight: 26 },
-  weekDay: { width: DAY_WIDTH, alignItems: 'center', paddingVertical: 4 },
-  weekDayLabel: { fontSize: 10, color: '#9ca3af', fontWeight: '600', letterSpacing: 0.5 },
-  weekDayNum: { fontSize: 18, fontWeight: '600', color: '#374151', marginTop: 1 },
-  weekDayUnderline: { height: 2, width: 20, backgroundColor: ORANGE, borderRadius: 1, marginTop: 3 },
+  weekDay: { width: DAY_WIDTH, alignItems: 'center', justifyContent: 'center', paddingTop: 8, paddingBottom: 10, position: 'relative' },
+  weekDayLabel: { fontSize: 12, color: '#484b4b', fontWeight: '400', letterSpacing: 0.5, textTransform: 'uppercase' },
+  weekDayNum: { fontSize: 16, fontWeight: '400', color: '#484b4b', marginTop: 2 },
+  weekDayUnderline: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, backgroundColor: ORANGE },
 
   // Grid
   grid: { flex: 1 },
-  gridDateHeaderRow: {
-    flexDirection: 'row',
-    height: 8,
-    backgroundColor: '#fff',
-  },
-  gridDateHeader: { alignItems: 'center', justifyContent: 'flex-end' },
-  gridDateLine: { height: 2, width: '80%', backgroundColor: 'transparent', borderRadius: 1 },
 
   // Group header
   groupHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#fff',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderTopWidth: 1,
@@ -413,9 +408,9 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
     height: GROUP_HEADER_HEIGHT,
   },
-  groupHeaderText: { fontSize: 13, fontWeight: '700', color: '#374151' },
+  groupHeaderText: { fontSize: 14, fontWeight: '700', color: '#333' },
   unallocatedLink: {},
-  unallocatedText: { fontSize: 12, color: ORANGE, fontWeight: '600' },
+  unallocatedText: { fontSize: 14, color: '#c43100', fontWeight: '600' },
 
   // Room row
   roomRow: {
@@ -434,10 +429,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     zIndex: 1,
   },
-  roomLabelText: { fontSize: 9, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.3 },
-  roomLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 1 },
-  roomLabelNum: { fontSize: 15, fontWeight: '600', color: '#374151', flex: 1 },
-  roomLabelName: { fontSize: 12, fontWeight: '600', color: '#374151', flex: 1 },
+  roomLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  roomLabelName: { fontSize: 14, fontWeight: '400', color: '#000', flex: 1, lineHeight: 18 },
   abbrPill: {
     borderWidth: 1.5,
     borderRadius: 4,
@@ -484,10 +477,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 7,
     height: ROW_HEIGHT - 14,
-    borderRadius: 4,
+    borderRadius: 6,
     flexDirection: 'row',
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
     overflow: 'hidden',
   },
   resFlag: {
@@ -503,9 +495,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  resName: { fontSize: 11, fontWeight: '600' },
+  resName: { fontSize: 12, fontWeight: '700', color: '#333' },
   resMeta: { flexDirection: 'row', marginTop: 2 },
   resMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  resMetaText: { fontSize: 10, color: '#555' },
+  resMetaText: { fontSize: 11, color: '#484b4b' },
 
 });

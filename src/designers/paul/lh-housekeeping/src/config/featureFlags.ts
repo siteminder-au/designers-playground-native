@@ -18,8 +18,8 @@ const FLAGS = {
   /** Late checkout badge on room number row */
   showLateCheckout: true,
 
-  /** Assign housekeeper section in the notes footer */
-  showAssignHousekeeper: true,
+  /** 8-digit booking reference ID, pinned right in the guest info row */
+  showReservationId: true,
 } as const;
 
 export default FLAGS;

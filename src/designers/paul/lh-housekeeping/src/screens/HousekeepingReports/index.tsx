@@ -26,6 +26,10 @@ import { useHousekeepingStatus, RoomStatus } from '../../context/HousekeepingSta
 import { STATUS_VARIANT, SYMBOL_CONTAINER } from '../../config/statusVariant';
 import FLAGS from '../../config/featureFlags';
 import { COLORS } from '../../config/colors';
+import CleanSvg from '../../../assets/Clean.svg';
+import DirtySvg from '../../../assets/Dirty.svg';
+import InspectionSvg from '../../../assets/Inspection.svg';
+import SkipSvg from '../../../assets/Skip.svg';
 
 interface RoomDaySchedule {
   isOccupied: boolean;
@@ -64,6 +68,14 @@ const STATUS_CONFIG: Record<RoomStatus, { label: string; bg: string; border: str
   DEEP_CLEAN:           { label: 'Needs deep clean',   bg: '#f1bfbf',               border: '#b81919',               text: '#b81919',               icon: 'auto-awesome'    },
   SKIP_CLEANING:        { label: 'Skip clean',         bg: '#fef9c3',               border: '#d97706',               text: '#a16207',               icon: 'do-not-disturb'  },
   AWAITING_INSPECTION:  { label: 'Awaiting inspection',bg: COLORS.Blue[600],        border: COLORS.Blue[200],        text: COLORS.Blue[200],        icon: 'auto-fix-high'   },
+};
+
+const STATUS_SVG_ICON: Partial<Record<RoomStatus, React.FC<{ width?: number; height?: number }>>> = {
+  CLEANED:             CleanSvg,
+  UNCLEANED:           DirtySvg,
+  DEEP_CLEAN:          DirtySvg,
+  AWAITING_INSPECTION: InspectionSvg,
+  SKIP_CLEANING:       SkipSvg,
 };
 
 // 'symbol' variant — MaterialCommunityIcons with housekeeping-semantic meaning
@@ -356,6 +368,7 @@ function CleaningControl({
   }
 
   // 'icon' — Figma pill design
+  const SvgIcon = STATUS_SVG_ICON[status];
   return (
     <TouchableOpacity
       activeOpacity={0.7}
@@ -364,7 +377,9 @@ function CleaningControl({
     >
       <View ref={ref} style={[styles.cleaningBtn, { backgroundColor: bg, borderColor: border }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <MaterialIcons name={icon} size={18} color={text} />
+          {SvgIcon
+            ? <SvgIcon width={18} height={18} />
+            : <MaterialIcons name={icon} size={18} color={text} />}
           <Text style={[styles.cleaningBtnText, { color: text }]}>{label}</Text>
         </View>
         <Ionicons name="chevron-down" size={12} color={text} />
@@ -446,7 +461,7 @@ function RoomRow({
               {/^\d+$/.test(item.room.number) ? `Room ${item.room.number}` : item.room.number}
             </Text>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
             <Text style={styles.roomType}>{item.room.type.toUpperCase()}</Text>
             {item.isOccupied && (
               <>
@@ -1044,7 +1059,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         <View style={styles.headerTop}>
           {!housekeeperMode && (
             <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()}>
-              <Ionicons name="close" size={22} color="#484b4b" />
+              <Ionicons name="arrow-back" size={22} color="#484b4b" />
             </TouchableOpacity>
           )}
           <Text style={styles.headerLabel} pointerEvents="none">Housekeeping</Text>
@@ -1197,7 +1212,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
               top: statusDropdown.y + statusDropdown.height + 6,
               right: Dimensions.get('window').width - statusDropdown.x - statusDropdown.width,
             }]}>
-              {(Object.keys(STATUS_CONFIG) as RoomStatus[]).map((s, i) => {
+              {(Object.keys(STATUS_CONFIG) as RoomStatus[]).filter(s => !(housekeeperMode && s === 'CLEANED')).map((s, i) => {
                 const isActive = (statusOverrides[statusDropdown.roomId] ?? statusDropdown.currentStatus) === s;
                 return (
                   <React.Fragment key={s}>
@@ -2066,7 +2081,7 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
     overflow: 'hidden',
   },
-  rowTop:   { flexDirection: 'row', alignItems: 'center' },
+  rowTop:   { flexDirection: 'row', alignItems: 'flex-start' },
   rowLeft:  { flex: 1, gap: 4 },
   rowRight: { flexDirection: 'row', gap: 24, alignItems: 'center' },
 
@@ -2104,7 +2119,7 @@ const styles = StyleSheet.create({
   roomTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
   roomNumber:   { fontSize: 16, fontWeight: '600', color: '#212323' },
   roomTitleSep: { width: 2, height: 2, borderRadius: 1, backgroundColor: '#9ca3af' },
-  roomType:     { fontSize: 11, fontWeight: '700', color: '#9BA0A0', flexShrink: 1 },
+  roomType:     { fontSize: 11, fontWeight: '700', color: '#9BA0A0' },
 
   // Guest info section
   guestInfoSection: {

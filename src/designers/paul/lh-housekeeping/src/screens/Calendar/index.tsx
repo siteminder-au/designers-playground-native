@@ -15,6 +15,10 @@ import { useHousekeepingStatus, RoomStatus } from '../../context/HousekeepingSta
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { STATUS_VARIANT, SYMBOL_CONTAINER } from '../../config/statusVariant';
 import { COLORS } from '../../config/colors';
+import CleanSvg from '../../../assets/Clean.svg';
+import DirtySvg from '../../../assets/Dirty.svg';
+import InspectionSvg from '../../../assets/Inspection.svg';
+import SkipSvg from '../../../assets/Skip.svg';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const ROOM_COL_WIDTH = 90;
@@ -47,12 +51,12 @@ interface CalendarRoom {
   reservations: CalendarReservation[];
 }
 
-const STATUS_ICON: Record<RoomStatus, { name: React.ComponentProps<typeof Ionicons>['name']; color: string }> = {
-  CLEANED:             { name: 'checkmark-circle', color: '#2d7d46'        },
-  UNCLEANED:           { name: 'alert-circle',     color: '#b91c1c'        },
-  DEEP_CLEAN:          { name: 'alert-circle',     color: '#b91c1c'        },
-  SKIP_CLEANING:       { name: 'remove-circle',    color: '#a16207'        },
-  AWAITING_INSPECTION: { name: 'help-circle',      color: COLORS.Blue[200] },
+const STATUS_ICON: Record<RoomStatus, { name: React.ComponentProps<typeof Ionicons>['name']; color: string; bg: string }> = {
+  CLEANED:             { name: 'checkmark-circle', color: '#2d7d46',        bg: '#9AE0BD'        },
+  UNCLEANED:           { name: 'alert-circle',     color: '#b91c1c',        bg: '#f1bfbf'        },
+  DEEP_CLEAN:          { name: 'alert-circle',     color: '#b91c1c',        bg: '#f1bfbf'        },
+  SKIP_CLEANING:       { name: 'remove-circle',    color: '#a16207',        bg: '#fef9c3'        },
+  AWAITING_INSPECTION: { name: 'help-circle',      color: COLORS.Blue[200], bg: COLORS.Blue[600] },
 };
 
 // 'symbol' variant — MaterialCommunityIcons with housekeeping-semantic meaning
@@ -83,6 +87,14 @@ const STATUS_ABBR: Record<RoomStatus, { label: string; color: string }> = {
   DEEP_CLEAN:          { label: 'DPC', color: '#b91c1c'        },
   SKIP_CLEANING:       { label: 'SKP', color: '#d97706'        },
   AWAITING_INSPECTION: { label: 'AWI', color: COLORS.Blue[200] },
+};
+
+const STATUS_SVG_ICON: Partial<Record<RoomStatus, React.FC<{ width?: number; height?: number }>>> = {
+  CLEANED:             CleanSvg,
+  UNCLEANED:           DirtySvg,
+  DEEP_CLEAN:          DirtySvg,
+  AWAITING_INSPECTION: InspectionSvg,
+  SKIP_CLEANING:       SkipSvg,
 };
 
 interface RoomGroup {
@@ -235,13 +247,17 @@ export default function CalendarScreen() {
                         style={styles.roomLabelName}
                         numberOfLines={2}
                       >{isNumeric ? `Room ${room.number}` : room.number}</Text>
-                      {STATUS_VARIANT === 'icon' && (
-                        <Ionicons
-                          name={STATUS_ICON[effectiveStatus].name}
-                          color={STATUS_ICON[effectiveStatus].color}
-                          size={18}
-                        />
-                      )}
+                      {STATUS_VARIANT === 'icon' && (() => {
+                        const SvgIcon = STATUS_SVG_ICON[effectiveStatus];
+                        const { bg, name, color } = STATUS_ICON[effectiveStatus];
+                        return (
+                          <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
+                            {SvgIcon
+                              ? <SvgIcon width={16} height={16} />
+                              : <Ionicons name={name} color={color} size={16} />}
+                          </View>
+                        );
+                      })()}
                       {STATUS_VARIANT === 'symbol' && (() => {
                         const { tint } = STATUS_SYMBOL[effectiveStatus];
                         const containerStyle = SYMBOL_CONTAINER === 'circle'

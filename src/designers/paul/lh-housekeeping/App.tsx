@@ -1,4 +1,5 @@
 import React from 'react';
+import { View, Platform, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { ApolloProvider } from '@apollo/client';
 import { Ionicons } from '@expo/vector-icons';
@@ -120,11 +121,38 @@ export default function PaulLHHousekeepingApp() {
 
   if (!fontsLoaded) return null;
 
-  return (
+  const content = (
     <ApolloProvider client={client}>
       <HousekeepingStatusProvider>
         <AppNavigator />
       </HousekeepingStatusProvider>
     </ApolloProvider>
   );
+
+  if (Platform.OS !== 'web') return content;
+
+  return (
+    <View style={styles.webOuter}>
+      <View style={styles.webInner}>{content}</View>
+    </View>
+  );
 }
+
+const styles = StyleSheet.create({
+  webOuter: {
+    flex: 1,
+    backgroundColor: '#d1d5db',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  webInner: {
+    width: 390,
+    maxWidth: '100%' as any,
+    flex: 1,
+    overflow: 'hidden' as any,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+  },
+});

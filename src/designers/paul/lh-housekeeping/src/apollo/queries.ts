@@ -72,6 +72,7 @@ export const GET_HOUSEKEEPING_SCHEDULE = gql`
           type
           status
           notes
+          isClosed
         }
       }
     }

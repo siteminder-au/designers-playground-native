@@ -29,7 +29,7 @@ import { COLORS } from '../../config/colors';
 import CleanSvg from '../../../assets/Clean.svg';
 import DirtySvg from '../../../assets/Dirty.svg';
 import InspectionSvg from '../../../assets/Inspection.svg';
-import SkipSvg from '../../../assets/Skip.svg';
+import SnoozeSvg from '../../../assets/Snooze.svg';
 
 interface RoomDaySchedule {
   isOccupied: boolean;
@@ -48,7 +48,7 @@ interface RoomDaySchedule {
   earlyCheckout: boolean;
   bedConfiguration: string;
   guestComments: string | null;
-  room: { id: string; number: string; type: string; status: RoomStatus; notes: string | null };
+  room: { id: string; number: string; type: string; status: RoomStatus; notes: string | null; isClosed: boolean };
 }
 
 interface DaySchedule {
@@ -75,7 +75,7 @@ const STATUS_SVG_ICON: Partial<Record<RoomStatus, React.FC<{ width?: number; hei
   UNCLEANED:           DirtySvg,
   DEEP_CLEAN:          DirtySvg,
   AWAITING_INSPECTION: InspectionSvg,
-  SKIP_CLEANING:       SkipSvg,
+  SKIP_CLEANING:       SnoozeSvg,
 };
 
 // 'symbol' variant — MaterialCommunityIcons with housekeeping-semantic meaning
@@ -188,7 +188,7 @@ interface FilterState {
   earlyCheckout: boolean;
 }
 const ROOM_TYPE_OPTIONS = ['Bridge Room', 'Deluxe Suite', 'Family Room'];
-const ROOM_STATUS_OPTIONS = ['Occupied', 'Unoccupied', 'Check-in only', 'Check-out only', 'Check-out/in'];
+const ROOM_STATUS_OPTIONS = ['Occupied', 'Unoccupied', 'Check-in only', 'Check-out only', 'Check-out/in', 'Closed'];
 const CLEANING_STATUS_OPTIONS = ['Clean', 'Need cleaning', 'Need deep cleaning', 'Skip cleaning', 'Awaiting inspection'];
 const CLEANING_STATUS_MAP: Record<string, RoomStatus | null> = {
   'Clean':               'CLEANED',
@@ -200,11 +200,12 @@ const CLEANING_STATUS_MAP: Record<string, RoomStatus | null> = {
 const DEFAULT_FILTERS: FilterState = { statuses: [], roomTypes: [], roomStatuses: [], cleaningStatuses: [], includeStaffNotes: false, includeGuestComments: false, lateCheckout: false, earlyCheckout: false };
 
 function getRoomStatusCategory(item: RoomDaySchedule, date: string): string {
+  if (item.room.isClosed)       return 'Closed';
   const isCheckIn     = item.checkIn === date;
   const hasCheckout   = item.hasCheckoutToday;
-  if (isCheckIn && hasCheckout) return 'Check-out/in';   // turnaround: departing + arriving
-  if (isCheckIn)                return 'Check-in only';  // empty room, new arrival only
-  if (hasCheckout)              return 'Check-out only'; // departing guest, no new arrival
+  if (isCheckIn && hasCheckout) return 'Check-out/in';
+  if (isCheckIn)                return 'Check-in only';
+  if (hasCheckout)              return 'Check-out only';
   if (!item.isOccupied)         return 'Unoccupied';
   return 'Occupied';
 }
@@ -463,10 +464,16 @@ function RoomRow({
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
             <Text style={styles.roomType}>{item.room.type.toUpperCase()}</Text>
-            {item.isOccupied && (
+            {item.isOccupied && !item.room.isClosed && (
               <>
                 <View style={styles.roomTitleSep} />
                 <Text style={[styles.occupancyStatusText, { color: '#b81919' }]}>Occupied</Text>
+              </>
+            )}
+            {item.room.isClosed && (
+              <>
+                <View style={styles.roomTitleSep} />
+                <Text style={[styles.occupancyStatusText, { color: '#6b7280' }]}>Closed</Text>
               </>
             )}
           </View>
@@ -1852,7 +1859,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
             <Text style={styles.modalTitle}>Select dates</Text>
             <View style={{ width: 24 }} />
           </View>
-          <Text style={styles.dateModalHelper}>Date ranges are limited to 28 days from today.</Text>
+          <Text style={styles.dateModalHelper}>Start date is within 28 days of today. End date is within 28 days of start.</Text>
 
           <ScrollView>
             {/* Start date field */}
@@ -1875,9 +1882,11 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
             {expandedField === 'start' && (
               <Calendar
+                minDate={addDays(today, -28)}
                 maxDate={addDays(today, 28)}
                 onDayPress={(day: { dateString: string }) => {
                   setPendingStart(day.dateString);
+                  setPendingEnd(null);
                   setExpandedField('end');
                 }}
                 markedDates={pendingStart ? { [pendingStart]: { selected: true, selectedColor: ORANGE } } : {}}
@@ -1909,7 +1918,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
             {expandedField === 'end' && (
               <Calendar
                 minDate={pendingStart ?? undefined}
-                maxDate={addDays(today, 28)}
+                maxDate={pendingStart ? addDays(pendingStart, 28) : addDays(today, 28)}
                 onDayPress={(day: { dateString: string }) => {
                   setPendingEnd(day.dateString);
                   setExpandedField(null);

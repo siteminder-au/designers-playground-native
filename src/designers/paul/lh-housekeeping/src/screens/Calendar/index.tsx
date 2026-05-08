@@ -18,7 +18,7 @@ import { COLORS } from '../../config/colors';
 import CleanSvg from '../../../assets/Clean.svg';
 import DirtySvg from '../../../assets/Dirty.svg';
 import InspectionSvg from '../../../assets/Inspection.svg';
-import SkipSvg from '../../../assets/Skip.svg';
+import SnoozeSvg from '../../../assets/Snooze.svg';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const ROOM_COL_WIDTH = 90;
@@ -94,7 +94,7 @@ const STATUS_SVG_ICON: Partial<Record<RoomStatus, React.FC<{ width?: number; hei
   UNCLEANED:           DirtySvg,
   DEEP_CLEAN:          DirtySvg,
   AWAITING_INSPECTION: InspectionSvg,
-  SKIP_CLEANING:       SkipSvg,
+  SKIP_CLEANING:       SnoozeSvg,
 };
 
 interface RoomGroup {

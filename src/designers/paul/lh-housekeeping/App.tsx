@@ -150,6 +150,11 @@ const styles = StyleSheet.create({
     maxWidth: '100%' as any,
     flex: 1,
     overflow: 'hidden' as any,
+    // A CSS transform makes this element the containing block for
+    // position:fixed descendants (React Native Web renders Modals
+    // with position:fixed). This traps all modals/sheets inside the
+    // 390px frame rather than letting them escape to full viewport width.
+    transform: [{ translateX: 0 }],
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

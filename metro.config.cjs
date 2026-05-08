@@ -1,10 +1,4 @@
-import { getDefaultConfig } from 'expo/metro-config';
-import { createRequire } from 'module';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const require = createRequire(import.meta.url);
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
@@ -19,4 +13,4 @@ config.resolver = {
   sourceExts: [...config.resolver.sourceExts, 'svg'],
 };
 
-export default config;
+module.exports = config;

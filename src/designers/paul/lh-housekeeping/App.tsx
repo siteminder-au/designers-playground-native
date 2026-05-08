@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Platform, StyleSheet } from 'react-native';
+import React, { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { ApolloProvider } from '@apollo/client';
 import { Ionicons } from '@expo/vector-icons';
@@ -119,6 +119,30 @@ export default function PaulLHHousekeepingApp() {
     'ValueSerifTrial-Medium': require('./assets/fonts/ValueSerifTrial-Medium.ttf'),
   });
 
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    // RNW renders Modal via ReactDOM.createPortal into document.body,
+    // making modal divs direct children of <body> — not our React container.
+    // Adding a CSS transform to <body> makes it the containing block for all
+    // position:fixed descendants, so modals are scoped to body's 390px width.
+    const style = document.createElement('style');
+    style.id = 'paul-lh-mobile-frame';
+    style.textContent = `
+      html { background: #d1d5db !important; height: 100%; }
+      body {
+        max-width: 390px !important;
+        margin: 0 auto !important;
+        height: 100% !important;
+        overflow: hidden !important;
+        transform: translateX(0) !important;
+        box-shadow: 0 0 40px rgba(0,0,0,0.35) !important;
+        background: #fff !important;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => { document.getElementById('paul-lh-mobile-frame')?.remove(); };
+  }, []);
+
   if (!fontsLoaded) return null;
 
   const content = (
@@ -129,35 +153,5 @@ export default function PaulLHHousekeepingApp() {
     </ApolloProvider>
   );
 
-  if (Platform.OS !== 'web') return content;
-
-  return (
-    <View style={styles.webOuter}>
-      <View style={styles.webInner}>{content}</View>
-    </View>
-  );
+  return content;
 }
-
-const styles = StyleSheet.create({
-  webOuter: {
-    flex: 1,
-    backgroundColor: '#d1d5db',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-  },
-  webInner: {
-    width: 390,
-    maxWidth: '100%' as any,
-    flex: 1,
-    overflow: 'hidden' as any,
-    // A CSS transform makes this element the containing block for
-    // position:fixed descendants (React Native Web renders Modals
-    // with position:fixed). This traps all modals/sheets inside the
-    // 390px frame rather than letting them escape to full viewport width.
-    transform: [{ translateX: 0 }],
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-  },
-});

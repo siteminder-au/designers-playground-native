@@ -48,6 +48,7 @@ interface RoomDaySchedule {
   earlyCheckout: boolean;
   bedConfiguration: string;
   guestComments: string | null;
+  extraItems: string[];
   room: { id: string; number: string; type: string; status: RoomStatus; notes: string | null; isClosed: boolean };
 }
 
@@ -108,17 +109,18 @@ const STATUS_ABBR: Record<RoomStatus, { label: string; fullLabel: string; color:
   AWAITING_INSPECTION: { label: 'AWI', fullLabel: 'Awaiting inspection', color: COLORS.Blue[200] },
 };
 
-type SortField = 'room_number' | 'room_type' | 'occupancy' | 'guest_count' | 'notes' | 'cleanliness';
+type SortField = 'priority' | 'room_number' | 'room_type' | 'occupancy' | 'guest_count' | 'notes' | 'cleanliness';
 type SortDirection = 'asc' | 'desc';
 interface SortState { field: SortField; direction: SortDirection }
 
 const SORT_OPTIONS: { value: SortField; label: string }[] = [
-  { value: 'room_number', label: 'Room number' },
-  { value: 'room_type',   label: 'Room type' },
-  { value: 'occupancy',   label: 'Room status' },
-  { value: 'guest_count', label: 'Number of guests' },
+  { value: 'priority',    label: 'Priority' },
+  { value: 'cleanliness', label: 'Cleaning status' },
   { value: 'notes',       label: 'Room notes' },
-  { value: 'cleanliness', label: 'Cleanliness status' },
+  { value: 'occupancy',   label: 'Room status' },
+  { value: 'room_number', label: 'Room name' },
+  { value: 'room_type',   label: 'Room type' },
+  { value: 'guest_count', label: 'Number of guests' },
 ];
 
 const DEFAULT_SORT: SortState = { field: 'room_number', direction: 'asc' };
@@ -132,16 +134,67 @@ const STATUS_SORT_ORDER: Record<RoomStatus, number> = {
   CLEANED:             4,
 };
 
+// Returns priority bucket 1 (most urgent) → 7 (not actionable)
+function getPriority(
+  item: RoomDaySchedule,
+  date: string,
+  notes: Record<string, string>,
+  overrides: Record<string, RoomStatus>,
+): number {
+  const noteKey = item.reservationId ?? item.room.id;
+  const effectiveStatus = overrides[item.room.id] ?? item.room.status;
+  const hasNotes = !!(notes[noteKey] || item.room.notes || item.guestComments || item.extraItems.length > 0);
+
+  // P7: Not actionable right now
+  // Closed is always P7. Cleaned/skip are only P7 when nothing is happening today —
+  // if there's a checkout or an arriving guest, the room still needs attention.
+  if (item.room.isClosed) return 7;
+  const hasIncomingGuest = item.guestName !== null && !item.isOccupied; // arriving today, not yet checked in
+  const hasOutgoing = item.hasCheckoutToday;
+  if ((effectiveStatus === 'CLEANED' || effectiveStatus === 'SKIP_CLEANING') && !hasIncomingGuest && !hasOutgoing) return 7;
+
+  // P6: Late checkout — guest still in room, push down until window passes
+  if (item.lateCheckout && item.isOccupied) return 6;
+
+  // P1: Early check-in / time-critical arrival prep — guest arriving soonest
+  if (!item.isOccupied && item.checkIn === date && item.checkInTime !== null) return 1;
+
+  // P2: Checkout today + arriving today — same-day turnover needed
+  if (item.hasCheckoutToday && item.guestName !== null && item.checkIn === date) return 2;
+
+  // P3: Stayover — in-house guest needs regular service today
+  if (item.isOccupied) return 3;
+
+  // P4: VIP / special notes — needs attention but not time-critical
+  if (hasNotes) return 4;
+
+  // P5: Checkout + no near-term arrival, or vacant with nothing pending
+  return 5;
+}
+
 function sortRooms(
   rooms: RoomDaySchedule[],
   sort: SortState,
   overrides: Record<string, RoomStatus>,
   notes: Record<string, string>,
+  date: string = '',
 ): RoomDaySchedule[] {
   const dir = sort.direction === 'asc' ? 1 : -1;
   return [...rooms].sort((a, b) => {
     let result = 0;
     switch (sort.field) {
+      case 'priority': {
+        // Inverted so ↓ (desc) puts P1 (most urgent) first
+        const pA = getPriority(a, date, notes, overrides);
+        const pB = getPriority(b, date, notes, overrides);
+        if (pA !== pB) { result = pB - pA; break; }
+        // Same bucket tiebreaker: earlier check-in time is more urgent
+        if (a.checkInTime && b.checkInTime) {
+          // b.localeCompare(a): '11:00' > '10:00' → positive → * dir(-1) → a first ✓
+          result = b.checkInTime.localeCompare(a.checkInTime);
+        }
+        break;
+      }
       case 'room_number': {
         const na = parseInt(a.room.number, 10);
         const nb = parseInt(b.room.number, 10);
@@ -160,7 +213,19 @@ function sortRooms(
       case 'notes': {
         const keyA = a.reservationId ?? a.room.id;
         const keyB = b.reservationId ?? b.room.id;
-        result = (notes[keyA] ? 1 : 0) - (notes[keyB] ? 1 : 0);
+        const hasStaffA   = !!(notes[keyA] || a.room.notes);
+        const hasGuestA   = !!a.guestComments;
+        const hasExtrasA  = a.extraItems.length > 0;
+        const hasStaffB   = !!(notes[keyB] || b.room.notes);
+        const hasGuestB   = !!b.guestComments;
+        const hasExtrasB  = b.extraItems.length > 0;
+        const countA = (hasStaffA ? 1 : 0) + (hasGuestA ? 1 : 0) + (hasExtrasA ? 1 : 0);
+        const countB = (hasStaffB ? 1 : 0) + (hasGuestB ? 1 : 0) + (hasExtrasB ? 1 : 0);
+        if (countA !== countB) { result = countA - countB; break; }
+        // Tiebreaker when count is equal: Extras (4) > Guest comments (2) > Staff notes (1)
+        const prioA = (hasExtrasA ? 4 : 0) + (hasGuestA ? 2 : 0) + (hasStaffA ? 1 : 0);
+        const prioB = (hasExtrasB ? 4 : 0) + (hasGuestB ? 2 : 0) + (hasStaffB ? 1 : 0);
+        result = prioA - prioB;
         break;
       }
       case 'cleanliness': {
@@ -184,6 +249,7 @@ interface FilterState {
   cleaningStatuses: string[];
   includeStaffNotes: boolean;
   includeGuestComments: boolean;
+  includeExtras: boolean;
   lateCheckout: boolean;
   earlyCheckout: boolean;
 }
@@ -197,7 +263,7 @@ const CLEANING_STATUS_MAP: Record<string, RoomStatus | null> = {
   'Skip cleaning':       'SKIP_CLEANING',
   'Awaiting inspection': 'AWAITING_INSPECTION',
 };
-const DEFAULT_FILTERS: FilterState = { statuses: [], roomTypes: [], roomStatuses: [], cleaningStatuses: [], includeStaffNotes: false, includeGuestComments: false, lateCheckout: false, earlyCheckout: false };
+const DEFAULT_FILTERS: FilterState = { statuses: [], roomTypes: [], roomStatuses: [], cleaningStatuses: [], includeStaffNotes: false, includeGuestComments: false, includeExtras: false, lateCheckout: false, earlyCheckout: false };
 
 function getRoomStatusCategory(item: RoomDaySchedule, date: string): string {
   if (item.room.isClosed)       return 'Closed';
@@ -217,8 +283,8 @@ function applyFilters(
   overrides: Record<string, RoomStatus>,
   date: string,
 ): RoomDaySchedule[] {
-  const { statuses, roomTypes, roomStatuses, cleaningStatuses, includeStaffNotes, includeGuestComments, lateCheckout, earlyCheckout } = filters;
-  if (!statuses.length && !roomTypes.length && !roomStatuses.length && !cleaningStatuses.length && !includeStaffNotes && !includeGuestComments && !lateCheckout && !earlyCheckout) return rooms;
+  const { statuses, roomTypes, roomStatuses, cleaningStatuses, includeStaffNotes, includeGuestComments, includeExtras, lateCheckout, earlyCheckout } = filters;
+  if (!statuses.length && !roomTypes.length && !roomStatuses.length && !cleaningStatuses.length && !includeStaffNotes && !includeGuestComments && !includeExtras && !lateCheckout && !earlyCheckout) return rooms;
   return rooms.filter(item => {
     const noteKey = item.reservationId ?? item.room.id;
     const effectiveStatus = overrides[item.room.id] ?? item.room.status;
@@ -229,10 +295,11 @@ function applyFilters(
       const mapped = cleaningStatuses.map(s => CLEANING_STATUS_MAP[s]).filter(Boolean) as RoomStatus[];
       if (!mapped.includes(effectiveStatus)) return false;
     }
-    if (includeStaffNotes || includeGuestComments) {
+    if (includeStaffNotes || includeGuestComments || includeExtras) {
       const hasStaffNote = !!(notes[noteKey] || item.room.notes);
       const hasGuestComment = !!item.guestComments;
-      const passes = (includeStaffNotes && hasStaffNote) || (includeGuestComments && hasGuestComment);
+      const hasExtras = item.extraItems.length > 0;
+      const passes = (includeStaffNotes && hasStaffNote) || (includeGuestComments && hasGuestComment) || (includeExtras && hasExtras);
       if (!passes) return false;
     }
     if (lateCheckout && !item.lateCheckout) return false;
@@ -246,6 +313,7 @@ function activeFilterCount(filters: FilterState): number {
   if (filters.statuses.length > 0) n++;
   if (filters.includeStaffNotes) n++;
   if (filters.includeGuestComments) n++;
+  if (filters.includeExtras) n++;
   if (filters.lateCheckout) n++;
   if (filters.earlyCheckout) n++;
   return n;
@@ -561,44 +629,45 @@ function RoomRow({
 
       <TouchableOpacity style={styles.noteArea} onPress={onNotePress} activeOpacity={0.7}>
         <View style={styles.noteActionRow}>
-          {item.guestComments ? (
-            <View style={{ flex: 1, gap: 6 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <Text style={styles.guestCommentsLabel}>Guest comments:</Text>
-                <Text numberOfLines={1} style={[styles.guestCommentsText, { flex: 1 }]}>{item.guestComments}</Text>
+          {/* Notes section — 70% when extras present, full width otherwise */}
+          <View style={{ flex: item.extraItems.length > 0 ? 0.8 : 1 }}>
+            {item.guestComments ? (
+              <View style={{ gap: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  <Text style={styles.guestCommentsLabel}>Guest comments:</Text>
+                  <Text numberOfLines={1} style={[styles.guestCommentsText, { flex: 1 }]}>{item.guestComments}</Text>
+                </View>
+                {note ? (
+                  <Text numberOfLines={2} style={[styles.noteText, { flex: 1 }]}>
+                    <Text style={styles.staffNoteLabel}>Staff note: </Text>{note}
+                  </Text>
+                ) : (
+                  <Text style={styles.addNoteText}>+ Staff notes</Text>
+                )}
               </View>
-              {note ? (
+            ) : note ? (
+              <View style={styles.noteRow}>
                 <Text numberOfLines={2} style={[styles.noteText, { flex: 1 }]}>
                   <Text style={styles.staffNoteLabel}>Staff note: </Text>{note}
                 </Text>
-              ) : (
-                <Text style={styles.addNoteText}>+ Staff notes</Text>
-              )}
-            </View>
-          ) : note ? (
-            <View style={styles.noteRow}>
-              <Text numberOfLines={2} style={[styles.noteText, { flex: 1 }]}>
-                <Text style={styles.staffNoteLabel}>Staff note: </Text>{note}
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.noteRow}>
-              <Text style={styles.addNoteText}>+ Staff notes</Text>
-            </View>
-          )}
-          {false && <TouchableOpacity style={styles.assignBtn} onPress={onAssignPress}>
-            {assignedTo ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text style={[styles.assignBtnText, { maxWidth: 58, textAlign: 'left' }]} numberOfLines={1}>{assignedTo}</Text>
-                <Ionicons name="swap-horizontal-outline" size={13} color={ORANGE} />
               </View>
             ) : (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text style={styles.assignBtnText}>Assign</Text>
-                <Ionicons name="add" size={14} color={ORANGE} />
+              <View style={styles.noteRow}>
+                <Text style={styles.addNoteText}>+ Staff notes</Text>
               </View>
             )}
-          </TouchableOpacity>}
+          </View>
+          {item.extraItems.length > 0 && (
+            <>
+              {/* Vertical divider */}
+              <View style={styles.noteDivider} />
+              {/* Extras section — 20% width */}
+              <View style={styles.extrasSection}>
+                <Text style={styles.extrasCount}>{item.extraItems.length}</Text>
+                <Text style={styles.extrasLabel}>Extras</Text>
+              </View>
+            </>
+          )}
         </View>
       </TouchableOpacity>
     </View>
@@ -960,7 +1029,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   // Single-day view
   const selectedDay = schedule.find(d => d.date === selectedDate);
   const singleRooms: RoomDaySchedule[] = applyFilters(
-    sortRooms(selectedDay?.rooms ?? [], sort, statusOverrides, notes),
+    sortRooms(selectedDay?.rooms ?? [], sort, statusOverrides, notes, selectedDate),
     filters, notes, statusOverrides, selectedDate,
   );
   const printTotalRows = (dateRange ? schedule.flatMap(d => d.rooms) : singleRooms).length;
@@ -970,7 +1039,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const rangeSections = schedule
     .map(day => ({
       title: formatSectionHeader(day.date, today),
-      data: applyFilters(sortRooms(day.rooms, sort, statusOverrides, notes), filters, notes, statusOverrides, day.date),
+      data: applyFilters(sortRooms(day.rooms, sort, statusOverrides, notes, day.date), filters, notes, statusOverrides, day.date),
     }))
     .filter(s => s.data.length > 0);
 
@@ -1335,6 +1404,15 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                     <Text style={styles.addNoteText}>+ Add staff note</Text>
                   </TouchableOpacity>
                 )}
+                {(notesSheetItem?.extraItems?.length ?? 0) > 0 && (
+                  <>
+                    <View style={styles.notesSheetDivider} />
+                    <Text style={styles.notesSheetSectionLabel}>Extras</Text>
+                    {notesSheetItem!.extraItems.map((item, i) => (
+                      <Text key={i} style={styles.notesSheetBody}>{'\u2022'} {item}</Text>
+                    ))}
+                  </>
+                )}
               </ScrollView>
             </Animated.View>
           </KeyboardAvoidingView>
@@ -1528,7 +1606,8 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                   {([
                     { key: 'includeStaffNotes',    label: 'Staff notes'     },
                     { key: 'includeGuestComments', label: 'Guest comments'  },
-                  ] as { key: 'includeStaffNotes' | 'includeGuestComments'; label: string }[]).map(opt => {
+                    { key: 'includeExtras',        label: 'Extras'          },
+                  ] as { key: 'includeStaffNotes' | 'includeGuestComments' | 'includeExtras'; label: string }[]).map(opt => {
                     const isActive = filters[opt.key];
                     return (
                       <TouchableOpacity
@@ -1689,9 +1768,10 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
               {/* Table header */}
               <View style={styles.printTableHeader}>
-                <Text style={[styles.printTableHeaderCell, { flex: 1 }]}>Room</Text>
-                <Text style={[styles.printTableHeaderCell, { flex: 2 }]}>Type</Text>
-                <Text style={[styles.printTableHeaderCell, { flex: 1.5 }]}>Occupancy</Text>
+                <Text style={[styles.printTableHeaderCell, { flex: 1.4 }]}>Room</Text>
+                <Text style={[styles.printTableHeaderCell, { flex: 1 }]}>Check-in</Text>
+                <Text style={[styles.printTableHeaderCell, { flex: 1 }]}>Check-out</Text>
+                <Text style={[styles.printTableHeaderCell, { flex: 1.5 }]}>Room status</Text>
                 <Text style={[styles.printTableHeaderCell, { flex: 1.3 }]}>Status</Text>
               </View>
 
@@ -1703,8 +1783,9 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                 return (
                   <View key={`${item.room.id}-${i}`} style={[styles.printTableRow, i % 2 === 1 && styles.printTableRowAlt]}>
                     <View style={styles.printTableRowCols}>
-                      <Text style={[styles.printTableCell, styles.printTableCellBold, { flex: 1 }]}>{item.room.number}</Text>
-                      <Text style={[styles.printTableCell, { flex: 2 }]}>{item.room.type}</Text>
+                      <Text style={[styles.printTableCell, styles.printTableCellBold, { flex: 1.4 }]}>{item.room.number}</Text>
+                      <Text style={[styles.printTableCell, { flex: 1 }]}>{item.checkIn ? new Date(item.checkIn + 'T12:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) : '—'}</Text>
+                      <Text style={[styles.printTableCell, { flex: 1 }]}>{item.checkOut ? new Date(item.checkOut + 'T12:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) : '—'}</Text>
                       <Text style={[styles.printTableCell, { flex: 1.5 }]}>
                         {item.isOccupied ? `${item.guestCount} guest${item.guestCount !== 1 ? 's' : ''}` : 'Vacant'}
                       </Text>
@@ -1712,9 +1793,14 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                         <Text style={[styles.printStatusText, { color: cfg.text }]}>{cfg.label}</Text>
                       </View>
                     </View>
-                    {!!note && (
-                      <View style={styles.printNoteRow}>
-                        <Text style={styles.printNoteText}><Text style={styles.printNoteLabel}>Note: </Text>{note}</Text>
+                    {(!!item.guestComments || !!note) && (
+                      <View style={styles.printNotesContainer}>
+                        {!!item.guestComments && (
+                          <Text style={styles.printNoteText}><Text style={styles.printNoteLabel}>Guest comments: </Text>{item.guestComments}</Text>
+                        )}
+                        {!!note && (
+                          <Text style={styles.printNoteText}><Text style={styles.printNoteLabel}>Staff note: </Text>{note}</Text>
+                        )}
                       </View>
                     )}
                   </View>
@@ -2101,9 +2187,13 @@ const styles = StyleSheet.create({
   guestCommentsLabel: { fontSize: 11, color: '#9ca3af', fontWeight: '600' as const, flexShrink: 0 },
   staffNoteLabel:     { fontSize: 11, color: '#9ca3af', fontWeight: '600' as const, fontStyle: 'normal' as const },
   guestCommentsText: { fontSize: 12, color: '#9ca3af', fontStyle: 'italic' as const },
-  noteActionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  noteActionRow: { flexDirection: 'row', alignItems: 'stretch' },
   noteRow:  { flex: 1, height: 24, justifyContent: 'center' },
   noteAssignDivider: { width: 1, alignSelf: 'stretch', backgroundColor: '#e5e7eb', marginHorizontal: 12 },
+  noteDivider: { width: 1, alignSelf: 'stretch', backgroundColor: '#e5e7eb', marginHorizontal: 12 },
+  extrasSection: { flex: 0.2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  extrasCount: { fontSize: 12, fontWeight: '700' as const, color: '#374151' },
+  extrasLabel: { fontSize: 12, fontWeight: '600' as const, color: '#9ca3af' },
   noteActionDivider: { width: 1, height: 16, backgroundColor: '#d1d5db', marginHorizontal: 8 },
   assignBtn: { width: 80, height: 24, alignItems: 'flex-end', justifyContent: 'center' },
   assignBtnText: { fontSize: 12, color: ORANGE, fontWeight: '700', textAlign: 'right' },
@@ -2298,14 +2388,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#d1d5db',
   },
   sheetHandleArea: {
-    width: '100%', paddingVertical: 14,
+    width: '100%', paddingVertical: 10,
     alignItems: 'center', justifyContent: 'center',
   },
   sortSheetHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingTop: 10, paddingBottom: 12,
+    paddingHorizontal: 20, paddingTop: 0, paddingBottom: 12,
   },
-  sortSheetTitle: { fontSize: 13, fontWeight: '700', color: '#6b7280', letterSpacing: 0.5 },
+  sortSheetTitle: { fontSize: 18, fontWeight: '600', color: COLORS.Black[200] },
   sortResetText: { fontSize: 14, color: ORANGE, fontWeight: '600' },
   sortOptionRow: {
     flexDirection: 'row', alignItems: 'center',
@@ -2353,28 +2443,36 @@ const styles = StyleSheet.create({
     elevation: 4,
     marginBottom: 12,
   },
-  printDocTitle: { fontSize: 13, fontWeight: '700', color: '#111' },
-  printDocDate:  { fontSize: 9, color: '#6b7280', marginTop: 2 },
+  printDocTitle: { fontSize: 11, fontWeight: '700', color: '#111' },
+  printDocDate:  { fontSize: 7.5, color: '#6b7280', marginTop: 2 },
   printDocDivider: { height: 0.5, backgroundColor: '#9ca3af', marginVertical: 8 },
   printTableHeader: {
-    flexDirection: 'row', paddingVertical: 4,
+    flexDirection: 'row', paddingVertical: 4, gap: 6,
     borderBottomWidth: 0.5, borderColor: '#374151', marginBottom: 1,
   },
-  printTableHeaderCell: { fontSize: 7.5, fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: 0.3 },
+  printTableHeaderCell: { fontSize: 6.5, fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: 0.3 },
   printTableRow: {
     paddingVertical: 5,
     borderBottomWidth: 0.5, borderColor: '#e5e7eb',
   },
   printTableRowCols: {
-    flexDirection: 'row', alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 6,
   },
   printTableRowAlt: {},
-  printTableCell: { fontSize: 9, color: '#374151' },
+  printTableCell: { fontSize: 7.5, color: '#374151' },
   printTableCellBold: { fontWeight: '700', color: '#111' },
   printStatusBadge: { borderRadius: 2, paddingHorizontal: 4, paddingVertical: 1, alignSelf: 'flex-start' },
-  printStatusText: { fontSize: 8, fontWeight: '600' },
+  printStatusText: { fontSize: 7, fontWeight: '600' },
   printNoteRow: { width: '100%', paddingTop: 2, paddingLeft: 1 },
-  printNoteText: { fontSize: 7.5, color: '#6b7280', fontStyle: 'italic' },
+  printNotesContainer: {
+    marginTop: 4,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 2,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    gap: 2,
+  },
+  printNoteText: { fontSize: 6.5, color: '#6b7280', fontStyle: 'italic' },
   printNoteLabel: { fontWeight: '700', fontStyle: 'normal' },
   // Bottom sheet: print settings
   printSheet: {

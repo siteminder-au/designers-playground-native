@@ -118,6 +118,18 @@ The app deploys as a **React Native Web** app to Heroku (`sm-native`), exactly l
 **Deployed URL:** `https://sm-native-5c5b643660da.herokuapp.com/`
 
 ############################################################################################################################
+# Shared Postgres database
+############################################################################################################################
+
+A shared Heroku Postgres database (`postgresql-colorful-67130`) is attached to the `sm-native` app. Heroku injects `DATABASE_URL` at runtime.
+
+- **Shared pool:** `src/db/pool.js` exports a single `pg.Pool` plus a `query(text, params)` helper. Import from any server-side resolver/route.
+- **Table naming:** Every designer **must** prefix their tables with their slug, e.g. `paul_bookings`, `radha_orders`. No unprefixed tables.
+- **Access pattern:** Prototypes (client) can't reach Postgres directly. Add resolvers under `src/graphql/{your-name}/` (see `paul/` for reference), use the shared pool, and query from the prototype via Apollo Client at `/graphql`.
+- **Local dev:** `heroku config:get DATABASE_URL -a sm-native` and export it, or run a local Postgres and point `DATABASE_URL` at it.
+- **Migrations:** Run ad-hoc `CREATE TABLE` via `heroku pg:psql -a sm-native`. Always include the designer prefix.
+
+############################################################################################################################
 # Overarching directives
 ############################################################################################################################
 

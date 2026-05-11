@@ -633,10 +633,9 @@ function RoomRow({
           <View style={{ flex: item.extraItems.length > 0 ? 0.8 : 1 }}>
             {item.guestComments ? (
               <View style={{ gap: 6 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                  <Text style={styles.guestCommentsLabel}>Guest comments:</Text>
-                  <Text numberOfLines={1} style={[styles.guestCommentsText, { flex: 1 }]}>{item.guestComments}</Text>
-                </View>
+                <Text numberOfLines={2} style={[styles.guestCommentsText, { flex: 1 }]}>
+                  <Text style={styles.guestCommentsLabel}>Guest comments: </Text>{item.guestComments}
+                </Text>
                 {note ? (
                   <Text numberOfLines={2} style={[styles.noteText, { flex: 1 }]}>
                     <Text style={styles.staffNoteLabel}>Staff note: </Text>{note}
@@ -700,6 +699,17 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     currentStatus: RoomStatus;
     x: number; y: number; width: number; height: number;
   } | null>(null);
+
+  // Stats strip scroll ref + pulse hint on first load
+  const statsScrollRef = useRef<ScrollView>(null);
+  useEffect(() => {
+    // 3 left-right pulses, each 350ms apart, starting after 500ms
+    const beats = [0, 28, 0, 28, 0];
+    const timers = beats.map((x, i) =>
+      setTimeout(() => statsScrollRef.current?.scrollTo({ x, animated: true }), 500 + i * 350)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, []);
 
   // Feature flags (runtime toggles for demo)
   const [flags, setFlags] = useState({ ...FLAGS });
@@ -1035,6 +1045,48 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const printTotalRows = (dateRange ? schedule.flatMap(d => d.rooms) : singleRooms).length;
   const printPageCount = Math.max(1, Math.ceil(printTotalRows / 22));
 
+  // Stats strip — always computed from the selected/start date, unfiltered
+  const statsRooms = selectedDay?.rooms ?? [];
+  const dayStats = {
+    dirty:        statsRooms.filter(r => { const s = statusOverrides[r.room.id] ?? r.room.status; return s === 'UNCLEANED' || s === 'DEEP_CLEAN'; }).length,
+    earlyCheckIn: statsRooms.filter(r => r.checkInTime !== null).length,
+    lateCheckOut: statsRooms.filter(r => r.lateCheckout && r.hasCheckoutToday).length,
+    outOfOrder:   statsRooms.filter(r => r.room.isClosed).length,
+    issues:       statsRooms.filter(r => r.room.notes !== null).length,
+  };
+  const BG = '#f2f3f3'; // matches screen background
+  const statsStrip = (
+    <View style={{ position: 'relative' }}>
+      <ScrollView
+        ref={statsScrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, gap: 24 }}
+      >
+        {([
+          { value: dayStats.dirty,        label: 'Rooms dirty today'      },
+          { value: dayStats.earlyCheckIn, label: 'Early check-in today'   },
+          { value: dayStats.lateCheckOut, label: 'Late check-out today'   },
+          { value: dayStats.outOfOrder,   label: 'Out of order today'     },
+          { value: dayStats.issues,       label: 'Issue reported today'   },
+        ] as { value: number; label: string }[]).map((stat, i) => (
+          <View key={i} style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+            <Text style={styles.statValue}>{stat.value}</Text>
+            <Text style={styles.statLabel}>{stat.label}</Text>
+          </View>
+        ))}
+      </ScrollView>
+      {/* Simulated right-edge fade — indicates horizontal scroll affordance */}
+      <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 40, flexDirection: 'row' }} pointerEvents="none">
+        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0)`    }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0.3)`  }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0.6)`  }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0.85)` }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,1)`    }} />
+      </View>
+    </View>
+  );
+
   // Range view sections (empty sections hidden when filters active)
   const rangeSections = schedule
     .map(day => ({
@@ -1214,6 +1266,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         <SectionList
           sections={rangeSections}
           keyExtractor={(item, i) => `${item.room.id}-${i}`}
+          ListHeaderComponent={statsStrip}
           renderSectionHeader={({ section }) => (
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionHeaderText}>{section.title}</Text>
@@ -1251,6 +1304,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         <FlatList
           data={singleRooms}
           keyExtractor={item => item.room.id}
+          ListHeaderComponent={statsStrip}
           renderItem={({ item }) => {
             const effectiveStatus = statusOverrides[item.room.id] ?? item.room.status;
             const noteKey = item.reservationId ?? item.room.id;
@@ -2194,6 +2248,8 @@ const styles = StyleSheet.create({
   extrasSection: { flex: 0.2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
   extrasCount: { fontSize: 12, fontWeight: '700' as const, color: '#374151' },
   extrasLabel: { fontSize: 12, fontWeight: '600' as const, color: '#9ca3af' },
+  statLabel: { fontSize: 12, color: '#9ca3af', fontWeight: '500' as const },
+  statValue: { fontSize: 14, fontWeight: '700' as const, color: '#111827' },
   noteActionDivider: { width: 1, height: 16, backgroundColor: '#d1d5db', marginHorizontal: 8 },
   assignBtn: { width: 80, height: 24, alignItems: 'flex-end', justifyContent: 'center' },
   assignBtnText: { fontSize: 12, color: ORANGE, fontWeight: '700', textAlign: 'right' },

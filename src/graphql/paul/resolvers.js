@@ -1,50 +1,103 @@
 import { query } from '../../db/pool.js';
-import { ensureSchema } from './seed.js';
 
-await ensureSchema();
+const BASE_DATE_MS = Date.UTC(2026, 3, 21);
 
-const ROOM_COLS = `
-  id,
-  number,
-  floor,
-  type,
-  status,
-  assigned_to       AS "assignedTo",
-  notes,
-  bed_configuration AS "bedConfiguration"
-`;
+function dayToISO(day) {
+  return new Date(BASE_DATE_MS + day * 86_400_000).toISOString().slice(0, 10);
+}
 
-const RESERVATION_COLS = `
-  id,
-  room_id                                     AS "roomId",
-  guest_name                                  AS "guestName",
-  TO_CHAR(check_in,  'YYYY-MM-DD')            AS "checkIn",
-  TO_CHAR(check_out, 'YYYY-MM-DD')            AS "checkOut",
-  adults,
-  children,
-  infants,
-  reservation_status                          AS "reservationStatus",
-  guest_status                                AS "guestStatus",
-  is_unallocated                              AS "isUnallocated",
-  outstanding_balance                         AS "outstandingBalance",
-  payment_expired                             AS "paymentExpired",
-  room_display_name                           AS "roomDisplayName",
-  late_checkout                               AS "lateCheckout",
-  bed_configuration                           AS "bedConfiguration"
-`;
+const ROOM_IDS = [
+  'br-1', 'br-2', 'br-3', 'br-4', 'br-5', 'br-6', 'br-7', 'br-8', 'br-9', 'br-10',
+  'ds-1', 'ds-2', 'ds-3', 'ds-4', 'ds-5',
+  'fr-1', 'fr-2', 'fr-3', 'fr-4', 'fr-5', 'fr-6', 'fr-7',
+];
+
+const ROOM_META = {
+  br: { label: 'Room',        type: 'Bridge Room',  floor: 1, bedConfiguration: 'Twin Beds' },
+  ds: { label: 'Suite',       type: 'Deluxe Suite', floor: 2, bedConfiguration: 'King Bed' },
+  fr: { label: 'Family Room', type: 'Family Room',  floor: 3, bedConfiguration: 'Multiple Beds' },
+};
+
+const CALENDAR_TO_HK_ID = {
+  'Room 1': 'br-1', 'Room 2': 'br-2', 'Room 3': 'br-3', 'Room 4': 'br-4', 'Room 5': 'br-5',
+  'Room 6': 'br-6', 'Room 7': 'br-7', 'Room 8': 'br-8', 'Room 9': 'br-9', 'Room 10': 'br-10',
+  'Suite 1': 'ds-1', 'Suite 2': 'ds-2', 'Suite 3': 'ds-3', 'Suite 4': 'ds-4', 'Suite 5': 'ds-5',
+  'Family Room 1': 'fr-1', 'Family Room 2': 'fr-2', 'Family Room 3': 'fr-3',
+  'Family Room 4': 'fr-4', 'Family Room 5': 'fr-5', 'Family Room 6': 'fr-6', 'Family Room 7': 'fr-7',
+};
+
+const CLEANING_DB_TO_GQL = {
+  'cleaned':              'CLEANED',
+  'need-cleaning':        'UNCLEANED',
+  'need-deep-cleaning':   'DEEP_CLEAN',
+  'skipped-cleaning':     'SKIP_CLEANING',
+  'awaiting-inspection':  'AWAITING_INSPECTION',
+};
+
+const CLEANING_GQL_TO_DB = Object.fromEntries(
+  Object.entries(CLEANING_DB_TO_GQL).map(([db, gql]) => [gql, db])
+);
+
+function buildRoom(roomId, dbStatus) {
+  const meta = ROOM_META[roomId.split('-')[0]] ?? { label: roomId, type: 'Other', floor: 0, bedConfiguration: 'Standard' };
+  const num = roomId.split('-')[1];
+  return {
+    id: roomId,
+    number: `${meta.label} ${num}`,
+    floor: meta.floor,
+    type: meta.type,
+    status: CLEANING_DB_TO_GQL[dbStatus] ?? 'UNCLEANED',
+    assignedTo: null,
+    notes: null,
+    bedConfiguration: meta.bedConfiguration,
+  };
+}
+
+function buildReservation(data) {
+  const isUnallocated = data.room === 'Unallocated';
+  const checkIn = dayToISO(data.startDay);
+  const checkOut = dayToISO(data.startDay + data.numberOfNights);
+
+  let guestStatus = 'CONFIRMED';
+  if (data.isCheckedOut) guestStatus = 'CHECKED_OUT';
+  else if (data.isCheckedIn) guestStatus = 'CHECKED_IN';
+
+  return {
+    id: data.id,
+    roomId: isUnallocated ? null : CALENDAR_TO_HK_ID[data.room] ?? null,
+    guestName: data.guestName,
+    checkIn,
+    checkOut,
+    adults: data.adults,
+    children: data.children,
+    infants: data.strollers,
+    reservationStatus: 'CONFIRMED',
+    guestStatus,
+    isUnallocated,
+    outstandingBalance: null,
+    paymentExpired: data.isPaid === false,
+    roomDisplayName: isUnallocated ? null : data.room,
+    lateCheckout: false,
+    bedConfiguration: null,
+  };
+}
 
 async function loadRooms() {
-  const { rows } = await query(`SELECT ${ROOM_COLS} FROM paul_rooms ORDER BY id::int`);
-  return rows;
+  const { rows } = await query(
+    'SELECT room_id, cleaning_status FROM si_room_cleaning'
+  );
+  const statusByRoom = new Map(rows.map(r => [r.room_id, r.cleaning_status]));
+  return ROOM_IDS.map(id => buildRoom(id, statusByRoom.get(id)));
 }
 
 async function loadReservations() {
-  const { rows } = await query(`SELECT ${RESERVATION_COLS} FROM paul_reservations`);
-  return rows;
+  const { rows } = await query('SELECT data FROM si_reservations');
+  return rows.map(r => buildReservation(r.data));
 }
 
-function withRoom(reservation, rooms) {
-  return { ...reservation, room: rooms.find(room => room.id === reservation.roomId) };
+function attachRoom(reservation, rooms) {
+  const room = rooms.find(r => r.id === reservation.roomId);
+  return { ...reservation, room };
 }
 
 export const resolvers = {
@@ -67,7 +120,7 @@ export const resolvers = {
       const [rooms, reservations] = await Promise.all([loadRooms(), loadReservations()]);
       return reservations
         .filter(r => r.checkIn <= endDate && r.checkOut >= startDate)
-        .map(r => withRoom(r, rooms));
+        .map(r => attachRoom(r, rooms));
     },
 
     calendarData: async (_, { startDate, endDate }) => {
@@ -136,19 +189,19 @@ export const resolvers = {
 
       const checkingOut = reservations
         .filter(r => r.checkOut === today && r.guestStatus === 'CHECKED_IN')
-        .map(r => withRoom(r, rooms));
+        .map(r => attachRoom(r, rooms));
 
       const checkingIn = reservations
         .filter(r => r.checkIn === today && r.guestStatus === 'CONFIRMED')
-        .map(r => withRoom(r, rooms));
+        .map(r => attachRoom(r, rooms));
 
       const checkedOut = reservations
         .filter(r => r.checkOut === today && r.guestStatus === 'CHECKED_OUT')
-        .map(r => withRoom(r, rooms));
+        .map(r => attachRoom(r, rooms));
 
       const inhouse = reservations
         .filter(r => r.checkIn < today && r.checkOut > today && r.guestStatus === 'CHECKED_IN')
-        .map(r => withRoom(r, rooms));
+        .map(r => attachRoom(r, rooms));
 
       const counts = {
         unallocated: checkingIn.filter(r => r.isUnallocated).length,
@@ -163,13 +216,18 @@ export const resolvers = {
 
   Mutation: {
     updateRoomStatus: async (_, { roomId, status }) => {
+      const dbStatus = CLEANING_GQL_TO_DB[status];
+      if (!dbStatus) throw new Error(`Unknown RoomStatus: ${status}`);
       const { rows } = await query(
-        `UPDATE paul_rooms SET status = $1 WHERE id = $2
-         RETURNING ${ROOM_COLS}`,
-        [status, roomId],
+        `INSERT INTO si_room_cleaning (room_id, cleaning_status, updated_at)
+         VALUES ($1, $2, NOW())
+         ON CONFLICT (room_id) DO UPDATE
+           SET cleaning_status = EXCLUDED.cleaning_status,
+               updated_at = NOW()
+         RETURNING room_id, cleaning_status`,
+        [roomId, dbStatus],
       );
-      if (rows.length === 0) throw new Error(`Room ${roomId} not found`);
-      return rows[0];
+      return buildRoom(rows[0].room_id, rows[0].cleaning_status);
     },
   },
 };

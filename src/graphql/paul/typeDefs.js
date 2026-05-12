@@ -4,6 +4,8 @@ export const typeDefs = `#graphql
     CLEANED
     UNCLEANED
     SKIP_CLEANING
+    DEEP_CLEAN
+    AWAITING_INSPECTION
   }
 
   enum ReservationStatus {

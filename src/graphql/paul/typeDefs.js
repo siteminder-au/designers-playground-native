@@ -28,6 +28,7 @@ export const typeDefs = `#graphql
     assignedTo: String
     notes: String
     bedConfiguration: String!
+    isClosed: Boolean!
   }
 
   type Reservation {
@@ -98,6 +99,7 @@ export const typeDefs = `#graphql
   type RoomDaySchedule {
     room: Room!
     isOccupied: Boolean!
+    hasCheckoutToday: Boolean!
     guestCount: Int!
     adults: Int!
     children: Int!
@@ -106,8 +108,13 @@ export const typeDefs = `#graphql
     guestName: String
     checkIn: String
     checkOut: String
+    checkInTime: String
+    checkOutTime: String
     lateCheckout: Boolean!
+    earlyCheckout: Boolean!
     bedConfiguration: String!
+    guestComments: String
+    extraItems: [String!]!
   }
 
   type DaySchedule {

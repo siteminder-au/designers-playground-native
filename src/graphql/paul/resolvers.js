@@ -50,6 +50,7 @@ function buildRoom(roomId, dbStatus) {
     assignedTo: null,
     notes: null,
     bedConfiguration: meta.bedConfiguration,
+    isClosed: false,
   };
 }
 
@@ -77,7 +78,12 @@ function buildReservation(data) {
     outstandingBalance: null,
     paymentExpired: data.isPaid === false,
     roomDisplayName: isUnallocated ? null : data.room,
-    lateCheckout: false,
+    lateCheckout: !!data.checkOutTime,
+    earlyCheckout: !!data.checkInTime,
+    checkInTime: data.checkInTime ?? null,
+    checkOutTime: data.checkOutTime ?? null,
+    guestComments: data.guestComment ?? null,
+    extraItems: data.hasExtras ? ['Extras'] : [],
     bedConfiguration: null,
   };
 }
@@ -160,9 +166,13 @@ export const resolvers = {
             r => r.roomId === room.id && r.checkIn <= current &&
                  (r.lateCheckout ? r.checkOut >= current : r.checkOut > current)
           );
+          const hasCheckoutToday = reservations.some(
+            r => r.roomId === room.id && r.checkOut === current
+          );
           return {
             room,
             isOccupied: !!res,
+            hasCheckoutToday,
             guestCount: (res?.adults ?? 0) + (res?.children ?? 0) + (res?.infants ?? 0),
             adults:   res?.adults   ?? 0,
             children: res?.children ?? 0,
@@ -171,8 +181,13 @@ export const resolvers = {
             guestName:     res?.guestName ?? null,
             checkIn:       res?.checkIn   ?? null,
             checkOut:      res?.checkOut  ?? null,
+            checkInTime:   res?.checkInTime  ?? null,
+            checkOutTime:  res?.checkOutTime ?? null,
             lateCheckout:  res?.lateCheckout  ?? false,
+            earlyCheckout: res?.earlyCheckout ?? false,
             bedConfiguration: res?.bedConfiguration ?? room.bedConfiguration,
+            guestComments: res?.guestComments ?? null,
+            extraItems:    res?.extraItems    ?? [],
           };
         });
         days.push({ date: current, rooms: dayRooms });

@@ -25,9 +25,17 @@ export function HousekeepingStatusProvider({ children }: { children: React.React
 
   function setStatusOverride(roomId: string, status: RoomStatus) {
     setStatusOverrides(prev => ({ ...prev, [roomId]: status }));
-    updateRoomStatusMutation({ variables: { roomId, status } }).catch(err => {
-      console.warn('[paul] updateRoomStatus failed', err);
-    });
+    updateRoomStatusMutation({ variables: { roomId, status } })
+      .catch(err => { console.warn('[paul] updateRoomStatus failed', err); })
+      .finally(() => {
+        // Clear the local override once the mutation settles so polled updates
+        // from the DB (e.g. Si's changes) are no longer shadowed.
+        setStatusOverrides(prev => {
+          const next = { ...prev };
+          delete next[roomId];
+          return next;
+        });
+      });
   }
 
   return (

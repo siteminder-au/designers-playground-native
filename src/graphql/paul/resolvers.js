@@ -1,15 +1,59 @@
-import { rooms, reservations } from './mockData.js';
+import { query } from '../../db/pool.js';
+import { ensureSchema } from './seed.js';
 
-function withRoom(r) {
-  return { ...r, room: rooms.find(room => room.id === r.roomId) };
+await ensureSchema();
+
+const ROOM_COLS = `
+  id,
+  number,
+  floor,
+  type,
+  status,
+  assigned_to       AS "assignedTo",
+  notes,
+  bed_configuration AS "bedConfiguration"
+`;
+
+const RESERVATION_COLS = `
+  id,
+  room_id                                     AS "roomId",
+  guest_name                                  AS "guestName",
+  TO_CHAR(check_in,  'YYYY-MM-DD')            AS "checkIn",
+  TO_CHAR(check_out, 'YYYY-MM-DD')            AS "checkOut",
+  adults,
+  children,
+  infants,
+  reservation_status                          AS "reservationStatus",
+  guest_status                                AS "guestStatus",
+  is_unallocated                              AS "isUnallocated",
+  outstanding_balance                         AS "outstandingBalance",
+  payment_expired                             AS "paymentExpired",
+  room_display_name                           AS "roomDisplayName",
+  late_checkout                               AS "lateCheckout",
+  bed_configuration                           AS "bedConfiguration"
+`;
+
+async function loadRooms() {
+  const { rows } = await query(`SELECT ${ROOM_COLS} FROM paul_rooms ORDER BY id::int`);
+  return rows;
+}
+
+async function loadReservations() {
+  const { rows } = await query(`SELECT ${RESERVATION_COLS} FROM paul_reservations`);
+  return rows;
+}
+
+function withRoom(reservation, rooms) {
+  return { ...reservation, room: rooms.find(room => room.id === reservation.roomId) };
 }
 
 export const resolvers = {
   Query: {
-    rooms: () => rooms,
+    rooms: () => loadRooms(),
 
-    housekeepingReport: (_, { date }) => {
+    housekeepingReport: async (_, { date }) => {
       const reportDate = date ?? new Date().toISOString().split('T')[0];
+      const rooms = await loadRooms();
       const summary = {
         total: rooms.length,
         cleaned: rooms.filter(r => r.status === 'CLEANED').length,
@@ -19,13 +63,15 @@ export const resolvers = {
       return { date: reportDate, rooms, summary };
     },
 
-    reservations: (_, { startDate, endDate }) => {
+    reservations: async (_, { startDate, endDate }) => {
+      const [rooms, reservations] = await Promise.all([loadRooms(), loadReservations()]);
       return reservations
         .filter(r => r.checkIn <= endDate && r.checkOut >= startDate)
-        .map(withRoom);
+        .map(r => withRoom(r, rooms));
     },
 
-    calendarData: (_, { startDate, endDate }) => {
+    calendarData: async (_, { startDate, endDate }) => {
+      const [rooms, reservations] = await Promise.all([loadRooms(), loadReservations()]);
       const typeMap = new Map();
       for (const room of rooms) {
         if (!typeMap.has(room.type)) typeMap.set(room.type, []);
@@ -51,7 +97,8 @@ export const resolvers = {
       });
     },
 
-    housekeepingSchedule: (_, { startDate, endDate }) => {
+    housekeepingSchedule: async (_, { startDate, endDate }) => {
+      const [rooms, reservations] = await Promise.all([loadRooms(), loadReservations()]);
       const days = [];
       let current = startDate;
       while (current <= endDate) {
@@ -83,27 +130,28 @@ export const resolvers = {
       return days;
     },
 
-    todayReservations: (_, { date }) => {
+    todayReservations: async (_, { date }) => {
       const today = date ?? new Date().toISOString().split('T')[0];
+      const [rooms, reservations] = await Promise.all([loadRooms(), loadReservations()]);
 
       const checkingOut = reservations
         .filter(r => r.checkOut === today && r.guestStatus === 'CHECKED_IN')
-        .map(withRoom);
+        .map(r => withRoom(r, rooms));
 
       const checkingIn = reservations
         .filter(r => r.checkIn === today && r.guestStatus === 'CONFIRMED')
-        .map(withRoom);
+        .map(r => withRoom(r, rooms));
 
       const checkedOut = reservations
         .filter(r => r.checkOut === today && r.guestStatus === 'CHECKED_OUT')
-        .map(withRoom);
+        .map(r => withRoom(r, rooms));
 
       const inhouse = reservations
         .filter(r => r.checkIn < today && r.checkOut > today && r.guestStatus === 'CHECKED_IN')
-        .map(withRoom);
+        .map(r => withRoom(r, rooms));
 
       const counts = {
-        unallocated: [...checkingIn].filter(r => r.isUnallocated).length,
+        unallocated: checkingIn.filter(r => r.isUnallocated).length,
         confirmed: checkingIn.length,
         checkedIn: inhouse.length + checkingOut.length,
         checkedOut: checkedOut.length,
@@ -114,11 +162,14 @@ export const resolvers = {
   },
 
   Mutation: {
-    updateRoomStatus: (_, { roomId, status }) => {
-      const room = rooms.find(r => r.id === roomId);
-      if (!room) throw new Error(`Room ${roomId} not found`);
-      room.status = status;
-      return room;
+    updateRoomStatus: async (_, { roomId, status }) => {
+      const { rows } = await query(
+        `UPDATE paul_rooms SET status = $1 WHERE id = $2
+         RETURNING ${ROOM_COLS}`,
+        [status, roomId],
+      );
+      if (rows.length === 0) throw new Error(`Room ${roomId} not found`);
+      return rows[0];
     },
   },
 };

@@ -994,7 +994,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
   const { data, loading, error } = useQuery(GET_HOUSEKEEPING_SCHEDULE, {
     variables: { startDate: queryStart, endDate: queryEnd },
-    pollInterval: 3000,
+    pollInterval: 15000,
   });
 
   const schedule: DaySchedule[] = data?.housekeepingSchedule ?? [];

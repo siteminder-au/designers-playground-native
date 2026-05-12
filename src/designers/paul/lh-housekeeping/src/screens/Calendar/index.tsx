@@ -141,7 +141,7 @@ export default function CalendarScreen() {
 
   const { data, loading } = useQuery(GET_CALENDAR_DATA, {
     variables: { startDate: queryStart, endDate: queryEnd },
-    pollInterval: 3000,
+    pollInterval: 15000,
   });
 
   const visibleDates = Array.from({ length: NUM_DAYS }, (_, i) => addDays(weekStart, i));

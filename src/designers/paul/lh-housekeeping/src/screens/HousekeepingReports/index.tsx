@@ -157,13 +157,12 @@ function getPriority(
   const hasNotes = !!(notes[noteKey] || item.room.notes || item.guestComments || item.extraItems.length > 0);
 
   // P7: Not actionable right now
-  // Closed is always P7. Cleaned/skip are always P7 — once a room has been
-  // cleaned (or intentionally skipped), it should leave the active list so the
-  // user gets clear feedback on their status change.
+  // Closed is always P7. Cleaned/skip are only P7 when nothing is happening today —
+  // if there's a checkout or an arriving guest, the room still needs attention.
   if (item.room.isClosed) return 7;
   const hasIncomingGuest = item.guestName !== null && !item.isOccupied; // arriving today, not yet checked in
   const hasOutgoing = item.hasCheckoutToday;
-  if (effectiveStatus === 'CLEANED' || effectiveStatus === 'SKIP_CLEANING') return 7;
+  if ((effectiveStatus === 'CLEANED' || effectiveStatus === 'SKIP_CLEANING') && !hasIncomingGuest && !hasOutgoing) return 7;
 
   // P6: Late checkout — guest still in room, push down until window passes
   if (item.lateCheckout && item.isOccupied) return 6;

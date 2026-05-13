@@ -54,6 +54,34 @@ function buildRoom(roomId, dbStatus) {
   };
 }
 
+// Si stores times as "11:00 AM" / "2:00 PM". Convert to 24h "HH:MM" for downstream.
+function to24h(time) {
+  if (!time) return null;
+  const m = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec(String(time).trim());
+  if (m) {
+    let h = parseInt(m[1], 10);
+    const isPm = m[3].toUpperCase() === 'PM';
+    if (isPm && h !== 12) h += 12;
+    if (!isPm && h === 12) h = 0;
+    return `${String(h).padStart(2, '0')}:${m[2]}`;
+  }
+  return /^\d{1,2}:\d{2}$/.test(time) ? time : null;
+}
+
+// Si's thresholds: early check-in < 2pm, late check-out > 11am. Standard times
+// (2pm/3pm check-in, 11am check-out) collapse to null so the UI shows the grey
+// "Checking in" / "Checking out" badge; only special times surface in orange.
+function asEarlyCheckIn(time24) {
+  if (!time24) return null;
+  const [h, m] = time24.split(':').map(Number);
+  return h * 60 + m < 14 * 60 ? time24 : null;
+}
+function asLateCheckOut(time24) {
+  if (!time24) return null;
+  const [h, m] = time24.split(':').map(Number);
+  return h * 60 + m > 11 * 60 ? time24 : null;
+}
+
 function buildReservation(data) {
   const isUnallocated = data.room === 'Unallocated';
   const checkIn = dayToISO(data.startDay);
@@ -62,6 +90,9 @@ function buildReservation(data) {
   let guestStatus = 'CONFIRMED';
   if (data.isCheckedOut) guestStatus = 'CHECKED_OUT';
   else if (data.isCheckedIn) guestStatus = 'CHECKED_IN';
+
+  const checkInTime = asEarlyCheckIn(to24h(data.checkInTime));
+  const checkOutTime = asLateCheckOut(to24h(data.checkOutTime));
 
   return {
     id: data.id,
@@ -78,10 +109,10 @@ function buildReservation(data) {
     outstandingBalance: null,
     paymentExpired: data.isPaid === false,
     roomDisplayName: isUnallocated ? null : data.room,
-    lateCheckout: !!data.checkOutTime,
-    earlyCheckout: !!data.checkInTime,
-    checkInTime: data.checkInTime ?? null,
-    checkOutTime: data.checkOutTime ?? null,
+    lateCheckout: checkOutTime !== null,
+    earlyCheckout: checkInTime !== null,
+    checkInTime,
+    checkOutTime,
     guestComments: data.guestComment ?? null,
     extraItems: data.hasExtras ? ['Extras'] : [],
     bedConfiguration: null,
@@ -171,7 +202,7 @@ export const resolvers = {
           );
           return {
             room,
-            isOccupied: !!res,
+            isOccupied: !!res && res.guestStatus === 'CHECKED_IN',
             hasCheckoutToday,
             guestCount: (res?.adults ?? 0) + (res?.children ?? 0) + (res?.infants ?? 0),
             adults:   res?.adults   ?? 0,

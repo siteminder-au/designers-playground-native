@@ -681,10 +681,12 @@ function RoomRow({
 function AnimatedRoomWrapper({
   id,
   positionsRef,
+  shouldAnimate,
   children,
 }: {
   id: string;
   positionsRef: React.MutableRefObject<Map<string, number>>;
+  shouldAnimate: boolean;
   children: React.ReactNode;
 }) {
   const ref = useRef<View>(null);
@@ -705,17 +707,19 @@ function AnimatedRoomWrapper({
   useLayoutEffect(() => {
     const node = ref.current as any;
     if (!node) return;
-    // Measure synchronously before paint so translateY snap-back happens in the
-    // same frame as the layout commit (no visible flicker at the new position).
+    // Only animate when the sort order changed (shouldAnimate=true). On other
+    // re-renders (opening dropdowns, polling, etc.), record positions for the
+    // next reorder but skip the animation so layout-shift noise doesn't trigger
+    // spurious slides.
     if (typeof node.getBoundingClientRect === 'function') {
       const newY = node.getBoundingClientRect().top;
       const lastY = positionsRef.current.get(id);
-      if (lastY != null) applyDelta(lastY, newY);
+      if (shouldAnimate && lastY != null) applyDelta(lastY, newY);
       positionsRef.current.set(id, newY);
     } else if (typeof node.measureInWindow === 'function') {
       node.measureInWindow((_x: number, y: number) => {
         const lastY = positionsRef.current.get(id);
-        if (lastY != null) applyDelta(lastY, y);
+        if (shouldAnimate && lastY != null) applyDelta(lastY, y);
         positionsRef.current.set(id, y);
       });
     }
@@ -738,6 +742,9 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
   // Tracks each room card's last measured Y for FLIP reorder animation
   const roomPositionsRef = useRef(new Map<string, number>());
+  // Tracks previous sort order so we only animate on actual reorders, not on
+  // every re-render (e.g. opening dropdowns, polling refetches).
+  const previousOrderRef = useRef<string[]>([]);
   // Refs for explicit scroll preservation across status changes
   const flatListRef = useRef<FlatList<RoomDaySchedule>>(null);
   const scrollYRef = useRef(0);
@@ -1108,6 +1115,25 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     sortRooms(selectedDay?.rooms ?? [], sort, statusOverrides, notes, selectedDate),
     filters, notes, statusOverrides, selectedDate,
   );
+
+  // Detect if the sort order of the single-day list changed since the previous
+  // render. Only triggers the FLIP slide animation on real reorders.
+  const currentOrder = singleRooms.map(r => r.room.id);
+  let orderChanged = previousOrderRef.current.length === currentOrder.length;
+  if (orderChanged) {
+    orderChanged = false;
+    for (let i = 0; i < currentOrder.length; i++) {
+      if (previousOrderRef.current[i] !== currentOrder[i]) {
+        orderChanged = true;
+        break;
+      }
+    }
+  } else if (previousOrderRef.current.length > 0) {
+    // Length changed (filter toggled, etc.) — count as a reorder so cards reflow smoothly.
+    orderChanged = true;
+  }
+  previousOrderRef.current = currentOrder;
+
   const printTotalRows = (dateRange ? schedule.flatMap(d => d.rooms) : singleRooms).length;
   const printPageCount = Math.max(1, Math.ceil(printTotalRows / 22));
 
@@ -1349,7 +1375,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
             const noteKey = item.reservationId ?? item.room.id;
             const bedConfig = item.bedConfiguration;
             return (
-              <AnimatedRoomWrapper id={item.room.id} positionsRef={roomPositionsRef}>
+              <AnimatedRoomWrapper id={item.room.id} positionsRef={roomPositionsRef} shouldAnimate={orderChanged}>
                 <RoomRow
                   item={item}
                   status={effectiveStatus}
@@ -1387,7 +1413,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
             const noteKey = item.reservationId ?? item.room.id;
             const bedConfig = item.bedConfiguration;
             return (
-              <AnimatedRoomWrapper id={item.room.id} positionsRef={roomPositionsRef}>
+              <AnimatedRoomWrapper id={item.room.id} positionsRef={roomPositionsRef} shouldAnimate={orderChanged}>
                 <RoomRow
                   item={item}
                   status={effectiveStatus}

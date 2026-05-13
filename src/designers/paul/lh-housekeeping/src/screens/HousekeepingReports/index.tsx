@@ -134,7 +134,7 @@ const SORT_OPTIONS: { value: SortField; label: string }[] = [
   { value: 'guest_count', label: 'Number of guests' },
 ];
 
-const DEFAULT_SORT: SortState = { field: 'room_number', direction: 'asc' };
+const DEFAULT_SORT: SortState = { field: 'priority', direction: 'desc' };
 
 
 const STATUS_SORT_ORDER: Record<RoomStatus, number> = {

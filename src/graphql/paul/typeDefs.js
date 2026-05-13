@@ -122,6 +122,17 @@ export const typeDefs = `#graphql
     rooms: [RoomDaySchedule!]!
   }
 
+  type StaffNote {
+    id: ID!
+    roomId: ID!
+    author: String!
+    text: String!
+    tag: String!
+    reservationId: String
+    createdAt: String!
+    updatedAt: String!
+  }
+
   type Query {
     housekeepingReport(date: String): HousekeepingReport!
     reservations(startDate: String!, endDate: String!): [Reservation!]!
@@ -129,9 +140,12 @@ export const typeDefs = `#graphql
     calendarData(startDate: String!, endDate: String!): [RoomGroup!]!
     todayReservations(date: String): TodayReservations!
     housekeepingSchedule(startDate: String!, endDate: String!): [DaySchedule!]!
+    staffNotes: [StaffNote!]!
   }
 
   type Mutation {
     updateRoomStatus(roomId: ID!, status: RoomStatus!): Room!
+    addStaffNote(id: ID!, roomId: ID!, author: String!, text: String!, tag: String!, reservationId: String): StaffNote!
+    updateStaffNote(id: ID!, text: String!): StaffNote!
   }
 `;

@@ -258,6 +258,15 @@ export const resolvers = {
 
       return { checkingOut, checkingIn, checkedOut, inhouse, counts };
     },
+
+    staffNotes: async () => {
+      const { rows } = await query(
+        `SELECT id, room_id, author, text, tag, reservation_id, created_at, updated_at
+         FROM si_staff_notes
+         ORDER BY created_at ASC`,
+      );
+      return rows.map(buildStaffNote);
+    },
   },
 
   Mutation: {
@@ -275,5 +284,47 @@ export const resolvers = {
       );
       return buildRoom(rows[0].room_id, rows[0].cleaning_status);
     },
+
+    addStaffNote: async (_, { id, roomId, author, text, tag, reservationId }) => {
+      if (tag !== 'room' && tag !== 'guest') throw new Error(`Invalid tag: ${tag}`);
+      // Idempotent on id per Si's contract — re-posting the same id is a no-op.
+      await query(
+        `INSERT INTO si_staff_notes (id, room_id, author, text, tag, reservation_id)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (id) DO NOTHING`,
+        [id, roomId, author, text, tag, reservationId ?? null],
+      );
+      const { rows } = await query(
+        `SELECT id, room_id, author, text, tag, reservation_id, created_at, updated_at
+         FROM si_staff_notes WHERE id = $1`,
+        [id],
+      );
+      return buildStaffNote(rows[0]);
+    },
+
+    updateStaffNote: async (_, { id, text }) => {
+      const { rows } = await query(
+        `UPDATE si_staff_notes
+         SET text = $1, updated_at = NOW()
+         WHERE id = $2
+         RETURNING id, room_id, author, text, tag, reservation_id, created_at, updated_at`,
+        [text, id],
+      );
+      if (!rows[0]) throw new Error(`StaffNote ${id} not found`);
+      return buildStaffNote(rows[0]);
+    },
   },
 };
+
+function buildStaffNote(row) {
+  return {
+    id: row.id,
+    roomId: row.room_id,
+    author: row.author,
+    text: row.text,
+    tag: row.tag,
+    reservationId: row.reservation_id,
+    createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
+    updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at),
+  };
+}

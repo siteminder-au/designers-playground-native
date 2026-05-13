@@ -673,11 +673,52 @@ function RoomRow({
   );
 }
 
+// ── FLIP-animated wrapper: measures each row's Y on layout, then slides
+// from the previous Y to the new one when the list reorders. Works on web + native
+// because it animates transform (translateY) only — no layout side effects.
+
+function AnimatedRoomWrapper({
+  id,
+  positionsRef,
+  children,
+}: {
+  id: string;
+  positionsRef: React.MutableRefObject<Map<string, number>>;
+  children: React.ReactNode;
+}) {
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  function handleLayout(e: { nativeEvent: { layout: { y: number } } }) {
+    const newY = e.nativeEvent.layout.y;
+    const lastY = positionsRef.current.get(id);
+    if (lastY != null && Math.abs(lastY - newY) > 1) {
+      // Snap visually back to old position, then animate to the new one
+      translateY.setValue(lastY - newY);
+      Animated.spring(translateY, {
+        toValue: 0,
+        useNativeDriver: true,
+        damping: 22,
+        stiffness: 220,
+      }).start();
+    }
+    positionsRef.current.set(id, newY);
+  }
+
+  return (
+    <Animated.View style={{ transform: [{ translateY }] }} onLayout={handleLayout}>
+      {children}
+    </Animated.View>
+  );
+}
+
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function HousekeepingScreen({ navigation }: { navigation: any }) {
   const insets = useSafeAreaInsets();
   const today = new Date().toISOString().split('T')[0];
+
+  // Tracks each room card's last measured Y for FLIP reorder animation
+  const roomPositionsRef = useRef(new Map<string, number>());
 
   // Strip state
   const [selectedDate, setSelectedDate] = useState(today);
@@ -1277,17 +1318,19 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
             const noteKey = item.reservationId ?? item.room.id;
             const bedConfig = item.bedConfiguration;
             return (
-              <RoomRow
-                item={item}
-                status={effectiveStatus}
-                note={notes[noteKey] ?? ''}
-                bedConfig={bedConfig}
-                flags={flags}
-                onNotePress={() => openNotesSheet(item, noteKey)}
-                onStatusPress={(rect) => openStatusDropdown(item.room.id, effectiveStatus, rect)}
-                assignedTo={assignments[item.room.id] ?? null}
-                onAssignPress={() => openAssignModal(item.room.id)}
-              />
+              <AnimatedRoomWrapper id={item.room.id} positionsRef={roomPositionsRef}>
+                <RoomRow
+                  item={item}
+                  status={effectiveStatus}
+                  note={notes[noteKey] ?? ''}
+                  bedConfig={bedConfig}
+                  flags={flags}
+                  onNotePress={() => openNotesSheet(item, noteKey)}
+                  onStatusPress={(rect) => openStatusDropdown(item.room.id, effectiveStatus, rect)}
+                  assignedTo={assignments[item.room.id] ?? null}
+                  onAssignPress={() => openAssignModal(item.room.id)}
+                />
+              </AnimatedRoomWrapper>
             );
           }}
           ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
@@ -1310,17 +1353,19 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
             const noteKey = item.reservationId ?? item.room.id;
             const bedConfig = item.bedConfiguration;
             return (
-              <RoomRow
-                item={item}
-                status={effectiveStatus}
-                note={notes[noteKey] ?? ''}
-                bedConfig={bedConfig}
-                flags={flags}
-                onNotePress={() => openNotesSheet(item, noteKey)}
-                onStatusPress={(rect) => openStatusDropdown(item.room.id, effectiveStatus, rect)}
-                assignedTo={assignments[item.room.id] ?? null}
-                onAssignPress={() => openAssignModal(item.room.id)}
-              />
+              <AnimatedRoomWrapper id={item.room.id} positionsRef={roomPositionsRef}>
+                <RoomRow
+                  item={item}
+                  status={effectiveStatus}
+                  note={notes[noteKey] ?? ''}
+                  bedConfig={bedConfig}
+                  flags={flags}
+                  onNotePress={() => openNotesSheet(item, noteKey)}
+                  onStatusPress={(rect) => openStatusDropdown(item.room.id, effectiveStatus, rect)}
+                  assignedTo={assignments[item.room.id] ?? null}
+                  onAssignPress={() => openAssignModal(item.room.id)}
+                />
+              </AnimatedRoomWrapper>
             );
           }}
           ItemSeparatorComponent={() => <View style={{ height: 8 }} />}

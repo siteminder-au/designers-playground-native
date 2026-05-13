@@ -143,3 +143,43 @@ export const UPDATE_ROOM_STATUS = gql`
     }
   }
 `;
+
+export const GET_STAFF_NOTES = gql`
+  query GetStaffNotes {
+    staffNotes {
+      id
+      roomId
+      author
+      text
+      tag
+      reservationId
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const ADD_STAFF_NOTE = gql`
+  mutation AddStaffNote($id: ID!, $roomId: ID!, $author: String!, $text: String!, $tag: String!, $reservationId: String) {
+    addStaffNote(id: $id, roomId: $roomId, author: $author, text: $text, tag: $tag, reservationId: $reservationId) {
+      id
+      roomId
+      author
+      text
+      tag
+      reservationId
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const UPDATE_STAFF_NOTE = gql`
+  mutation UpdateStaffNote($id: ID!, $text: String!) {
+    updateStaffNote(id: $id, text: $text) {
+      id
+      text
+      updatedAt
+    }
+  }
+`;

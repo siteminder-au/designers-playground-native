@@ -20,8 +20,8 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Calendar } from 'react-native-calendars';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useQuery } from '@apollo/client';
-import { GET_HOUSEKEEPING_SCHEDULE } from '../../apollo/queries';
+import { useQuery, useMutation } from '@apollo/client';
+import { GET_HOUSEKEEPING_SCHEDULE, GET_STAFF_NOTES, ADD_STAFF_NOTE, UPDATE_STAFF_NOTE } from '../../apollo/queries';
 import { useHousekeepingStatus, RoomStatus } from '../../context/HousekeepingStatus';
 import { STATUS_VARIANT, SYMBOL_CONTAINER } from '../../config/statusVariant';
 import FLAGS from '../../config/featureFlags';
@@ -55,6 +55,17 @@ interface RoomDaySchedule {
 interface DaySchedule {
   date: string;
   rooms: RoomDaySchedule[];
+}
+
+interface StaffNote {
+  id: string;
+  roomId: string;
+  author: string;
+  text: string;
+  tag: 'room' | 'guest';
+  reservationId: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const ORANGE = '#e8722a';
@@ -1024,8 +1035,23 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     })
   ).current;
 
-  // Notes state
-  const [notes, setNotes] = useState<Record<string, string>>({});
+  // Staff notes: fetched from si_staff_notes via GraphQL, polled every 15s like cleaning
+  const { data: staffNotesData } = useQuery(GET_STAFF_NOTES, { pollInterval: 15000 });
+  const allStaffNotes: StaffNote[] = staffNotesData?.staffNotes ?? [];
+  const [addStaffNoteMutation] = useMutation(ADD_STAFF_NOTE, { refetchQueries: [{ query: GET_STAFF_NOTES }] });
+  const [updateStaffNoteMutation] = useMutation(UPDATE_STAFF_NOTE, { refetchQueries: [{ query: GET_STAFF_NOTES }] });
+
+  // Map of noteKey → latest visible staff-note text, where noteKey is
+  // `reservationId ?? roomId`. A 'guest' note attaches to its reservation; a
+  // 'room' note attaches to the physical room and is visible regardless of who
+  // is checked in. This preserves the existing UI lookup pattern.
+  const notes: Record<string, string> = {};
+  for (const n of allStaffNotes) {
+    if (n.tag === 'room') notes[n.roomId] = n.text;
+    else if (n.tag === 'guest' && n.reservationId) notes[n.reservationId] = n.text;
+  }
+
+  // Legacy modal kept around for backward compat; not currently triggered.
   const [notesModalVisible, setNotesModalVisible] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
   const [draftNote, setDraftNote] = useState('');
@@ -1036,6 +1062,8 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const [notesSheetKey, setNotesSheetKey] = useState<string | null>(null);
   const [notesSheetEditing, setNotesSheetEditing] = useState(false);
   const [notesSheetDraft, setNotesSheetDraft] = useState('');
+  const [newNoteTag, setNewNoteTag] = useState<'room' | 'guest'>('room');
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const notesSheetAnim = useRef(new Animated.Value(0)).current;
   const notesSheetTranslateY = useRef(new Animated.Value(400)).current;
 
@@ -1240,19 +1268,52 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     setNotesSheetKey(noteKey);
     setNotesSheetEditing(false);
     setNotesSheetDraft('');
+    setEditingNoteId(null);
+    // Default the tag based on whether the room has an active reservation: a
+    // checked-in / arriving guest → notes are about that stay; otherwise it's
+    // about the physical room.
+    setNewNoteTag(item.reservationId ? 'guest' : 'room');
     setNotesSheetVisible(true);
   }
 
   function saveSheetNote() {
-    if (!notesSheetKey) return;
+    if (!notesSheetItem) return;
     const trimmed = notesSheetDraft.trim();
-    if (trimmed) {
-      setNotes(prev => ({ ...prev, [notesSheetKey!]: trimmed }));
-    } else {
-      setNotes(prev => { const next = { ...prev }; delete next[notesSheetKey!]; return next; });
+    if (!trimmed) {
+      setNotesSheetEditing(false);
+      return;
     }
+    if (editingNoteId) {
+      updateStaffNoteMutation({ variables: { id: editingNoteId, text: trimmed } })
+        .catch(err => console.warn('[paul] updateStaffNote failed', err));
+    } else {
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      addStaffNoteMutation({
+        variables: {
+          id,
+          roomId: notesSheetItem.room.id,
+          author: 'You',
+          text: trimmed,
+          tag: newNoteTag,
+          reservationId: newNoteTag === 'guest' ? notesSheetItem.reservationId : null,
+        },
+      }).catch(err => console.warn('[paul] addStaffNote failed', err));
+    }
+    setNotesSheetDraft('');
     setNotesSheetEditing(false);
+    setEditingNoteId(null);
   }
+
+  // Visible staff notes for the room currently open in the sheet — room-tagged
+  // notes are always shown; guest-tagged notes only when their reservation_id
+  // matches the room's current reservation.
+  const sheetNotes: StaffNote[] = notesSheetItem
+    ? allStaffNotes.filter(n => {
+        if (n.roomId !== notesSheetItem.room.id) return false;
+        if (n.tag === 'room') return true;
+        return !!notesSheetItem.reservationId && n.reservationId === notesSheetItem.reservationId;
+      })
+    : [];
 
   function closeNotesSheet() {
     Animated.parallel([
@@ -1268,8 +1329,8 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   }
 
   function saveNote() {
-    if (!editingRoomId) return;
-    setNotes(prev => ({ ...prev, [editingRoomId]: draftNote.trim() }));
+    // Legacy local-state save path — kept as a no-op so the unused notesModal
+    // component still compiles. All real writes go through saveSheetNote.
     setNotesModalVisible(false);
   }
 
@@ -1528,42 +1589,97 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                     <View style={styles.notesSheetDivider} />
                   </>
                 ) : null}
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <Text style={styles.notesSheetSectionLabel}>Staff note</Text>
-                  {!notesSheetEditing && notesSheetKey && notes[notesSheetKey] && (
-                    <TouchableOpacity onPress={() => { setNotesSheetDraft(notes[notesSheetKey!] ?? ''); setNotesSheetEditing(true); }}>
-                      <Ionicons name="pencil-outline" size={16} color={ORANGE} />
-                    </TouchableOpacity>
-                  )}
-                </View>
-                {notesSheetEditing ? (
+                <Text style={styles.notesSheetSectionLabel}>Staff notes</Text>
+                {sheetNotes.length === 0 && !notesSheetEditing && (
+                  <Text style={[styles.notesSheetBody, { color: COLORS.Black[600], fontStyle: 'italic', marginBottom: 8 }]}>
+                    No staff notes yet.
+                  </Text>
+                )}
+                {sheetNotes.map(note => {
+                  const isEditing = editingNoteId === note.id;
+                  return (
+                    <View key={note.id} style={{ marginBottom: 10 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                        <Text style={[styles.notesSheetBody, { fontSize: 11, color: COLORS.Black[500] }]}>
+                          {note.tag === 'room' ? 'Room' : 'Guest'} · {note.author} · {new Date(note.createdAt).toLocaleString([], { hour: 'numeric', minute: '2-digit' })}
+                        </Text>
+                        {!isEditing && (
+                          <TouchableOpacity onPress={() => { setEditingNoteId(note.id); setNotesSheetDraft(note.text); setNotesSheetEditing(true); }}>
+                            <Ionicons name="pencil-outline" size={14} color={ORANGE} />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                      {isEditing ? (
+                        <>
+                          <TextInput
+                            style={styles.notesSheetInput}
+                            value={notesSheetDraft}
+                            onChangeText={setNotesSheetDraft}
+                            multiline
+                            autoFocus
+                            placeholder="Edit note..."
+                            placeholderTextColor={COLORS.Black[600]}
+                            textAlignVertical="top"
+                            maxLength={300}
+                          />
+                          <View style={styles.notesSheetSaveRow}>
+                            <TouchableOpacity onPress={() => { setEditingNoteId(null); setNotesSheetEditing(false); setNotesSheetDraft(''); }}>
+                              <Text style={styles.notesSheetCancel}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.notesSheetSaveBtn} onPress={saveSheetNote}>
+                              <Text style={styles.notesSheetSaveBtnText}>Save</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </>
+                      ) : (
+                        <Text style={styles.notesSheetBody}>{note.text}</Text>
+                      )}
+                    </View>
+                  );
+                })}
+                {notesSheetEditing && !editingNoteId ? (
                   <>
+                    {notesSheetItem?.reservationId && (
+                      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                        <TouchableOpacity
+                          onPress={() => setNewNoteTag('room')}
+                          style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: newNoteTag === 'room' ? ORANGE : COLORS.Background.Stroke, backgroundColor: newNoteTag === 'room' ? '#FFF4ED' : 'transparent' }}
+                        >
+                          <Text style={{ color: newNoteTag === 'room' ? ORANGE : COLORS.Black[400], fontSize: 12, fontWeight: '600' }}>Room</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => setNewNoteTag('guest')}
+                          style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: newNoteTag === 'guest' ? ORANGE : COLORS.Background.Stroke, backgroundColor: newNoteTag === 'guest' ? '#FFF4ED' : 'transparent' }}
+                        >
+                          <Text style={{ color: newNoteTag === 'guest' ? ORANGE : COLORS.Black[400], fontSize: 12, fontWeight: '600' }}>Guest</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                     <TextInput
                       style={styles.notesSheetInput}
                       value={notesSheetDraft}
                       onChangeText={setNotesSheetDraft}
                       multiline
                       autoFocus
-                      placeholder="Add a note for housekeeping..."
+                      placeholder="Add a note..."
                       placeholderTextColor={COLORS.Black[600]}
                       textAlignVertical="top"
+                      maxLength={300}
                     />
                     <View style={styles.notesSheetSaveRow}>
-                      <TouchableOpacity onPress={() => setNotesSheetEditing(false)}>
+                      <TouchableOpacity onPress={() => { setNotesSheetEditing(false); setNotesSheetDraft(''); }}>
                         <Text style={styles.notesSheetCancel}>Cancel</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={styles.notesSheetSaveBtn} onPress={saveSheetNote}>
-                        <Text style={styles.notesSheetSaveBtnText}>Save</Text>
+                        <Text style={styles.notesSheetSaveBtnText}>Add</Text>
                       </TouchableOpacity>
                     </View>
                   </>
-                ) : notesSheetKey && notes[notesSheetKey] ? (
-                  <Text style={styles.notesSheetBody}>{notes[notesSheetKey]}</Text>
-                ) : (
+                ) : !editingNoteId ? (
                   <TouchableOpacity onPress={() => { setNotesSheetDraft(''); setNotesSheetEditing(true); }}>
                     <Text style={styles.addNoteText}>+ Add staff note</Text>
                   </TouchableOpacity>
-                )}
+                ) : null}
                 {(notesSheetItem?.extraItems?.length ?? 0) > 0 && (
                   <>
                     <View style={styles.notesSheetDivider} />

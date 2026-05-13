@@ -705,16 +705,16 @@ function AnimatedRoomWrapper({
   useLayoutEffect(() => {
     const node = ref.current as any;
     if (!node) return;
-    // Measure synchronously before the browser paints, so the "snap to old
-    // position" via translateY happens in the same frame as the layout commit
-    // — no visible flicker of the card at its new position.
-    if (typeof node.getBoundingClientRect === 'function') {
-      const newY = node.getBoundingClientRect().top;
+    // Use offsetTop (web) / measure (native) — both are scroll-independent and
+    // ignore transforms, so position deltas reflect pure layout reorders, not
+    // viewport shifts or in-flight animations.
+    if (typeof node.offsetTop === 'number') {
+      const newY = node.offsetTop;
       const lastY = positionsRef.current.get(id);
       if (lastY != null) applyDelta(lastY, newY);
       positionsRef.current.set(id, newY);
-    } else if (typeof node.measureInWindow === 'function') {
-      node.measureInWindow((_x: number, y: number) => {
+    } else if (typeof node.measure === 'function') {
+      node.measure((_x: number, y: number) => {
         const lastY = positionsRef.current.get(id);
         if (lastY != null) applyDelta(lastY, y);
         positionsRef.current.set(id, y);
@@ -739,6 +739,12 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
   // Tracks each room card's last measured Y for FLIP reorder animation
   const roomPositionsRef = useRef(new Map<string, number>());
+  // Refs for explicit scroll preservation across status changes
+  const flatListRef = useRef<FlatList<RoomDaySchedule>>(null);
+  const scrollYRef = useRef(0);
+  const handleListScroll = (e: any) => {
+    scrollYRef.current = e.nativeEvent.contentOffset.y;
+  };
 
   // Strip state
   const [selectedDate, setSelectedDate] = useState(today);
@@ -1181,8 +1187,14 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
   function applyStatusChange(newStatus: RoomStatus) {
     if (!statusDropdown) return;
+    // Snapshot scroll position so we can pin it back after the re-render —
+    // prevents the FlatList from auto-shifting to follow the moved card.
+    const snapshotScroll = scrollYRef.current;
     setStatusOverride(statusDropdown.roomId, newStatus);
     setStatusDropdown(null);
+    requestAnimationFrame(() => {
+      flatListRef.current?.scrollToOffset({ offset: snapshotScroll, animated: false });
+    });
   }
 
 
@@ -1365,6 +1377,9 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         />
       ) : (
         <FlatList
+          ref={flatListRef}
+          onScroll={handleListScroll}
+          scrollEventThrottle={16}
           data={singleRooms}
           keyExtractor={item => item.room.id}
           ListHeaderComponent={statsStrip}

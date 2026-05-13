@@ -1377,9 +1377,11 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                 <Ionicons name="calendar-outline" size={20} color="#333" />
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={{ padding: 4 }} onPress={() => setAutoSheetVisible(true)}>
-              <MaterialCommunityIcons name="cog-sync-outline" size={22} color="#374151" />
-            </TouchableOpacity>
+            {!housekeeperMode && (
+              <TouchableOpacity style={{ padding: 4 }} onPress={() => setAutoSheetVisible(true)}>
+                <MaterialCommunityIcons name="cog-sync-outline" size={22} color="#374151" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>

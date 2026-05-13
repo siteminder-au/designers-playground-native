@@ -705,16 +705,15 @@ function AnimatedRoomWrapper({
   useLayoutEffect(() => {
     const node = ref.current as any;
     if (!node) return;
-    // Use offsetTop (web) / measure (native) — both are scroll-independent and
-    // ignore transforms, so position deltas reflect pure layout reorders, not
-    // viewport shifts or in-flight animations.
-    if (typeof node.offsetTop === 'number') {
-      const newY = node.offsetTop;
+    // Measure synchronously before paint so translateY snap-back happens in the
+    // same frame as the layout commit (no visible flicker at the new position).
+    if (typeof node.getBoundingClientRect === 'function') {
+      const newY = node.getBoundingClientRect().top;
       const lastY = positionsRef.current.get(id);
       if (lastY != null) applyDelta(lastY, newY);
       positionsRef.current.set(id, newY);
-    } else if (typeof node.measure === 'function') {
-      node.measure((_x: number, y: number) => {
+    } else if (typeof node.measureInWindow === 'function') {
+      node.measureInWindow((_x: number, y: number) => {
         const lastY = positionsRef.current.get(id);
         if (lastY != null) applyDelta(lastY, y);
         positionsRef.current.set(id, y);

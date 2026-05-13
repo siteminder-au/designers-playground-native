@@ -673,9 +673,10 @@ function RoomRow({
   );
 }
 
-// ── FLIP-animated wrapper: measures each row's Y on layout, then slides
-// from the previous Y to the new one when the list reorders. Works on web + native
-// because it animates transform (translateY) only — no layout side effects.
+// ── FLIP-animated wrapper: after each render, measures each row's screen Y and
+// slides it from its previous Y to the new one when the list reorders.
+// Uses getBoundingClientRect on web (RN Web's onLayout doesn't fire on flex
+// reposition) and measureInWindow on native.
 
 function AnimatedRoomWrapper({
   id,
@@ -686,28 +687,46 @@ function AnimatedRoomWrapper({
   positionsRef: React.MutableRefObject<Map<string, number>>;
   children: React.ReactNode;
 }) {
+  const ref = useRef<View>(null);
   const translateY = useRef(new Animated.Value(0)).current;
 
-  function handleLayout(e: { nativeEvent: { layout: { y: number } } }) {
-    const newY = e.nativeEvent.layout.y;
-    const lastY = positionsRef.current.get(id);
-    if (lastY != null && Math.abs(lastY - newY) > 1) {
-      // Snap visually back to old position, then animate to the new one
-      translateY.setValue(lastY - newY);
+  function applyDelta(oldY: number, newY: number) {
+    if (Math.abs(oldY - newY) > 1) {
+      translateY.setValue(oldY - newY);
       Animated.spring(translateY, {
         toValue: 0,
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== 'web',
         damping: 22,
         stiffness: 220,
       }).start();
     }
-    positionsRef.current.set(id, newY);
   }
 
+  useEffect(() => {
+    const node = ref.current as any;
+    if (!node) return;
+    requestAnimationFrame(() => {
+      if (typeof node.getBoundingClientRect === 'function') {
+        const newY = node.getBoundingClientRect().top;
+        const lastY = positionsRef.current.get(id);
+        if (lastY != null) applyDelta(lastY, newY);
+        positionsRef.current.set(id, newY);
+      } else if (typeof node.measureInWindow === 'function') {
+        node.measureInWindow((_x: number, y: number) => {
+          const lastY = positionsRef.current.get(id);
+          if (lastY != null) applyDelta(lastY, y);
+          positionsRef.current.set(id, y);
+        });
+      }
+    });
+  });
+
   return (
-    <Animated.View style={{ transform: [{ translateY }] }} onLayout={handleLayout}>
-      {children}
-    </Animated.View>
+    <View ref={ref}>
+      <Animated.View style={{ transform: [{ translateY }] }}>
+        {children}
+      </Animated.View>
+    </View>
   );
 }
 

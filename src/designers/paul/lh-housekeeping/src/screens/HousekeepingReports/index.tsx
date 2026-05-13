@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -702,23 +702,24 @@ function AnimatedRoomWrapper({
     }
   }
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = ref.current as any;
     if (!node) return;
-    requestAnimationFrame(() => {
-      if (typeof node.getBoundingClientRect === 'function') {
-        const newY = node.getBoundingClientRect().top;
+    // Measure synchronously before the browser paints, so the "snap to old
+    // position" via translateY happens in the same frame as the layout commit
+    // — no visible flicker of the card at its new position.
+    if (typeof node.getBoundingClientRect === 'function') {
+      const newY = node.getBoundingClientRect().top;
+      const lastY = positionsRef.current.get(id);
+      if (lastY != null) applyDelta(lastY, newY);
+      positionsRef.current.set(id, newY);
+    } else if (typeof node.measureInWindow === 'function') {
+      node.measureInWindow((_x: number, y: number) => {
         const lastY = positionsRef.current.get(id);
-        if (lastY != null) applyDelta(lastY, newY);
-        positionsRef.current.set(id, newY);
-      } else if (typeof node.measureInWindow === 'function') {
-        node.measureInWindow((_x: number, y: number) => {
-          const lastY = positionsRef.current.get(id);
-          if (lastY != null) applyDelta(lastY, y);
-          positionsRef.current.set(id, y);
-        });
-      }
-    });
+        if (lastY != null) applyDelta(lastY, y);
+        positionsRef.current.set(id, y);
+      });
+    }
   });
 
   return (

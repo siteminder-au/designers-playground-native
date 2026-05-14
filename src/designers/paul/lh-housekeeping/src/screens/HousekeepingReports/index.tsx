@@ -890,6 +890,14 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const singleDateSelector = dateSelectorVariant === 'strip';
   const monthSheetVariant = dateSelectorVariant === 'monthSheet';
 
+  // Active stat chip filter — only used when flags.roomStatsChips is on.
+  // null = no chip selected (show everything).
+  const [activeStatFilter, setActiveStatFilter] = useState<null | 'dirty' | 'earlyCheckIn' | 'lateCheckOut' | 'outOfOrder' | 'issues'>(null);
+  // Clear the chip filter when switching away from the chips variant.
+  useEffect(() => {
+    if (!flags.roomStatsChips) setActiveStatFilter(null);
+  }, [flags.roomStatsChips]);
+
   // Month sheet (variant C) state
   const [monthSheetVisible, setMonthSheetVisible] = useState(false);
   const [monthSheetCursor, setMonthSheetCursor] = useState(today); // any ISO date in the month being viewed
@@ -1231,10 +1239,23 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
   // Single-day view
   const selectedDay = schedule.find(d => d.date === selectedDate);
+  // Chip-variant filter: only active when chip variant is on AND a chip is selected.
+  const matchesActiveChip = (r: RoomDaySchedule): boolean => {
+    if (!flags.roomStatsChips || !activeStatFilter) return true;
+    if (activeStatFilter === 'dirty') {
+      const s = statusOverrides[r.room.id] ?? r.room.status;
+      return s === 'UNCLEANED' || s === 'DEEP_CLEAN';
+    }
+    if (activeStatFilter === 'earlyCheckIn') return r.checkInTime !== null;
+    if (activeStatFilter === 'lateCheckOut') return r.lateCheckout && r.hasCheckoutToday;
+    if (activeStatFilter === 'outOfOrder')   return r.room.isClosed;
+    if (activeStatFilter === 'issues')       return r.room.notes !== null;
+    return true;
+  };
   const singleRooms: RoomDaySchedule[] = applyFilters(
     sortRooms(selectedDay?.rooms ?? [], sort, statusOverrides, notes, selectedDate),
     filters, notes, statusOverrides, selectedDate,
-  );
+  ).filter(matchesActiveChip);
 
   // Detect if the sort order of the single-day list changed since the previous
   // render. Only triggers the FLIP slide animation on real reorders.
@@ -1259,15 +1280,67 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
   // Stats strip — always computed from the selected/start date, unfiltered
   const statsRooms = selectedDay?.rooms ?? [];
+  // Predicates that match each stat — used both for counting and for the chip
+  // variant's tap-to-filter behavior.
+  type StatKey = 'dirty' | 'earlyCheckIn' | 'lateCheckOut' | 'outOfOrder' | 'issues';
+  const statPredicates: Record<StatKey, (r: RoomDaySchedule) => boolean> = {
+    dirty:        r => { const s = statusOverrides[r.room.id] ?? r.room.status; return s === 'UNCLEANED' || s === 'DEEP_CLEAN'; },
+    earlyCheckIn: r => r.checkInTime !== null,
+    lateCheckOut: r => r.lateCheckout && r.hasCheckoutToday,
+    outOfOrder:   r => r.room.isClosed,
+    issues:       r => r.room.notes !== null,
+  };
   const dayStats = {
-    dirty:        statsRooms.filter(r => { const s = statusOverrides[r.room.id] ?? r.room.status; return s === 'UNCLEANED' || s === 'DEEP_CLEAN'; }).length,
-    earlyCheckIn: statsRooms.filter(r => r.checkInTime !== null).length,
-    lateCheckOut: statsRooms.filter(r => r.lateCheckout && r.hasCheckoutToday).length,
-    outOfOrder:   statsRooms.filter(r => r.room.isClosed).length,
-    issues:       statsRooms.filter(r => r.room.notes !== null).length,
+    dirty:        statsRooms.filter(statPredicates.dirty).length,
+    earlyCheckIn: statsRooms.filter(statPredicates.earlyCheckIn).length,
+    lateCheckOut: statsRooms.filter(statPredicates.lateCheckOut).length,
+    outOfOrder:   statsRooms.filter(statPredicates.outOfOrder).length,
+    issues:       statsRooms.filter(statPredicates.issues).length,
   };
   const BG = '#f2f3f3'; // matches screen background
-  const statsStrip = (
+  const statItems = ([
+    { key: 'dirty',        value: dayStats.dirty,        label: 'Rooms dirty today'      },
+    { key: 'earlyCheckIn', value: dayStats.earlyCheckIn, label: 'Early check-in today'   },
+    { key: 'lateCheckOut', value: dayStats.lateCheckOut, label: 'Late check-out today'   },
+    { key: 'outOfOrder',   value: dayStats.outOfOrder,   label: 'Out of order today'     },
+    { key: 'issues',       value: dayStats.issues,       label: 'Issue reported today'   },
+  ] as { key: StatKey; value: number; label: string }[]);
+
+  const statsStrip = flags.roomStatsChips ? (
+    // Chip variant — tappable filters
+    <View style={{ position: 'relative' }}>
+      <ScrollView
+        ref={statsScrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, gap: 8 }}
+      >
+        {statItems.map(stat => {
+          const isActive = activeStatFilter === stat.key;
+          return (
+            <TouchableOpacity
+              key={stat.key}
+              style={[styles.statChip, isActive && styles.statChipActive]}
+              onPress={() => setActiveStatFilter(isActive ? null : stat.key)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.statChipText, isActive && styles.statChipTextActive]}>
+                {stat.value} {stat.label.replace(' today', '')}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+      <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 40, flexDirection: 'row' }} pointerEvents="none">
+        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0)`    }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0.3)`  }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0.6)`  }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0.85)` }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,1)`    }} />
+      </View>
+    </View>
+  ) : (
+    // Default — static informational strip
     <View style={{ position: 'relative' }}>
       <ScrollView
         ref={statsScrollRef}
@@ -1275,20 +1348,13 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, gap: 24 }}
       >
-        {([
-          { value: dayStats.dirty,        label: 'Rooms dirty today'      },
-          { value: dayStats.earlyCheckIn, label: 'Early check-in today'   },
-          { value: dayStats.lateCheckOut, label: 'Late check-out today'   },
-          { value: dayStats.outOfOrder,   label: 'Out of order today'     },
-          { value: dayStats.issues,       label: 'Issue reported today'   },
-        ] as { value: number; label: string }[]).map((stat, i) => (
-          <View key={i} style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+        {statItems.map(stat => (
+          <View key={stat.key} style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
             <Text style={styles.statValue}>{stat.value}</Text>
             <Text style={styles.statLabel}>{stat.label}</Text>
           </View>
         ))}
       </ScrollView>
-      {/* Simulated right-edge fade — indicates horizontal scroll affordance */}
       <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 40, flexDirection: 'row' }} pointerEvents="none">
         <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0)`    }} />
         <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0.3)`  }} />
@@ -2112,7 +2178,8 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
               { key: 'showBedConfig',         label: 'Bed configuration' },
               { key: 'showLateCheckout',      label: 'Early check-in & late check-out badge' },
               { key: 'showReservationId',    label: 'Reservation ID' },
-            ] as { key: 'showGuestName' | 'showGuestPax' | 'showBedConfig' | 'showLateCheckout' | 'showReservationId'; label: string }[]).map((item, i) => (
+              { key: 'roomStatsChips',       label: 'Room stats as tappable chips' },
+            ] as { key: 'showGuestName' | 'showGuestPax' | 'showBedConfig' | 'showLateCheckout' | 'showReservationId' | 'roomStatsChips'; label: string }[]).map((item, i) => (
               <React.Fragment key={item.key}>
                 {i > 0 && <View style={styles.dropdownDivider} />}
                 <View style={styles.demoFlagRow}>
@@ -2770,6 +2837,18 @@ const styles = StyleSheet.create({
   extrasLabel: { fontSize: 12, fontWeight: '600' as const, color: '#9ca3af' },
   statLabel: { fontSize: 12, color: '#9ca3af', fontWeight: '500' as const },
   statValue: { fontSize: 14, fontWeight: '700' as const, color: '#111827' },
+
+  // Chip variant of room stats — tappable filters (Figma 655:3305)
+  statChip: {
+    paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: 4, borderWidth: 1, borderColor: '#CCD1D1',
+    backgroundColor: '#fff',
+  },
+  statChipActive: {
+    backgroundColor: '#FFF5EE', borderColor: ORANGE,
+  },
+  statChipText: { fontSize: 13, fontWeight: '500', color: COLORS.Black[300] },
+  statChipTextActive: { color: ORANGE, fontWeight: '600' },
   noteActionDivider: { width: 1, height: 16, backgroundColor: '#d1d5db', marginHorizontal: 8 },
   assignBtn: { width: 80, height: 24, alignItems: 'flex-end', justifyContent: 'center' },
   assignBtnText: { fontSize: 12, color: ORANGE, fontWeight: '700', textAlign: 'right' },

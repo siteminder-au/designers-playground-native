@@ -28,6 +28,10 @@ const FLAGS = {
    *  - 'monthSheet': tap the date header → opens single-date month-calendar sheet.
    */
   dateSelectorVariant: 'range' as 'range' | 'strip' | 'monthSheet',
+
+  /** Render the room stats row as tappable chips that filter the list,
+   *  instead of the default static informational strip. */
+  roomStatsChips: false,
 } as const;
 
 export default FLAGS;

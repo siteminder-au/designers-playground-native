@@ -884,6 +884,21 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const [nightlyResetOccupied, setNightlyResetOccupied] = useState(false);
   const [resetAfterCheckout, setResetAfterCheckout] = useState(true);
   const [resetAfterClosure, setResetAfterClosure] = useState(true);
+  // Demo variant: single-date selector mode (read from the `flags` state above
+  // so it's runtime-toggleable from the demo flags sheet). When on, the calendar
+  // icon and date range bottom sheet are hidden; week strip is the only picker.
+  const singleDateSelector = flags.singleDateSelector;
+
+  // When entering single-date mode, drop any active range view and snap back
+  // to single-day view so the UI is consistent.
+  useEffect(() => {
+    if (singleDateSelector && dateRange) {
+      setDateRange(null);
+      setSelectedDate(today);
+      setWeekStart(today);
+      if (modalVisible) closeDateSheet();
+    }
+  }, [singleDateSelector]);
 
   useEffect(() => {
     if (autoSheetVisible) {
@@ -1412,7 +1427,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
               </TouchableOpacity>
             )}
 
-            {!dateRange && (
+            {!dateRange && !singleDateSelector && (
               <TouchableOpacity style={{ padding: 4 }} onPress={openModal}>
                 <Ionicons name="calendar-outline" size={20} color="#333" />
               </TouchableOpacity>
@@ -1984,6 +1999,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
               { key: 'showBedConfig',         label: 'Bed configuration' },
               { key: 'showLateCheckout',      label: 'Early check-in & late check-out badge' },
               { key: 'showReservationId',    label: 'Reservation ID' },
+              { key: 'singleDateSelector',    label: 'Single date selector (hide calendar)' },
             ] as { key: keyof typeof FLAGS; label: string }[]).map((item, i) => (
               <React.Fragment key={item.key}>
                 {i > 0 && <View style={styles.dropdownDivider} />}
@@ -2251,8 +2267,8 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         </View>
       </Modal>
 
-      {/* ── Select dates bottom sheet ── */}
-      <Modal visible={modalVisible} animationType="none" transparent onRequestClose={closeDateSheet} statusBarTranslucent>
+      {/* ── Select dates bottom sheet (not rendered in single-date variant) ── */}
+      <Modal visible={modalVisible && !singleDateSelector} animationType="none" transparent onRequestClose={closeDateSheet} statusBarTranslucent>
         <Animated.View style={[styles.sortSheetOverlay, { opacity: dateSheetAnim }]}>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeDateSheet} />
           <Animated.View style={[styles.dateSheet, { transform: [{ translateY: dateSheetTranslateY }] }]}>

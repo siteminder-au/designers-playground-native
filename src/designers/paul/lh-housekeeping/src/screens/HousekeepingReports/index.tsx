@@ -12,8 +12,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Dimensions,
-  Animated,
-  PanResponder,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -44,6 +42,7 @@ import styles from './styles';
 import { type BadgeRect } from './components/CleaningControl';
 import { RoomRow } from './components/RoomRow';
 import { AnimatedRoomWrapper } from './components/AnimatedRoomWrapper';
+import { useBottomSheet } from './hooks/useBottomSheet';
 import { NotesSheet } from './components/sheets/NotesSheet';
 import { SortSheet } from './components/sheets/SortSheet';
 import { AssignSheet } from './components/sheets/AssignSheet';
@@ -80,7 +79,10 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null);
 
   // Select-dates modal state
-  const [modalVisible, setModalVisible] = useState(false);
+  const {
+    visible: modalVisible, setVisible: setModalVisible, close: closeDateSheet,
+    sheetAnim: dateSheetAnim, translateY: dateSheetTranslateY, panResponder: dateSheetPanResponder,
+  } = useBottomSheet(600);
   const [expandedField, setExpandedField] = useState<'start' | 'end' | null>('start');
   const [pendingStart, setPendingStart] = useState<string | null>(null);
   const [pendingEnd, setPendingEnd] = useState<string | null>(null);
@@ -106,88 +108,23 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
   // Feature flags (runtime toggles for demo)
   const [flags, setFlags] = useState({ ...FLAGS });
-  const [demoSheetVisible, setDemoSheetVisible] = useState(false);
-  const demoSheetAnim = useRef(new Animated.Value(0)).current;
-  const demoTranslateY = useRef(new Animated.Value(400)).current;
-
-  useEffect(() => {
-    if (demoSheetVisible) {
-      demoTranslateY.setValue(400);
-      demoSheetAnim.setValue(0);
-      Animated.parallel([
-        Animated.spring(demoTranslateY, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }),
-        Animated.spring(demoSheetAnim,  { toValue: 1, useNativeDriver: true, damping: 22, stiffness: 220 }),
-      ]).start();
-    }
-  }, [demoSheetVisible]);
-
-  function closeDemoSheet() {
-    Animated.parallel([
-      Animated.timing(demoTranslateY, { toValue: 400, duration: 200, useNativeDriver: true }),
-      Animated.timing(demoSheetAnim,  { toValue: 0,   duration: 200, useNativeDriver: true }),
-    ]).start(() => setDemoSheetVisible(false));
-  }
-
-  const demoPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, g) => { if (g.dy > 0) demoTranslateY.setValue(g.dy); },
-      onPanResponderRelease: (_, g) => {
-        if (g.dy > 80) { closeDemoSheet(); }
-        else { Animated.spring(demoTranslateY, { toValue: 0, useNativeDriver: true }).start(); }
-      },
-    })
-  ).current;
+  const {
+    visible: demoSheetVisible, setVisible: setDemoSheetVisible, close: closeDemoSheet,
+    sheetAnim: demoSheetAnim, translateY: demoTranslateY, panResponder: demoPanResponder,
+  } = useBottomSheet(400);
 
   // Filter state
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
-  const [filterSheetVisible, setFilterSheetVisible] = useState(false);
-  const filterSheetAnim = useRef(new Animated.Value(0)).current;
-  // Single translateY value: drives both open/close animation and drag offset
-  const filterTranslateY = useRef(new Animated.Value(500)).current;
-
-  useEffect(() => {
-    if (filterSheetVisible) {
-      filterTranslateY.setValue(500);
-      filterSheetAnim.setValue(0);
-      Animated.parallel([
-        Animated.spring(filterTranslateY, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }),
-        Animated.spring(filterSheetAnim, { toValue: 1, useNativeDriver: true, damping: 22, stiffness: 220 }),
-      ]).start();
-    }
-  }, [filterSheetVisible]);
-
-  function closeFilterSheet() {
-    Animated.parallel([
-      Animated.timing(filterTranslateY, { toValue: 500, duration: 200, useNativeDriver: true }),
-      Animated.timing(filterSheetAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-    ]).start(() => {
-      setFilterSheetVisible(false);
-    });
-  }
-
-  const filterPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, g) => {
-        if (g.dy > 0) filterTranslateY.setValue(g.dy);
-      },
-      onPanResponderRelease: (_, g) => {
-        if (g.dy > 80) {
-          closeFilterSheet();
-        } else {
-          Animated.spring(filterTranslateY, { toValue: 0, useNativeDriver: true }).start();
-        }
-      },
-    })
-  ).current;
+  const {
+    visible: filterSheetVisible, setVisible: setFilterSheetVisible, close: closeFilterSheet,
+    sheetAnim: filterSheetAnim, translateY: filterTranslateY, panResponder: filterPanResponder,
+  } = useBottomSheet(500);
 
   // Automations sheet state
-  const [autoSheetVisible, setAutoSheetVisible] = useState(false);
-  const autoSheetAnim = useRef(new Animated.Value(0)).current;
-  const autoTranslateY = useRef(new Animated.Value(500)).current;
+  const {
+    visible: autoSheetVisible, setVisible: setAutoSheetVisible, close: closeAutoSheet,
+    sheetAnim: autoSheetAnim, translateY: autoTranslateY, panResponder: autoPanResponder,
+  } = useBottomSheet(500);
   const [deepCleanDays, setDeepCleanDays] = useState('3');
   const [nightlyResetOccupied, setNightlyResetOccupied] = useState(false);
   const [resetAfterCheckout, setResetAfterCheckout] = useState(true);
@@ -207,40 +144,11 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   }, [flags.roomStatsChips]);
 
   // Month sheet (variant C) state
-  const [monthSheetVisible, setMonthSheetVisible] = useState(false);
+  const {
+    visible: monthSheetVisible, setVisible: setMonthSheetVisible, close: closeMonthSheet,
+    sheetAnim: monthSheetAnim, translateY: monthSheetTranslateY, panResponder: monthSheetPanResponder,
+  } = useBottomSheet(600);
   const [monthSheetCursor, setMonthSheetCursor] = useState(today); // any ISO date in the month being viewed
-  const monthSheetAnim = useRef(new Animated.Value(0)).current;
-  const monthSheetTranslateY = useRef(new Animated.Value(600)).current;
-
-  useEffect(() => {
-    if (monthSheetVisible) {
-      monthSheetTranslateY.setValue(600);
-      monthSheetAnim.setValue(0);
-      Animated.parallel([
-        Animated.spring(monthSheetTranslateY, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }),
-        Animated.spring(monthSheetAnim,       { toValue: 1, useNativeDriver: true, damping: 22, stiffness: 220 }),
-      ]).start();
-    }
-  }, [monthSheetVisible]);
-
-  function closeMonthSheet() {
-    Animated.parallel([
-      Animated.timing(monthSheetTranslateY, { toValue: 600, duration: 200, useNativeDriver: true }),
-      Animated.timing(monthSheetAnim,       { toValue: 0,   duration: 200, useNativeDriver: true }),
-    ]).start(() => setMonthSheetVisible(false));
-  }
-
-  const monthSheetPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, g) => { if (g.dy > 0) monthSheetTranslateY.setValue(g.dy); },
-      onPanResponderRelease: (_, g) => {
-        if (g.dy > 80) { closeMonthSheet(); }
-        else { Animated.spring(monthSheetTranslateY, { toValue: 0, useNativeDriver: true }).start(); }
-      },
-    })
-  ).current;
 
   function openMonthSheet() {
     setMonthSheetCursor(selectedDate || today);
@@ -258,147 +166,25 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     }
   }, [dateSelectorVariant]);
 
-  useEffect(() => {
-    if (autoSheetVisible) {
-      autoTranslateY.setValue(500);
-      autoSheetAnim.setValue(0);
-      Animated.parallel([
-        Animated.spring(autoTranslateY, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }),
-        Animated.spring(autoSheetAnim,  { toValue: 1, useNativeDriver: true, damping: 22, stiffness: 220 }),
-      ]).start();
-    }
-  }, [autoSheetVisible]);
-
-  function closeAutoSheet() {
-    Animated.parallel([
-      Animated.timing(autoTranslateY, { toValue: 500, duration: 200, useNativeDriver: true }),
-      Animated.timing(autoSheetAnim,  { toValue: 0,   duration: 200, useNativeDriver: true }),
-    ]).start(() => setAutoSheetVisible(false));
-  }
-
-  const autoPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, g) => { if (g.dy > 0) autoTranslateY.setValue(g.dy); },
-      onPanResponderRelease: (_, g) => {
-        if (g.dy > 80) { closeAutoSheet(); }
-        else { Animated.spring(autoTranslateY, { toValue: 0, useNativeDriver: true }).start(); }
-      },
-    })
-  ).current;
-
   // Sort state
   const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
-  const [sortModalVisible, setSortModalVisible] = useState(false);
-  const sortSheetAnim = useRef(new Animated.Value(0)).current;
-  const sortTranslateY = useRef(new Animated.Value(400)).current;
-
-  useEffect(() => {
-    if (sortModalVisible) {
-      sortTranslateY.setValue(400);
-      sortSheetAnim.setValue(0);
-      Animated.parallel([
-        Animated.spring(sortTranslateY, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }),
-        Animated.spring(sortSheetAnim,  { toValue: 1, useNativeDriver: true, damping: 22, stiffness: 220 }),
-      ]).start();
-    }
-  }, [sortModalVisible]);
-
-  function closeSortModal() {
-    Animated.parallel([
-      Animated.timing(sortTranslateY, { toValue: 400, duration: 200, useNativeDriver: true }),
-      Animated.timing(sortSheetAnim,  { toValue: 0,   duration: 200, useNativeDriver: true }),
-    ]).start(() => setSortModalVisible(false));
-  }
-
-  const sortPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, g) => { if (g.dy > 0) sortTranslateY.setValue(g.dy); },
-      onPanResponderRelease: (_, g) => {
-        if (g.dy > 80) { closeSortModal(); }
-        else { Animated.spring(sortTranslateY, { toValue: 0, useNativeDriver: true }).start(); }
-      },
-    })
-  ).current;
-
-  // Date range sheet animation (slide up from bottom, drag to dismiss)
-  const dateSheetAnim = useRef(new Animated.Value(0)).current;
-  const dateSheetTranslateY = useRef(new Animated.Value(600)).current;
-
-  useEffect(() => {
-    if (modalVisible) {
-      dateSheetTranslateY.setValue(600);
-      dateSheetAnim.setValue(0);
-      Animated.parallel([
-        Animated.spring(dateSheetTranslateY, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }),
-        Animated.spring(dateSheetAnim,       { toValue: 1, useNativeDriver: true, damping: 22, stiffness: 220 }),
-      ]).start();
-    }
-  }, [modalVisible]);
-
-  function closeDateSheet() {
-    Animated.parallel([
-      Animated.timing(dateSheetTranslateY, { toValue: 600, duration: 200, useNativeDriver: true }),
-      Animated.timing(dateSheetAnim,       { toValue: 0,   duration: 200, useNativeDriver: true }),
-    ]).start(() => setModalVisible(false));
-  }
-
-  const dateSheetPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, g) => { if (g.dy > 0) dateSheetTranslateY.setValue(g.dy); },
-      onPanResponderRelease: (_, g) => {
-        if (g.dy > 80) { closeDateSheet(); }
-        else { Animated.spring(dateSheetTranslateY, { toValue: 0, useNativeDriver: true }).start(); }
-      },
-    })
-  ).current;
+  const {
+    visible: sortModalVisible, setVisible: setSortModalVisible, close: closeSortModal,
+    sheetAnim: sortSheetAnim, translateY: sortTranslateY, panResponder: sortPanResponder,
+  } = useBottomSheet(400);
 
   // Assign housekeeper state
   const [assignments, setAssignments] = useState<Record<string, string>>({});
-  const [assignModalVisible, setAssignModalVisible] = useState(false);
   const [assigningRoomId, setAssigningRoomId] = useState<string | null>(null);
-  const assignSheetAnim = useRef(new Animated.Value(0)).current;
-  const assignTranslateY = useRef(new Animated.Value(400)).current;
-
-  useEffect(() => {
-    if (assignModalVisible) {
-      assignTranslateY.setValue(400);
-      assignSheetAnim.setValue(0);
-      Animated.parallel([
-        Animated.spring(assignTranslateY, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }),
-        Animated.spring(assignSheetAnim,  { toValue: 1, useNativeDriver: true, damping: 22, stiffness: 220 }),
-      ]).start();
-    }
-  }, [assignModalVisible]);
+  const {
+    visible: assignModalVisible, setVisible: setAssignModalVisible, close: closeAssignModal,
+    sheetAnim: assignSheetAnim, translateY: assignTranslateY, panResponder: assignPanResponder,
+  } = useBottomSheet(400);
 
   function openAssignModal(roomId: string) {
     setAssigningRoomId(roomId);
     setAssignModalVisible(true);
   }
-
-  function closeAssignModal() {
-    Animated.parallel([
-      Animated.timing(assignTranslateY, { toValue: 400, duration: 200, useNativeDriver: true }),
-      Animated.timing(assignSheetAnim,  { toValue: 0,   duration: 200, useNativeDriver: true }),
-    ]).start(() => setAssignModalVisible(false));
-  }
-
-  const assignPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, g) => { if (g.dy > 0) assignTranslateY.setValue(g.dy); },
-      onPanResponderRelease: (_, g) => {
-        if (g.dy > 80) { closeAssignModal(); }
-        else { Animated.spring(assignTranslateY, { toValue: 0, useNativeDriver: true }).start(); }
-      },
-    })
-  ).current;
 
   function confirmAssignment() {
     closeAssignModal();
@@ -409,38 +195,17 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const [moreSettingsExpanded, setMoreSettingsExpanded] = useState(false);
   const [headersAndFooters, setHeadersAndFooters] = useState(true);
 
-  // Print settings sheet — standard bottom sheet pattern
-  const [printSettingsVisible, setPrintSettingsVisible] = useState(false);
-  const printSettingsSheetAnim = useRef(new Animated.Value(0)).current;
-  const printSettingsTranslateY = useRef(new Animated.Value(500)).current;
-
-  useEffect(() => {
-    if (printSettingsVisible) {
-      printSettingsTranslateY.setValue(500);
-      printSettingsSheetAnim.setValue(0);
-      Animated.parallel([
-        Animated.spring(printSettingsTranslateY, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }),
-        Animated.spring(printSettingsSheetAnim,  { toValue: 1, useNativeDriver: true, damping: 22, stiffness: 220 }),
-      ]).start();
-    }
-  }, [printSettingsVisible]);
+  // Print settings sheet — standard bottom sheet pattern. The settings sheet
+  // auto-opens when the print preview opens (and auto-closes when it closes).
+  const {
+    visible: printSettingsVisible, setVisible: setPrintSettingsVisible, close: closePrintSettings,
+    sheetAnim: printSettingsSheetAnim, translateY: printSettingsTranslateY, panResponder: printSettingsPanResponder,
+  } = useBottomSheet(500);
 
   useEffect(() => {
     if (printPreviewVisible) setPrintSettingsVisible(true);
     else setPrintSettingsVisible(false);
   }, [printPreviewVisible]);
-
-  const printSettingsPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder:  () => true,
-      onPanResponderMove:   (_, g) => { if (g.dy > 0) printSettingsTranslateY.setValue(g.dy); },
-      onPanResponderRelease:(_, g) => {
-        if (g.dy > 80) closePrintSettings();
-        else Animated.spring(printSettingsTranslateY, { toValue: 0, useNativeDriver: true }).start();
-      },
-    })
-  ).current;
 
   // Staff notes: fetched from si_staff_notes via GraphQL, polled every 15s like cleaning
   const { data: staffNotesData } = useQuery(GET_STAFF_NOTES, { pollInterval: 15000 });
@@ -464,38 +229,16 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const [draftNote, setDraftNote] = useState('');
 
   // Notes detail sheet state
-  const [notesSheetVisible, setNotesSheetVisible] = useState(false);
+  const {
+    visible: notesSheetVisible, setVisible: setNotesSheetVisible, close: closeNotesSheet,
+    sheetAnim: notesSheetAnim, translateY: notesSheetTranslateY, panResponder: notesSheetPanResponder,
+  } = useBottomSheet(400);
   const [notesSheetItem, setNotesSheetItem] = useState<RoomDaySchedule | null>(null);
   const [notesSheetKey, setNotesSheetKey] = useState<string | null>(null);
   const [notesSheetEditing, setNotesSheetEditing] = useState(false);
   const [notesSheetDraft, setNotesSheetDraft] = useState('');
   const [newNoteTag, setNewNoteTag] = useState<'room' | 'guest'>('room');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
-  const notesSheetAnim = useRef(new Animated.Value(0)).current;
-  const notesSheetTranslateY = useRef(new Animated.Value(400)).current;
-
-  useEffect(() => {
-    if (notesSheetVisible) {
-      notesSheetTranslateY.setValue(400);
-      notesSheetAnim.setValue(0);
-      Animated.parallel([
-        Animated.spring(notesSheetTranslateY, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }),
-        Animated.spring(notesSheetAnim,       { toValue: 1, useNativeDriver: true, damping: 22, stiffness: 220 }),
-      ]).start();
-    }
-  }, [notesSheetVisible]);
-
-  const notesSheetPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder:  () => true,
-      onPanResponderMove:   (_, g) => { if (g.dy > 0) notesSheetTranslateY.setValue(g.dy); },
-      onPanResponderRelease:(_, g) => {
-        if (g.dy > 80) closeNotesSheet();
-        else Animated.spring(notesSheetTranslateY, { toValue: 0, useNativeDriver: true }).start();
-      },
-    })
-  ).current;
 
   // Query: either the current week or the selected range
   const queryStart = dateRange?.start ?? weekStart;
@@ -727,13 +470,6 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     setPrintSettingsVisible(true);
   }
 
-  function closePrintSettings() {
-    Animated.parallel([
-      Animated.timing(printSettingsTranslateY, { toValue: 500, duration: 200, useNativeDriver: true }),
-      Animated.timing(printSettingsSheetAnim,  { toValue: 0,   duration: 200, useNativeDriver: true }),
-    ]).start(() => setPrintSettingsVisible(false));
-  }
-
   function openNotesSheet(item: RoomDaySchedule, noteKey: string) {
     setNotesSheetItem(item);
     setNotesSheetKey(noteKey);
@@ -785,13 +521,6 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         return !!notesSheetItem.reservationId && n.reservationId === notesSheetItem.reservationId;
       })
     : [];
-
-  function closeNotesSheet() {
-    Animated.parallel([
-      Animated.timing(notesSheetTranslateY, { toValue: 400, duration: 200, useNativeDriver: true }),
-      Animated.timing(notesSheetAnim,       { toValue: 0,   duration: 200, useNativeDriver: true }),
-    ]).start(() => setNotesSheetVisible(false));
-  }
 
   function openNotesModal(noteKey: string) {
     setEditingRoomId(noteKey);

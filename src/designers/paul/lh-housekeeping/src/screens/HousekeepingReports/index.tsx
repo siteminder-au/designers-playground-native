@@ -13,11 +13,9 @@ import {
   Platform,
   Dimensions,
   Animated,
-  Switch,
   PanResponder,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Calendar } from 'react-native-calendars';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useQuery, useMutation } from '@apollo/client';
 import { GET_HOUSEKEEPING_SCHEDULE, GET_STAFF_NOTES, ADD_STAFF_NOTE, UPDATE_STAFF_NOTE } from '../../apollo/queries';
@@ -26,7 +24,7 @@ import FLAGS from '../../config/featureFlags';
 import { COLORS } from '../../config/colors';
 import type { RoomDaySchedule, DaySchedule, StaffNote } from './types';
 import {
-  ORANGE, NUM_DAYS, WINDOW_HEIGHT, HOUSEKEEPERS,
+  ORANGE, NUM_DAYS,
   STATUS_CONFIG,
 } from './constants';
 import {
@@ -39,7 +37,6 @@ import {
 } from './utils/priority';
 import {
   type FilterState,
-  ROOM_TYPE_OPTIONS, ROOM_STATUS_OPTIONS, CLEANING_STATUS_OPTIONS,
   DEFAULT_FILTERS, applyFilters, activeFilterCount,
 } from './utils/filters';
 import { shouldShowBedConfig } from './utils/bedConfig';
@@ -47,6 +44,15 @@ import styles from './styles';
 import { type BadgeRect } from './components/CleaningControl';
 import { RoomRow } from './components/RoomRow';
 import { AnimatedRoomWrapper } from './components/AnimatedRoomWrapper';
+import { NotesSheet } from './components/sheets/NotesSheet';
+import { SortSheet } from './components/sheets/SortSheet';
+import { AssignSheet } from './components/sheets/AssignSheet';
+import { FilterSheet } from './components/sheets/FilterSheet';
+import { DemoFlagsSheet } from './components/sheets/DemoFlagsSheet';
+import { AutomationsSheet } from './components/sheets/AutomationsSheet';
+import { PrintPreviewModal } from './components/sheets/PrintPreviewModal';
+import { DateRangeSheet } from './components/sheets/DateRangeSheet';
+import { MonthSheet } from './components/sheets/MonthSheet';
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 
@@ -1080,939 +1086,144 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         </View>
       </Modal>
 
-      {/* ── Notes detail sheet ── */}
-      <Modal visible={notesSheetVisible} animationType="none" transparent onRequestClose={closeNotesSheet}>
-        <Animated.View style={[styles.sortSheetOverlay, { opacity: notesSheetAnim }]}>
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeNotesSheet} />
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-            <Animated.View style={[styles.sortSheet, { paddingBottom: 0, transform: [{ translateY: notesSheetTranslateY }] }]}>
-              <View style={styles.sheetHandleArea} {...notesSheetPanResponder.panHandlers}>
-                <View style={styles.sortSheetHandle} />
-              </View>
-              <View style={styles.sortSheetHeader}>
-                <Text style={styles.sortSheetTitle}>{flags.compactCard ? 'Room details' : 'Notes'}</Text>
-                <TouchableOpacity onPress={closeNotesSheet}>
-                  <Text style={styles.sortResetText}>Done</Text>
-                </TouchableOpacity>
-              </View>
-              <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 24 }} keyboardShouldPersistTaps="handled">
-                {/* Guest details — surfaced here only in compact card variant
-                    (these fields are hidden from the room card to save space) */}
-                {flags.compactCard && notesSheetItem && (
-                  (flags.showGuestName && notesSheetItem.guestName) ||
-                  (flags.showReservationId && notesSheetItem.reservationId) ||
-                  (flags.showGuestPax && (notesSheetItem.adults > 0 || notesSheetItem.children > 0 || notesSheetItem.infants > 0)) ||
-                  (flags.showBedConfig && shouldShowBedConfig(notesSheetItem.bedConfiguration))
-                ) && (
-                  <>
-                    <Text style={styles.notesSheetSectionLabel}>Guest details</Text>
-                    <View style={{ gap: 8, marginBottom: 12 }}>
-                      {flags.showGuestName && notesSheetItem.guestName && (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <MaterialCommunityIcons name="card-account-details-outline" size={14} color={COLORS.Black[200]} />
-                          <Text style={styles.notesSheetBody}>{notesSheetItem.guestName}</Text>
-                        </View>
-                      )}
-                      {flags.showReservationId && notesSheetItem.reservationId && (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <MaterialCommunityIcons name="tag-outline" size={14} color={COLORS.Black[200]} />
-                          <Text style={styles.notesSheetBody}>#{toBookingRef(notesSheetItem.reservationId)}</Text>
-                        </View>
-                      )}
-                      {flags.showGuestPax && (notesSheetItem.adults > 0 || notesSheetItem.children > 0 || notesSheetItem.infants > 0) && (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                          {notesSheetItem.adults > 0 && (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                              <MaterialCommunityIcons name="account-outline" size={14} color={COLORS.Black[200]} />
-                              <Text style={styles.notesSheetBody}>{notesSheetItem.adults}</Text>
-                            </View>
-                          )}
-                          {notesSheetItem.children > 0 && (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                              <MaterialCommunityIcons name="account-child-outline" size={14} color={COLORS.Black[200]} />
-                              <Text style={styles.notesSheetBody}>{notesSheetItem.children}</Text>
-                            </View>
-                          )}
-                          {notesSheetItem.infants > 0 && (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                              <MaterialCommunityIcons name="baby-face-outline" size={14} color={COLORS.Black[200]} />
-                              <Text style={styles.notesSheetBody}>{notesSheetItem.infants}</Text>
-                            </View>
-                          )}
-                        </View>
-                      )}
-                      {flags.showBedConfig && shouldShowBedConfig(notesSheetItem.bedConfiguration) && (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <MaterialCommunityIcons name="bed-outline" size={14} color={COLORS.Black[200]} />
-                          <Text style={styles.notesSheetBody}>{notesSheetItem.bedConfiguration}</Text>
-                        </View>
-                      )}
-                    </View>
-                    <View style={styles.notesSheetDivider} />
-                  </>
-                )}
-                {notesSheetItem?.guestComments ? (
-                  <>
-                    <Text style={styles.notesSheetSectionLabel}>Guest comments</Text>
-                    <Text style={styles.notesSheetBody}>{notesSheetItem.guestComments}</Text>
-                    <View style={styles.notesSheetDivider} />
-                  </>
-                ) : null}
-                <Text style={styles.notesSheetSectionLabel}>Staff notes</Text>
-                {sheetNotes.length === 0 && !notesSheetEditing && (
-                  <Text style={[styles.notesSheetBody, { color: COLORS.Black[600], fontStyle: 'italic', marginBottom: 8 }]}>
-                    No staff notes yet.
-                  </Text>
-                )}
-                {sheetNotes.map(note => {
-                  const isEditing = editingNoteId === note.id;
-                  return (
-                    <View key={note.id} style={{ marginBottom: 10 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                        <Text style={[styles.notesSheetBody, { fontSize: 11, color: COLORS.Black[500] }]}>
-                          {note.tag === 'room' ? 'Room' : 'Guest'} · {note.author} · {new Date(note.createdAt).toLocaleString([], { hour: 'numeric', minute: '2-digit' })}
-                        </Text>
-                        {!isEditing && (
-                          <TouchableOpacity onPress={() => { setEditingNoteId(note.id); setNotesSheetDraft(note.text); setNotesSheetEditing(true); }}>
-                            <Ionicons name="pencil-outline" size={14} color={ORANGE} />
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                      {isEditing ? (
-                        <>
-                          <TextInput
-                            style={styles.notesSheetInput}
-                            value={notesSheetDraft}
-                            onChangeText={setNotesSheetDraft}
-                            multiline
-                            autoFocus
-                            placeholder="Edit note..."
-                            placeholderTextColor={COLORS.Black[600]}
-                            textAlignVertical="top"
-                            maxLength={300}
-                          />
-                          <View style={styles.notesSheetSaveRow}>
-                            <TouchableOpacity onPress={() => { setEditingNoteId(null); setNotesSheetEditing(false); setNotesSheetDraft(''); }}>
-                              <Text style={styles.notesSheetCancel}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.notesSheetSaveBtn} onPress={saveSheetNote}>
-                              <Text style={styles.notesSheetSaveBtnText}>Save</Text>
-                            </TouchableOpacity>
-                          </View>
-                        </>
-                      ) : (
-                        <Text style={styles.notesSheetBody}>{note.text}</Text>
-                      )}
-                    </View>
-                  );
-                })}
-                {notesSheetEditing && !editingNoteId ? (
-                  <>
-                    {notesSheetItem?.reservationId && (
-                      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-                        <TouchableOpacity
-                          onPress={() => setNewNoteTag('room')}
-                          style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: newNoteTag === 'room' ? ORANGE : COLORS.Background.Stroke, backgroundColor: newNoteTag === 'room' ? '#FFF4ED' : 'transparent' }}
-                        >
-                          <Text style={{ color: newNoteTag === 'room' ? ORANGE : COLORS.Black[400], fontSize: 12, fontWeight: '600' }}>Room</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => setNewNoteTag('guest')}
-                          style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: newNoteTag === 'guest' ? ORANGE : COLORS.Background.Stroke, backgroundColor: newNoteTag === 'guest' ? '#FFF4ED' : 'transparent' }}
-                        >
-                          <Text style={{ color: newNoteTag === 'guest' ? ORANGE : COLORS.Black[400], fontSize: 12, fontWeight: '600' }}>Guest</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                    <TextInput
-                      style={styles.notesSheetInput}
-                      value={notesSheetDraft}
-                      onChangeText={setNotesSheetDraft}
-                      multiline
-                      autoFocus
-                      placeholder="Add a note..."
-                      placeholderTextColor={COLORS.Black[600]}
-                      textAlignVertical="top"
-                      maxLength={300}
-                    />
-                    <View style={styles.notesSheetSaveRow}>
-                      <TouchableOpacity onPress={() => { setNotesSheetEditing(false); setNotesSheetDraft(''); }}>
-                        <Text style={styles.notesSheetCancel}>Cancel</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.notesSheetSaveBtn} onPress={saveSheetNote}>
-                        <Text style={styles.notesSheetSaveBtnText}>Add</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </>
-                ) : !editingNoteId ? (
-                  <TouchableOpacity onPress={() => { setNotesSheetDraft(''); setNotesSheetEditing(true); }}>
-                    <Text style={styles.addNoteText}>+ Add staff note</Text>
-                  </TouchableOpacity>
-                ) : null}
-                {(notesSheetItem?.extraItems?.length ?? 0) > 0 && (
-                  <>
-                    <View style={styles.notesSheetDivider} />
-                    <Text style={styles.notesSheetSectionLabel}>Extras</Text>
-                    {notesSheetItem!.extraItems.map((item, i) => (
-                      <Text key={i} style={styles.notesSheetBody}>{'\u2022'} {item}</Text>
-                    ))}
-                  </>
-                )}
-              </ScrollView>
-            </Animated.View>
-          </KeyboardAvoidingView>
-        </Animated.View>
-      </Modal>
+      <NotesSheet
+        visible={notesSheetVisible}
+        onClose={closeNotesSheet}
+        sheetAnim={notesSheetAnim}
+        translateY={notesSheetTranslateY}
+        panResponder={notesSheetPanResponder}
+        item={notesSheetItem}
+        flags={flags}
+        sheetNotes={sheetNotes}
+        notesSheetEditing={notesSheetEditing}
+        setNotesSheetEditing={setNotesSheetEditing}
+        notesSheetDraft={notesSheetDraft}
+        setNotesSheetDraft={setNotesSheetDraft}
+        editingNoteId={editingNoteId}
+        setEditingNoteId={setEditingNoteId}
+        newNoteTag={newNoteTag}
+        setNewNoteTag={setNewNoteTag}
+        saveSheetNote={saveSheetNote}
+        insetsBottom={insets.bottom}
+      />
 
-      {/* ── Sort bottom sheet ── */}
-      <Modal visible={sortModalVisible} animationType="none" transparent onRequestClose={closeSortModal}>
-        <Animated.View style={[styles.sortSheetOverlay, { opacity: sortSheetAnim }]}>
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeSortModal} />
-          <Animated.View style={[styles.sortSheet, { transform: [{ translateY: sortTranslateY }] }]}>
-            <View style={styles.sheetHandleArea} {...sortPanResponder.panHandlers}><View style={styles.sortSheetHandle} /></View>
-            <View style={styles.sortSheetHeader}>
-              <Text style={styles.sortSheetTitle}>Sort by</Text>
-              <TouchableOpacity onPress={() => { setSort(DEFAULT_SORT); closeSortModal(); }}>
-                <Text style={styles.sortResetText}>Reset</Text>
-              </TouchableOpacity>
-            </View>
-            {SORT_OPTIONS.map((option, i) => {
-              const isSelected = sort.field === option.value;
-              return (
-                <React.Fragment key={option.value}>
+      <SortSheet
+        visible={sortModalVisible}
+        onClose={closeSortModal}
+        sheetAnim={sortSheetAnim}
+        translateY={sortTranslateY}
+        panResponder={sortPanResponder}
+        sort={sort}
+        setSort={setSort}
+      />
 
-                  <TouchableOpacity
-                    style={[styles.sortOptionRow, isSelected && styles.sortOptionRowActive]}
-                    onPress={() => { setSort(prev => ({ ...prev, field: option.value })); closeSortModal(); }}
-                  >
-                    <View style={[styles.sortRadio, isSelected && styles.sortRadioActive]}>
-                      {isSelected && <View style={styles.sortRadioDot} />}
-                    </View>
-                    <Text style={[styles.sortOptionLabel, isSelected && styles.sortOptionLabelActive]}>
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                </React.Fragment>
-              );
-            })}
-          </Animated.View>
-        </Animated.View>
-      </Modal>
+      <AssignSheet
+        visible={assignModalVisible}
+        onClose={closeAssignModal}
+        sheetAnim={assignSheetAnim}
+        translateY={assignTranslateY}
+        panResponder={assignPanResponder}
+        assigningRoomId={assigningRoomId}
+        assignments={assignments}
+        setAssignments={setAssignments}
+        onConfirm={confirmAssignment}
+      />
 
-      {/* ── Assign housekeeper bottom sheet ── */}
-      <Modal visible={assignModalVisible} animationType="none" transparent onRequestClose={closeAssignModal}>
-        <Animated.View style={[styles.sortSheetOverlay, { opacity: assignSheetAnim }]}>
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeAssignModal} />
-          <Animated.View style={[styles.sortSheet, { transform: [{ translateY: assignTranslateY }] }]}>
-            <View style={styles.sheetHandleArea} {...assignPanResponder.panHandlers}><View style={styles.sortSheetHandle} /></View>
-            <View style={styles.sortSheetHeader}>
-              <Text style={styles.sortSheetTitle}>Assign housekeeper</Text>
-              <TouchableOpacity onPress={confirmAssignment}>
-                <Text style={styles.sortResetText}>Confirm</Text>
-              </TouchableOpacity>
-            </View>
-            {HOUSEKEEPERS.map((name, i) => {
-              const isSelected = assigningRoomId ? assignments[assigningRoomId] === name : false;
-              return (
-                <React.Fragment key={name}>
+      <FilterSheet
+        visible={filterSheetVisible}
+        onClose={closeFilterSheet}
+        sheetAnim={filterSheetAnim}
+        translateY={filterTranslateY}
+        panResponder={filterPanResponder}
+        filters={filters}
+        setFilters={setFilters}
+        insetsBottom={insets.bottom}
+      />
 
-                  <TouchableOpacity
-                    style={[styles.sortOptionRow, isSelected && styles.sortOptionRowActive]}
-                    onPress={() => {
-                      if (assigningRoomId) setAssignments(prev => ({ ...prev, [assigningRoomId]: name }));
-                    }}
-                  >
-                    <View style={[styles.sortRadio, isSelected && styles.sortRadioActive]}>
-                      {isSelected && <View style={styles.sortRadioDot} />}
-                    </View>
-                    <Text style={[styles.sortOptionLabel, isSelected && styles.sortOptionLabelActive]}>
-                      {name}
-                    </Text>
-                  </TouchableOpacity>
-                </React.Fragment>
-              );
-            })}
-          </Animated.View>
-        </Animated.View>
-      </Modal>
+      <DemoFlagsSheet
+        visible={demoSheetVisible}
+        onClose={closeDemoSheet}
+        sheetAnim={demoSheetAnim}
+        translateY={demoTranslateY}
+        panResponder={demoPanResponder}
+        flags={flags}
+        setFlags={setFlags}
+        housekeeperMode={housekeeperMode}
+        setHousekeeperMode={setHousekeeperMode}
+        insetsBottom={insets.bottom}
+      />
 
-      {/* ── Filter bottom sheet ── */}
-      <Modal visible={filterSheetVisible} animationType="none" transparent onRequestClose={closeFilterSheet}>
-        <Animated.View style={[styles.sortSheetOverlay, { opacity: filterSheetAnim }]}>
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeFilterSheet} />
-          <Animated.View style={[styles.sortSheet, { height: WINDOW_HEIGHT * 0.85, paddingBottom: 0, transform: [{ translateY: filterTranslateY }] }]}>
-            <View style={styles.sheetHandleArea} {...filterPanResponder.panHandlers}>
-              <View style={styles.sortSheetHandle} />
-            </View>
-            <View style={styles.sortSheetHeader}>
-              <Text style={styles.sortSheetTitle}>Filter</Text>
-              <TouchableOpacity onPress={() => setFilters(DEFAULT_FILTERS)}>
-                <Text style={styles.sortResetText}>Reset</Text>
-              </TouchableOpacity>
-            </View>
+      <AutomationsSheet
+        visible={autoSheetVisible}
+        onClose={closeAutoSheet}
+        sheetAnim={autoSheetAnim}
+        translateY={autoTranslateY}
+        panResponder={autoPanResponder}
+        deepCleanDays={deepCleanDays}
+        setDeepCleanDays={setDeepCleanDays}
+        nightlyResetOccupied={nightlyResetOccupied}
+        setNightlyResetOccupied={setNightlyResetOccupied}
+        resetAfterCheckout={resetAfterCheckout}
+        setResetAfterCheckout={setResetAfterCheckout}
+        resetAfterClosure={resetAfterClosure}
+        setResetAfterClosure={setResetAfterClosure}
+        insetsBottom={insets.bottom}
+      />
 
-            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
-            {/* Room type — multi-select chips */}
-            <View style={styles.filterSection}>
-                <Text style={styles.filterSectionLabel}>ROOM TYPE</Text>
-                <View style={styles.filterChipRow}>
-                  {ROOM_TYPE_OPTIONS.map(type => {
-                    const isActive = filters.roomTypes.includes(type);
-                    return (
-                      <TouchableOpacity
-                        key={type}
-                        activeOpacity={0.75}
-                        style={[styles.filterChip, { borderColor: isActive ? '#ff6842' : '#d1d5db', backgroundColor: isActive ? '#fff5ee' : '#fff' }]}
-                        onPress={() => setFilters(prev => ({
-                          ...prev,
-                          roomTypes: isActive ? prev.roomTypes.filter(x => x !== type) : [...prev.roomTypes, type],
-                        }))}
-                      >
-                        <Text style={[styles.filterChipText, { color: isActive ? '#ff6842' : '#333', fontWeight: isActive ? '600' : '400' }]}>{type}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
+      <PrintPreviewModal
+        visible={printPreviewVisible}
+        onClose={() => setPrintPreviewVisible(false)}
+        headerText={headerText}
+        dateRange={dateRange}
+        schedule={schedule}
+        singleRooms={singleRooms}
+        statusOverrides={statusOverrides}
+        notes={notes}
+        printSettingsVisible={printSettingsVisible}
+        closePrintSettings={closePrintSettings}
+        printSettingsSheetAnim={printSettingsSheetAnim}
+        printSettingsTranslateY={printSettingsTranslateY}
+        printSettingsPanResponder={printSettingsPanResponder}
+        printPageCount={printPageCount}
+        moreSettingsExpanded={moreSettingsExpanded}
+        setMoreSettingsExpanded={setMoreSettingsExpanded}
+        headersAndFooters={headersAndFooters}
+        setHeadersAndFooters={setHeadersAndFooters}
+        insetsTop={insets.top}
+        insetsBottom={insets.bottom}
+      />
 
-              {/* Room status — multi-select chips */}
-              <View style={styles.filterSection}>
-                <Text style={styles.filterSectionLabel}>ROOM STATUS</Text>
-                <View style={styles.filterChipRow}>
-                  {ROOM_STATUS_OPTIONS.map(status => {
-                    const isActive = filters.roomStatuses.includes(status);
-                    return (
-                      <TouchableOpacity
-                        key={status}
-                        activeOpacity={0.75}
-                        style={[styles.filterChip, { borderColor: isActive ? '#ff6842' : '#d1d5db', backgroundColor: isActive ? '#fff5ee' : '#fff' }]}
-                        onPress={() => setFilters(prev => ({
-                          ...prev,
-                          roomStatuses: isActive ? prev.roomStatuses.filter(x => x !== status) : [...prev.roomStatuses, status],
-                        }))}
-                      >
-                        <Text style={[styles.filterChipText, { color: isActive ? '#ff6842' : '#333', fontWeight: isActive ? '600' : '400' }]}>{status}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
+      <DateRangeSheet
+        visible={modalVisible && dateSelectorVariant === 'range'}
+        onClose={closeDateSheet}
+        sheetAnim={dateSheetAnim}
+        translateY={dateSheetTranslateY}
+        panResponder={dateSheetPanResponder}
+        today={today}
+        pendingStart={pendingStart}
+        setPendingStart={setPendingStart}
+        pendingEnd={pendingEnd}
+        setPendingEnd={setPendingEnd}
+        expandedField={expandedField}
+        setExpandedField={setExpandedField}
+        resetDateSheet={resetDateSheet}
+        applyRange={applyRange}
+      />
 
-              {/* Cleaning status — multi-select chips */}
-              <View style={styles.filterSection}>
-                <Text style={styles.filterSectionLabel}>CLEANING STATUS</Text>
-                <View style={styles.filterChipRow}>
-                  {CLEANING_STATUS_OPTIONS.map(s => {
-                    const isActive = filters.cleaningStatuses.includes(s);
-                    return (
-                      <TouchableOpacity
-                        key={s}
-                        activeOpacity={0.75}
-                        style={[styles.filterChip, { borderColor: isActive ? '#ff6842' : '#d1d5db', backgroundColor: isActive ? '#fff5ee' : '#fff' }]}
-                        onPress={() => setFilters(prev => ({
-                          ...prev,
-                          cleaningStatuses: isActive ? prev.cleaningStatuses.filter(x => x !== s) : [...prev.cleaningStatuses, s],
-                        }))}
-                      >
-                        <Text style={[styles.filterChipText, { color: isActive ? '#ff6842' : '#333', fontWeight: isActive ? '600' : '400' }]}>{s}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-
-              {/* Checkouts — chips */}
-              <View style={styles.filterSection}>
-                <Text style={styles.filterSectionLabel}>CHECKOUTS</Text>
-                <View style={styles.filterChipRow}>
-                  {([
-                    { key: 'lateCheckout',  label: 'Late'  },
-                    { key: 'earlyCheckout', label: 'Early' },
-                  ] as { key: 'lateCheckout' | 'earlyCheckout'; label: string }[]).map(item => {
-                    const isActive = filters[item.key];
-                    return (
-                      <TouchableOpacity
-                        key={item.key}
-                        activeOpacity={0.75}
-                        style={[styles.filterChip, isActive ? styles.filterChipActive : styles.filterChipInactive]}
-                        onPress={() => setFilters(prev => ({ ...prev, [item.key]: !prev[item.key] }))}
-                      >
-                        <Text style={[styles.filterChipText, { color: isActive ? '#ff6842' : '#333', fontWeight: isActive ? '600' : '400' }]}>{item.label}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-
-              {/* Notes — chips */}
-              <View style={styles.filterSection}>
-                <Text style={styles.filterSectionLabel}>NOTES</Text>
-                <View style={styles.filterChipRow}>
-                  {([
-                    { key: 'includeStaffNotes',    label: 'Staff notes'     },
-                    { key: 'includeGuestComments', label: 'Guest comments'  },
-                    { key: 'includeExtras',        label: 'Extras'          },
-                  ] as { key: 'includeStaffNotes' | 'includeGuestComments' | 'includeExtras'; label: string }[]).map(opt => {
-                    const isActive = filters[opt.key];
-                    return (
-                      <TouchableOpacity
-                        key={opt.key}
-                        activeOpacity={0.75}
-                        style={[styles.filterChip, isActive ? styles.filterChipActive : styles.filterChipInactive]}
-                        onPress={() => setFilters(prev => ({ ...prev, [opt.key]: !prev[opt.key] }))}
-                      >
-                        <Text style={[styles.filterChipText, { color: isActive ? '#ff6842' : '#333', fontWeight: isActive ? '600' : '400' }]}>{opt.label}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-            </ScrollView>
-
-            {/* Save — pinned footer */}
-            <View style={[styles.autoFooter, styles.filterSaveFooter, { paddingBottom: insets.bottom + 16 }]}>
-              <TouchableOpacity style={styles.autoDoneBtn} onPress={closeFilterSheet}>
-                <Text style={styles.autoDoneBtnText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-        </Animated.View>
-      </Modal>
-
-      {/* ── Demo flags bottom sheet ── */}
-      <Modal visible={demoSheetVisible} animationType="none" transparent onRequestClose={closeDemoSheet}>
-        <Animated.View style={[styles.sortSheetOverlay, { opacity: demoSheetAnim }]}>
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeDemoSheet} />
-          <Animated.View style={[styles.sortSheet, { transform: [{ translateY: demoTranslateY }] }]}>
-            <View style={styles.sheetHandleArea} {...demoPanResponder.panHandlers}><View style={styles.sortSheetHandle} /></View>
-            <View style={styles.sortSheetHeader}>
-              <Text style={styles.sortSheetTitle}>Demo flags</Text>
-              <TouchableOpacity onPress={() => { setFlags({ ...FLAGS }); setHousekeeperMode(false); }}>
-                <Text style={styles.sortResetText}>Reset</Text>
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}>
-              {/* View mode */}
-              <View style={styles.demoFlagRow}>
-                <Text style={styles.demoFlagLabel}>Housekeeper view</Text>
-                <Switch
-                  value={housekeeperMode}
-                  onValueChange={setHousekeeperMode}
-                  trackColor={{ false: '#e5e7eb', true: ORANGE }}
-                  thumbColor="#fff"
-                />
-              </View>
-              <View style={styles.dropdownDivider} />
-              <View style={[styles.dropdownDivider, { marginBottom: 8 }]} />
-
-              {/* Date selector variant — segmented control (3 options) */}
-              <View style={styles.demoVariantRow}>
-                <Text style={[styles.demoFlagLabel, { flex: 0, marginRight: 0 }]}>Date picker</Text>
-                <View style={styles.segmentedControl}>
-                  {([
-                    { value: 'range',      label: 'Date range sheet' },
-                    { value: 'strip',      label: 'Date strip' },
-                    { value: 'monthSheet', label: 'Date sheet' },
-                  ] as { value: typeof FLAGS.dateSelectorVariant; label: string }[]).map(opt => {
-                    const isActive = flags.dateSelectorVariant === opt.value;
-                    return (
-                      <TouchableOpacity
-                        key={opt.value}
-                        style={[styles.segmentedBtn, isActive && styles.segmentedBtnActive]}
-                        onPress={() => setFlags(prev => ({ ...prev, dateSelectorVariant: opt.value }))}
-                      >
-                        <Text style={[styles.segmentedBtnText, isActive && styles.segmentedBtnTextActive]} numberOfLines={1}>{opt.label}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-              <View style={styles.dropdownDivider} />
-
-              {([
-                { key: 'showGuestName',         label: 'Guest name' },
-                { key: 'showGuestPax',          label: 'Pax counts' },
-                { key: 'showBedConfig',         label: 'Bed configuration' },
-                { key: 'showLateCheckout',      label: 'Early check-in & late check-out badge' },
-                { key: 'showReservationId',    label: 'Reservation ID' },
-                { key: 'roomStatsChips',       label: 'Room stats as tappable chips' },
-                { key: 'compactCard',          label: 'Compact room card (details in notes sheet)' },
-              ] as { key: 'showGuestName' | 'showGuestPax' | 'showBedConfig' | 'showLateCheckout' | 'showReservationId' | 'roomStatsChips' | 'compactCard'; label: string }[]).map((item, i) => (
-                <React.Fragment key={item.key}>
-                  {i > 0 && <View style={styles.dropdownDivider} />}
-                  <View style={styles.demoFlagRow}>
-                    <Text style={styles.demoFlagLabel}>{item.label}</Text>
-                    <Switch
-                      value={flags[item.key] as boolean}
-                      onValueChange={val => setFlags(prev => ({ ...prev, [item.key]: val }))}
-                      trackColor={{ false: '#e5e7eb', true: ORANGE }}
-                      thumbColor="#fff"
-                    />
-                  </View>
-                </React.Fragment>
-              ))}
-            </ScrollView>
-          </Animated.View>
-        </Animated.View>
-      </Modal>
-
-      {/* ── Automations bottom sheet ── */}
-      <Modal visible={autoSheetVisible} animationType="none" transparent onRequestClose={closeAutoSheet}>
-        <Animated.View style={[styles.sortSheetOverlay, { opacity: autoSheetAnim }]}>
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeAutoSheet} />
-          <Animated.View style={[styles.sortSheet, { paddingBottom: 0, transform: [{ translateY: autoTranslateY }] }]}>
-            <View style={styles.sheetHandleArea} {...autoPanResponder.panHandlers}><View style={styles.sortSheetHandle} /></View>
-            <View style={styles.sortSheetHeader}>
-              <Text style={styles.sortSheetTitle}>Automations</Text>
-              <TouchableOpacity onPress={() => { setDeepCleanDays('3'); setNightlyResetOccupied(false); setResetAfterCheckout(true); setResetAfterClosure(true); }}>
-                <Text style={styles.sortResetText}>Reset</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView>
-              <Text style={styles.autoSheetSubtitle}>Rules that run on page load to keep cleaning statuses up to date.</Text>
-
-              {/* Deep clean section */}
-              <View style={styles.autoSection}>
-                <Text style={styles.autoSectionTitle}>Deep clean after N days of occupancy</Text>
-                <Text style={styles.autoSectionDesc}>Flags rooms occupied for N or more consecutive days as Need Deep Cleaning.</Text>
-                <View style={styles.autoInputRow}>
-                  <TextInput
-                    style={styles.autoInput}
-                    value={deepCleanDays}
-                    onChangeText={setDeepCleanDays}
-                    keyboardType="numeric"
-                    maxLength={3}
-                  />
-                  <Text style={styles.autoInputSuffix}>days</Text>
-                </View>
-              </View>
-
-              <View style={styles.autoSeparator} />
-
-              {/* Checkbox rows */}
-              {([
-                { key: 'nightlyResetOccupied',  label: 'Nightly reset for occupied rooms',         desc: 'Resets all occupied rooms to Need Cleaning each day.',                            value: nightlyResetOccupied, set: setNightlyResetOccupied },
-                { key: 'resetAfterCheckout',    label: 'Reset to Need Cleaning after check-out',   desc: 'Sets departing rooms to Need Cleaning on check-out day.',                        value: resetAfterCheckout,   set: setResetAfterCheckout },
-                { key: 'resetAfterClosure',     label: 'Reset to Need Cleaning after room closure ends', desc: 'Clears rooms returning from maintenance or renovation closures.',           value: resetAfterClosure,    set: setResetAfterClosure },
-              ] as const).map(({ key, label, desc, value, set }) => (
-                <TouchableOpacity key={key} style={styles.autoCheckRow} onPress={() => (set as (v: boolean) => void)(!value)} activeOpacity={0.7}>
-                  <MaterialIcons
-                    name={value ? 'check-box' : 'check-box-outline-blank'}
-                    size={22}
-                    color={value ? '#e8722a' : '#9ca3af'}
-                    style={{ marginTop: 1 }}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.autoCheckLabel}>{label}</Text>
-                    <Text style={styles.autoCheckDesc}>{desc}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            {/* Done button */}
-            <View style={[styles.autoFooter, { paddingBottom: insets.bottom + 16 }]}>
-              <TouchableOpacity style={styles.autoDoneBtn} onPress={closeAutoSheet}>
-                <Text style={styles.autoDoneBtnText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-        </Animated.View>
-      </Modal>
-
-      {/* ── Print preview modal ── */}
-      <Modal visible={printPreviewVisible} animationType="slide" presentationStyle="fullScreen">
-        <View style={[styles.printPreviewSafe, { paddingTop: insets.top }]}>
-          {/* Header */}
-          <View style={styles.printPreviewHeader}>
-            <TouchableOpacity onPress={() => setPrintPreviewVisible(false)}>
-              <Ionicons name="close" size={22} color="#111" />
-            </TouchableOpacity>
-            <Text style={styles.printPreviewHeaderTitle}>Print preview</Text>
-            <View style={{ width: 24 }} />
-          </View>
-
-          {/* Document */}
-          <ScrollView contentContainerStyle={styles.printPreviewScroll}>
-            <View style={styles.printDoc}>
-              {/* Document header */}
-              <Text style={styles.printDocTitle}>Housekeeping Report</Text>
-              <Text style={styles.printDocDate}>{headerText}</Text>
-              <View style={styles.printDocDivider} />
-
-              {/* Table header */}
-              <View style={styles.printTableHeader}>
-                <Text style={[styles.printTableHeaderCell, { flex: 1.4 }]}>Room</Text>
-                <Text style={[styles.printTableHeaderCell, { flex: 1 }]}>Check-in</Text>
-                <Text style={[styles.printTableHeaderCell, { flex: 1 }]}>Check-out</Text>
-                <Text style={[styles.printTableHeaderCell, { flex: 1.5 }]}>Room status</Text>
-                <Text style={[styles.printTableHeaderCell, { flex: 1.3 }]}>Status</Text>
-              </View>
-
-              {/* Rows */}
-              {(dateRange ? schedule.flatMap(d => d.rooms) : singleRooms).map((item, i) => {
-                const status = statusOverrides[item.room.id] ?? item.room.status;
-                const cfg = STATUS_CONFIG[status];
-                const note = notes[item.room.id];
-                return (
-                  <View key={`${item.room.id}-${i}`} style={[styles.printTableRow, i % 2 === 1 && styles.printTableRowAlt]}>
-                    <View style={styles.printTableRowCols}>
-                      <Text style={[styles.printTableCell, styles.printTableCellBold, { flex: 1.4 }]}>{item.room.number}</Text>
-                      <Text style={[styles.printTableCell, { flex: 1 }]}>{item.checkIn ? new Date(item.checkIn + 'T12:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) : '—'}</Text>
-                      <Text style={[styles.printTableCell, { flex: 1 }]}>{item.checkOut ? new Date(item.checkOut + 'T12:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) : '—'}</Text>
-                      <Text style={[styles.printTableCell, { flex: 1.5 }]}>
-                        {item.isOccupied ? `${item.guestCount} guest${item.guestCount !== 1 ? 's' : ''}` : 'Vacant'}
-                      </Text>
-                      <View style={[styles.printStatusBadge, { backgroundColor: cfg.bg, flex: 1.3 }]}>
-                        <Text style={[styles.printStatusText, { color: cfg.text }]}>{cfg.label}</Text>
-                      </View>
-                    </View>
-                    {(!!item.guestComments || !!note) && (
-                      <View style={styles.printNotesContainer}>
-                        {!!item.guestComments && (
-                          <Text style={styles.printNoteText}><Text style={styles.printNoteLabel}>Guest comments: </Text>{item.guestComments}</Text>
-                        )}
-                        {!!note && (
-                          <Text style={styles.printNoteText}><Text style={styles.printNoteLabel}>Staff note: </Text>{note}</Text>
-                        )}
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
-            </View>
-
-          </ScrollView>
-
-          {/* ── Print settings sheet — standard bottom sheet overlay ── */}
-          {printSettingsVisible && (
-            <Animated.View style={{
-              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-              justifyContent: 'flex-end',
-              backgroundColor: 'rgba(0,0,0,0.35)',
-              opacity: printSettingsSheetAnim,
-            }}>
-              <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closePrintSettings} />
-              <Animated.View style={[styles.printSheet, { paddingBottom: 0, transform: [{ translateY: printSettingsTranslateY }] }]}>
-                <View style={styles.sheetHandleArea} {...printSettingsPanResponder.panHandlers}>
-                  <View style={styles.sortSheetHandle} />
-                </View>
-                <View style={styles.printSheetTitleRow}>
-                  <Text style={styles.printSheetTitleText}>Print Settings</Text>
-                  <Text style={styles.printSheetPageCount}>{printPageCount} page{printPageCount !== 1 ? 's' : ''}</Text>
-                </View>
-
-                <ScrollView contentContainerStyle={{ paddingBottom: 8 }}>
-                  <View style={styles.printSheetDivider} />
-
-                  <View style={styles.printSettingsRow}>
-                    <Text style={styles.printSettingsLabel}>Destination</Text>
-                    <View style={styles.printSettingsSelect}>
-                      <Ionicons name="document-outline" size={15} color={COLORS.Black[400]} />
-                      <Text style={styles.printSettingsSelectText}>Save as PDF</Text>
-                      <Ionicons name="chevron-down" size={13} color={COLORS.Black[400]} />
-                    </View>
-                  </View>
-
-                  <View style={styles.printSettingsRow}>
-                    <Text style={styles.printSettingsLabel}>Pages</Text>
-                    <View style={styles.printSettingsSelect}>
-                      <Text style={styles.printSettingsSelectText}>All</Text>
-                      <Ionicons name="chevron-down" size={13} color={COLORS.Black[400]} />
-                    </View>
-                  </View>
-
-                  <View style={styles.printSettingsRow}>
-                    <Text style={styles.printSettingsLabel}>Layout</Text>
-                    <View style={styles.printSettingsSelect}>
-                      <Text style={styles.printSettingsSelectText}>Portrait</Text>
-                      <Ionicons name="chevron-down" size={13} color={COLORS.Black[400]} />
-                    </View>
-                  </View>
-
-                  <View style={styles.printSettingsDivider} />
-
-                  <TouchableOpacity style={styles.printSettingsRow} onPress={() => setMoreSettingsExpanded(v => !v)}>
-                    <Text style={styles.printSettingsLabel}>More settings</Text>
-                    <Ionicons name={moreSettingsExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={COLORS.Black[100]} />
-                  </TouchableOpacity>
-
-                  {moreSettingsExpanded && (
-                    <>
-                      <View style={styles.printSettingsRow}>
-                        <Text style={styles.printSettingsLabel}>Paper size</Text>
-                        <View style={styles.printSettingsSelect}>
-                          <Text style={styles.printSettingsSelectText}>A4</Text>
-                          <Ionicons name="chevron-down" size={13} color={COLORS.Black[400]} />
-                        </View>
-                      </View>
-                      <View style={styles.printSettingsRow}>
-                        <Text style={styles.printSettingsLabel}>Pages per sheet</Text>
-                        <View style={styles.printSettingsSelect}>
-                          <Text style={styles.printSettingsSelectText}>1</Text>
-                          <Ionicons name="chevron-down" size={13} color={COLORS.Black[400]} />
-                        </View>
-                      </View>
-                      <View style={styles.printSettingsRow}>
-                        <Text style={styles.printSettingsLabel}>Margins</Text>
-                        <View style={styles.printSettingsSelect}>
-                          <Text style={styles.printSettingsSelectText}>Default</Text>
-                          <Ionicons name="chevron-down" size={13} color={COLORS.Black[400]} />
-                        </View>
-                      </View>
-                      <View style={styles.printSettingsRow}>
-                        <Text style={styles.printSettingsLabel}>Scale</Text>
-                        <View style={styles.printSettingsSelect}>
-                          <Text style={styles.printSettingsSelectText}>Default</Text>
-                          <Ionicons name="chevron-down" size={13} color={COLORS.Black[400]} />
-                        </View>
-                      </View>
-                      <View style={[styles.printSettingsRow, { alignItems: 'flex-start' }]}>
-                        <Text style={styles.printSettingsLabel}>Options</Text>
-                        <View>
-                          <TouchableOpacity style={styles.printCheckRow} onPress={() => setHeadersAndFooters(v => !v)}>
-                            <View style={[styles.printCheckbox, headersAndFooters && styles.printCheckboxChecked]}>
-                              {headersAndFooters && <Ionicons name="checkmark" size={11} color="#fff" />}
-                            </View>
-                            <Text style={styles.printCheckLabel}>Headers and footers</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity style={styles.printCheckRow}>
-                            <View style={styles.printCheckbox} />
-                            <Text style={styles.printCheckLabel}>Background graphics</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                      <View style={styles.printSettingsDivider} />
-                      <TouchableOpacity style={styles.printExternalRow}>
-                        <Text style={styles.printExternalText}>Print using system dialogue...</Text>
-                        <Ionicons name="open-outline" size={14} color={COLORS.Black[300]} />
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.printExternalRow}>
-                        <Text style={styles.printExternalText}>Open PDF in Preview</Text>
-                        <Ionicons name="open-outline" size={14} color={COLORS.Black[300]} />
-                      </TouchableOpacity>
-                    </>
-                  )}
-                </ScrollView>
-
-                <View style={[styles.printPreviewFooter, { paddingBottom: insets.bottom + 12 }]}>
-                  <TouchableOpacity style={styles.printConfirmBtn}>
-                    <Ionicons name="print-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
-                    <Text style={styles.printConfirmBtnText}>Print</Text>
-                  </TouchableOpacity>
-                </View>
-              </Animated.View>
-            </Animated.View>
-          )}
-        </View>
-      </Modal>
-
-      {/* ── Select dates bottom sheet (only rendered in 'range' variant) ── */}
-      <Modal visible={modalVisible && dateSelectorVariant === 'range'} animationType="none" transparent onRequestClose={closeDateSheet} statusBarTranslucent>
-        <Animated.View style={[styles.sortSheetOverlay, { opacity: dateSheetAnim }]}>
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeDateSheet} />
-          <Animated.View style={[styles.dateSheet, { transform: [{ translateY: dateSheetTranslateY }] }]}>
-              <View style={styles.sheetHandleArea} {...dateSheetPanResponder.panHandlers}>
-                <View style={styles.dateSheetHandle} />
-              </View>
-              <View style={styles.dateSheetHeader}>
-                <Text style={styles.dateSheetTitle}>Select dates</Text>
-                <TouchableOpacity onPress={closeDateSheet} style={styles.dateSheetCloseBtn}>
-                  <Ionicons name="close" size={20} color={COLORS.Black[200]} />
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.dateSheetHelper}>Start date is within 28 days of today. End date is within 28 days of start.</Text>
-
-              <ScrollView style={styles.dateSheetScroll} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12 }}>
-                {/* Start date panel */}
-                <View style={styles.dateSheetPanel}>
-                  <TouchableOpacity
-                    style={styles.dateSheetFieldRow}
-                    onPress={() => setExpandedField(expandedField === 'start' ? null : 'start')}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.dateSheetFieldLabel}>Start date</Text>
-                      <Text style={[styles.dateSheetFieldValue, !pendingStart && styles.dateSheetFieldPlaceholder]}>
-                        {pendingStart ? formatLong(pendingStart) : 'Select a date'}
-                      </Text>
-                    </View>
-                    <Ionicons
-                      name={expandedField === 'start' ? 'chevron-up' : 'chevron-down'}
-                      size={18}
-                      color={COLORS.Black[500]}
-                    />
-                  </TouchableOpacity>
-                  {expandedField === 'start' && (
-                    <Calendar
-                      minDate={addDays(today, -28)}
-                      maxDate={addDays(today, 28)}
-                      onDayPress={(day: { dateString: string }) => {
-                        setPendingStart(day.dateString);
-                        setPendingEnd(null);
-                        setExpandedField('end');
-                      }}
-                      markedDates={pendingStart ? { [pendingStart]: { selected: true, selectedColor: ORANGE } } : {}}
-                      theme={{ selectedDayBackgroundColor: ORANGE, todayTextColor: ORANGE, arrowColor: ORANGE, calendarBackground: 'transparent' }}
-                      style={{ backgroundColor: 'transparent' }}
-                    />
-                  )}
-                </View>
-
-                {/* End date panel */}
-                <View style={styles.dateSheetPanel}>
-                  <TouchableOpacity
-                    style={styles.dateSheetFieldRow}
-                    onPress={() => setExpandedField(expandedField === 'end' ? null : 'end')}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.dateSheetFieldLabel}>End date</Text>
-                      <Text style={[styles.dateSheetFieldValue, !pendingEnd && styles.dateSheetFieldPlaceholder]}>
-                        {pendingEnd ? formatLong(pendingEnd) : 'Select a date'}
-                      </Text>
-                    </View>
-                    <Ionicons
-                      name={expandedField === 'end' ? 'chevron-up' : 'chevron-down'}
-                      size={18}
-                      color={COLORS.Black[500]}
-                    />
-                  </TouchableOpacity>
-                  {expandedField === 'end' && (
-                    <Calendar
-                      minDate={pendingStart ?? undefined}
-                      maxDate={pendingStart ? addDays(pendingStart, 28) : addDays(today, 28)}
-                      onDayPress={(day: { dateString: string }) => {
-                        setPendingEnd(day.dateString);
-                        setExpandedField(null);
-                      }}
-                      markedDates={pendingEnd ? { [pendingEnd]: { selected: true, selectedColor: ORANGE } } : {}}
-                      theme={{ selectedDayBackgroundColor: ORANGE, todayTextColor: ORANGE, arrowColor: ORANGE, calendarBackground: 'transparent' }}
-                      style={{ backgroundColor: 'transparent' }}
-                    />
-                  )}
-                </View>
-              </ScrollView>
-
-              {/* Sticky footer toolbar: Reset (left) + Apply pill (right) */}
-              <View style={styles.dateSheetFooter}>
-                <TouchableOpacity
-                  style={styles.dateSheetResetBtn}
-                  onPress={resetDateSheet}
-                  disabled={!pendingStart && !pendingEnd}
-                >
-                  <Ionicons name="refresh" size={20} color={(!pendingStart && !pendingEnd) ? COLORS.Black[500] : ORANGE} />
-                  <Text style={[styles.dateSheetResetText, (!pendingStart && !pendingEnd) && { color: COLORS.Black[500] }]}>Reset</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.dateSheetApplyPill, (!pendingStart || !pendingEnd) && styles.dateSheetApplyPillDisabled]}
-                  onPress={applyRange}
-                  disabled={!pendingStart || !pendingEnd}
-                >
-                  <Ionicons name="arrow-forward" size={16} color="#fff" />
-                  <Text style={styles.dateSheetApplyPillText}>Apply</Text>
-                </TouchableOpacity>
-              </View>
-            </Animated.View>
-        </Animated.View>
-      </Modal>
-
-      {/* ── Month sheet (variant C — Figma 655:2956) ── */}
-      <Modal visible={monthSheetVisible} animationType="none" transparent onRequestClose={closeMonthSheet} statusBarTranslucent>
-        <Animated.View style={[styles.sortSheetOverlay, { opacity: monthSheetAnim }]}>
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeMonthSheet} />
-          <Animated.View style={[styles.monthSheet, { transform: [{ translateY: monthSheetTranslateY }] }]}>
-            <View style={styles.sheetHandleArea} {...monthSheetPanResponder.panHandlers}>
-              <View style={styles.dateSheetHandle} />
-            </View>
-            {(() => {
-              const MONTH_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-              const cursorDate = new Date(monthSheetCursor + 'T12:00:00');
-              const year = cursorDate.getFullYear();
-              const month = cursorDate.getMonth();
-              const firstOfMonth = new Date(year, month, 1);
-              const startDow = firstOfMonth.getDay(); // 0 = Sun
-              const daysInMonth = new Date(year, month + 1, 0).getDate();
-              // 6 rows × 7 cols = 42 cells. Pad leading and trailing with nulls.
-              const cells: (number | null)[] = [
-                ...Array(startDow).fill(null),
-                ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-              ];
-              while (cells.length < 42) cells.push(null);
-              const rows: (number | null)[][] = [];
-              for (let i = 0; i < 6; i++) rows.push(cells.slice(i * 7, i * 7 + 7));
-              const goPrev = () => {
-                const d = new Date(year, month - 1, 1);
-                setMonthSheetCursor(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`);
-              };
-              const goNext = () => {
-                const d = new Date(year, month + 1, 1);
-                setMonthSheetCursor(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`);
-              };
-              const todayDate = new Date(today + 'T12:00:00');
-              const isToday = (day: number) => day === todayDate.getDate() && month === todayDate.getMonth() && year === todayDate.getFullYear();
-              const selDate = new Date(selectedDate + 'T12:00:00');
-              const isSelected = (day: number) => day === selDate.getDate() && month === selDate.getMonth() && year === selDate.getFullYear();
-              const pickDay = (day: number) => {
-                const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                setSelectedDate(iso);
-                setWeekStart(iso);
-                closeMonthSheet();
-              };
-              return (
-                <>
-                  <View style={styles.monthSheetHeader}>
-                    <Text style={styles.monthSheetMonthYear}>{MONTH_LONG[month]} {year}</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 24 }}>
-                      <TouchableOpacity onPress={goPrev}>
-                        <Ionicons name="chevron-back" size={22} color={ORANGE} />
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={goNext}>
-                        <Ionicons name="chevron-forward" size={22} color={ORANGE} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                  <View style={styles.monthSheetDayRow}>
-                    {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => (
-                      <Text key={d} style={styles.monthSheetDayLabel}>{d}</Text>
-                    ))}
-                  </View>
-                  <View style={styles.monthSheetGrid}>
-                    {rows.map((row, ri) => (
-                      <View key={ri} style={styles.monthSheetGridRow}>
-                        {row.map((day, ci) => {
-                          if (day === null) return <View key={ci} style={styles.monthSheetCell} />;
-                          const sel = isSelected(day);
-                          const td = isToday(day);
-                          return (
-                            <TouchableOpacity
-                              key={ci}
-                              style={[styles.monthSheetCell, sel && styles.monthSheetCellSelected]}
-                              onPress={() => pickDay(day)}
-                              activeOpacity={0.6}
-                            >
-                              <Text style={[
-                                styles.monthSheetDayNum,
-                                td && !sel && { color: ORANGE },
-                                sel && styles.monthSheetDayNumSelected,
-                              ]}>
-                                {day}
-                              </Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
-                    ))}
-                  </View>
-                  <View style={{ height: insets.bottom + 16 }} />
-                </>
-              );
-            })()}
-            <TouchableOpacity onPress={closeMonthSheet} style={styles.monthSheetCloseBtn}>
-              <Ionicons name="close" size={20} color={COLORS.Black[200]} />
-            </TouchableOpacity>
-          </Animated.View>
-        </Animated.View>
-      </Modal>
+      <MonthSheet
+        visible={monthSheetVisible}
+        onClose={closeMonthSheet}
+        sheetAnim={monthSheetAnim}
+        translateY={monthSheetTranslateY}
+        panResponder={monthSheetPanResponder}
+        monthSheetCursor={monthSheetCursor}
+        setMonthSheetCursor={setMonthSheetCursor}
+        today={today}
+        selectedDate={selectedDate}
+        setSelectedDate={setSelectedDate}
+        setWeekStart={setWeekStart}
+        insetsBottom={insets.bottom}
+      />
     </View>
     </SafeAreaView>
   );

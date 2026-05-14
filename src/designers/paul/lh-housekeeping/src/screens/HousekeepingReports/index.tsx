@@ -2088,8 +2088,8 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
               <View style={styles.segmentedControl}>
                 {([
                   { value: 'range',      label: 'Date range sheet' },
-                  { value: 'strip',      label: 'Single date strip' },
-                  { value: 'monthSheet', label: 'Single date sheet' },
+                  { value: 'strip',      label: 'Date strip' },
+                  { value: 'monthSheet', label: 'Date sheet' },
                 ] as { value: typeof FLAGS.dateSelectorVariant; label: string }[]).map(opt => {
                   const isActive = flags.dateSelectorVariant === opt.value;
                   return (

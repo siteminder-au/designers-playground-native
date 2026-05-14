@@ -2087,9 +2087,9 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
               <Text style={styles.demoFlagLabel}>Date selector</Text>
               <View style={styles.segmentedControl}>
                 {([
-                  { value: 'range',      label: 'Range' },
-                  { value: 'strip',      label: 'Strip' },
-                  { value: 'monthSheet', label: 'Month' },
+                  { value: 'range',      label: 'Date range sheet' },
+                  { value: 'strip',      label: 'Single date strip' },
+                  { value: 'monthSheet', label: 'Single date sheet' },
                 ] as { value: typeof FLAGS.dateSelectorVariant; label: string }[]).map(opt => {
                   const isActive = flags.dateSelectorVariant === opt.value;
                   return (
@@ -2098,7 +2098,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                       style={[styles.segmentedBtn, isActive && styles.segmentedBtnActive]}
                       onPress={() => setFlags(prev => ({ ...prev, dateSelectorVariant: opt.value }))}
                     >
-                      <Text style={[styles.segmentedBtnText, isActive && styles.segmentedBtnTextActive]}>{opt.label}</Text>
+                      <Text style={[styles.segmentedBtnText, isActive && styles.segmentedBtnTextActive]} numberOfLines={2}>{opt.label}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -3001,8 +3001,7 @@ const styles = StyleSheet.create({
 
   // Segmented control (demo flags sheet — date selector variant)
   demoVariantRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingVertical: 10,
+    paddingHorizontal: 20, paddingVertical: 10, gap: 8,
   },
   segmentedControl: {
     flexDirection: 'row',
@@ -3010,13 +3009,16 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 2,
   },
-  segmentedBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
+  segmentedBtn: {
+    flex: 1, paddingHorizontal: 8, paddingVertical: 8, borderRadius: 6,
+    alignItems: 'center', justifyContent: 'center', minHeight: 36,
+  },
   segmentedBtnActive: {
     backgroundColor: '#fff',
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 2,
     elevation: 1,
   },
-  segmentedBtnText: { fontSize: 13, fontWeight: '500', color: COLORS.Black[400] },
+  segmentedBtnText: { fontSize: 12, fontWeight: '500', color: COLORS.Black[400], textAlign: 'center' },
   segmentedBtnTextActive: { color: COLORS.Black[200], fontWeight: '700' },
 
   // Month sheet (variant C — Figma 655:2956)

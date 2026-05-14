@@ -1811,7 +1811,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                 <View style={styles.sortSheetHandle} />
               </View>
               <View style={styles.sortSheetHeader}>
-                <Text style={styles.sortSheetTitle}>Notes</Text>
+                <Text style={styles.sortSheetTitle}>{flags.compactCard ? 'Room details' : 'Notes'}</Text>
                 <TouchableOpacity onPress={closeNotesSheet}>
                   <Text style={styles.sortResetText}>Done</Text>
                 </TouchableOpacity>

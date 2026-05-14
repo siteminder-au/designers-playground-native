@@ -21,9 +21,13 @@ const FLAGS = {
   /** 8-digit booking reference ID, pinned right in the guest info row */
   showReservationId: true,
 
-  /** Single-date variant: hides the calendar icon and date range bottom sheet
-   *  so the week strip is the only date selector. Single-day view only. */
-  singleDateSelector: false,
+  /**
+   * Date selector variant — three options:
+   *  - 'range'     : default. Date header + calendar icon → opens range bottom sheet.
+   *  - 'strip'     : week strip below the header, no calendar icon, single-day only.
+   *  - 'monthSheet': tap the date header → opens single-date month-calendar sheet.
+   */
+  dateSelectorVariant: 'range' as 'range' | 'strip' | 'monthSheet',
 } as const;
 
 export default FLAGS;

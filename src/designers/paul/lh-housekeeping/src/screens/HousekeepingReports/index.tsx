@@ -884,21 +884,63 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const [nightlyResetOccupied, setNightlyResetOccupied] = useState(false);
   const [resetAfterCheckout, setResetAfterCheckout] = useState(true);
   const [resetAfterClosure, setResetAfterClosure] = useState(true);
-  // Demo variant: single-date selector mode (read from the `flags` state above
-  // so it's runtime-toggleable from the demo flags sheet). When on, the calendar
-  // icon and date range bottom sheet are hidden; week strip is the only picker.
-  const singleDateSelector = flags.singleDateSelector;
+  // Demo variant: which date selector pattern to render (read from `flags`
+  // state so the demo flags sheet can switch at runtime).
+  const dateSelectorVariant = flags.dateSelectorVariant;
+  const singleDateSelector = dateSelectorVariant === 'strip';
+  const monthSheetVariant = dateSelectorVariant === 'monthSheet';
 
-  // When entering single-date mode, drop any active range view and snap back
-  // to single-day view so the UI is consistent.
+  // Month sheet (variant C) state
+  const [monthSheetVisible, setMonthSheetVisible] = useState(false);
+  const [monthSheetCursor, setMonthSheetCursor] = useState(today); // any ISO date in the month being viewed
+  const monthSheetAnim = useRef(new Animated.Value(0)).current;
+  const monthSheetTranslateY = useRef(new Animated.Value(600)).current;
+
   useEffect(() => {
-    if (singleDateSelector && dateRange) {
+    if (monthSheetVisible) {
+      monthSheetTranslateY.setValue(600);
+      monthSheetAnim.setValue(0);
+      Animated.parallel([
+        Animated.spring(monthSheetTranslateY, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }),
+        Animated.spring(monthSheetAnim,       { toValue: 1, useNativeDriver: true, damping: 22, stiffness: 220 }),
+      ]).start();
+    }
+  }, [monthSheetVisible]);
+
+  function closeMonthSheet() {
+    Animated.parallel([
+      Animated.timing(monthSheetTranslateY, { toValue: 600, duration: 200, useNativeDriver: true }),
+      Animated.timing(monthSheetAnim,       { toValue: 0,   duration: 200, useNativeDriver: true }),
+    ]).start(() => setMonthSheetVisible(false));
+  }
+
+  const monthSheetPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, g) => { if (g.dy > 0) monthSheetTranslateY.setValue(g.dy); },
+      onPanResponderRelease: (_, g) => {
+        if (g.dy > 80) { closeMonthSheet(); }
+        else { Animated.spring(monthSheetTranslateY, { toValue: 0, useNativeDriver: true }).start(); }
+      },
+    })
+  ).current;
+
+  function openMonthSheet() {
+    setMonthSheetCursor(selectedDate || today);
+    setMonthSheetVisible(true);
+  }
+
+  // When switching to a single-day variant (strip or monthSheet), drop any
+  // active range view and snap back to single-day view so the UI is consistent.
+  useEffect(() => {
+    if (dateSelectorVariant !== 'range' && dateRange) {
       setDateRange(null);
       setSelectedDate(today);
       setWeekStart(today);
       if (modalVisible) closeDateSheet();
     }
-  }, [singleDateSelector]);
+  }, [dateSelectorVariant]);
 
   useEffect(() => {
     if (autoSheetVisible) {
@@ -1411,7 +1453,14 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
           </TouchableOpacity>
         </View>
         <View style={styles.headerBottom}>
-          <Text style={[styles.headerDate, dateRange && { fontSize: 15 }]} numberOfLines={1}>{headerText}</Text>
+          {monthSheetVariant ? (
+            <TouchableOpacity onPress={openMonthSheet} activeOpacity={0.6} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={[styles.headerDate, dateRange && { fontSize: 15 }]} numberOfLines={1}>{headerText}</Text>
+              <Ionicons name="chevron-down" size={18} color={COLORS.Black[200]} />
+            </TouchableOpacity>
+          ) : (
+            <Text style={[styles.headerDate, dateRange && { fontSize: 15 }]} numberOfLines={1}>{headerText}</Text>
+          )}
           {dateRange && (
             <TouchableOpacity onPress={openModal} style={styles.clearBtn}>
               <Ionicons name="pencil-outline" size={18} color="#9ca3af" />
@@ -1427,7 +1476,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
               </TouchableOpacity>
             )}
 
-            {!dateRange && !singleDateSelector && (
+            {!dateRange && dateSelectorVariant === 'range' && (
               <TouchableOpacity style={{ padding: 4 }} onPress={openModal}>
                 <Ionicons name="calendar-outline" size={20} color="#333" />
               </TouchableOpacity>
@@ -2033,20 +2082,43 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
             <View style={styles.dropdownDivider} />
             <View style={[styles.dropdownDivider, { marginBottom: 8 }]} />
 
+            {/* Date selector variant — segmented control (3 options) */}
+            <View style={styles.demoVariantRow}>
+              <Text style={styles.demoFlagLabel}>Date selector</Text>
+              <View style={styles.segmentedControl}>
+                {([
+                  { value: 'range',      label: 'Range' },
+                  { value: 'strip',      label: 'Strip' },
+                  { value: 'monthSheet', label: 'Month' },
+                ] as { value: typeof FLAGS.dateSelectorVariant; label: string }[]).map(opt => {
+                  const isActive = flags.dateSelectorVariant === opt.value;
+                  return (
+                    <TouchableOpacity
+                      key={opt.value}
+                      style={[styles.segmentedBtn, isActive && styles.segmentedBtnActive]}
+                      onPress={() => setFlags(prev => ({ ...prev, dateSelectorVariant: opt.value }))}
+                    >
+                      <Text style={[styles.segmentedBtnText, isActive && styles.segmentedBtnTextActive]}>{opt.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+            <View style={styles.dropdownDivider} />
+
             {([
               { key: 'showGuestName',         label: 'Guest name' },
               { key: 'showGuestPax',          label: 'Pax counts' },
               { key: 'showBedConfig',         label: 'Bed configuration' },
               { key: 'showLateCheckout',      label: 'Early check-in & late check-out badge' },
               { key: 'showReservationId',    label: 'Reservation ID' },
-              { key: 'singleDateSelector',    label: 'Single date selector (hide calendar)' },
-            ] as { key: keyof typeof FLAGS; label: string }[]).map((item, i) => (
+            ] as { key: 'showGuestName' | 'showGuestPax' | 'showBedConfig' | 'showLateCheckout' | 'showReservationId'; label: string }[]).map((item, i) => (
               <React.Fragment key={item.key}>
                 {i > 0 && <View style={styles.dropdownDivider} />}
                 <View style={styles.demoFlagRow}>
                   <Text style={styles.demoFlagLabel}>{item.label}</Text>
                   <Switch
-                    value={flags[item.key]}
+                    value={flags[item.key] as boolean}
                     onValueChange={val => setFlags(prev => ({ ...prev, [item.key]: val }))}
                     trackColor={{ false: '#e5e7eb', true: ORANGE }}
                     thumbColor="#fff"
@@ -2307,8 +2379,8 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         </View>
       </Modal>
 
-      {/* ── Select dates bottom sheet (not rendered in single-date variant) ── */}
-      <Modal visible={modalVisible && !singleDateSelector} animationType="none" transparent onRequestClose={closeDateSheet} statusBarTranslucent>
+      {/* ── Select dates bottom sheet (only rendered in 'range' variant) ── */}
+      <Modal visible={modalVisible && dateSelectorVariant === 'range'} animationType="none" transparent onRequestClose={closeDateSheet} statusBarTranslucent>
         <Animated.View style={[styles.sortSheetOverlay, { opacity: dateSheetAnim }]}>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeDateSheet} />
           <Animated.View style={[styles.dateSheet, { transform: [{ translateY: dateSheetTranslateY }] }]}>
@@ -2412,6 +2484,104 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                 </TouchableOpacity>
               </View>
             </Animated.View>
+        </Animated.View>
+      </Modal>
+
+      {/* ── Month sheet (variant C — Figma 655:2956) ── */}
+      <Modal visible={monthSheetVisible} animationType="none" transparent onRequestClose={closeMonthSheet} statusBarTranslucent>
+        <Animated.View style={[styles.sortSheetOverlay, { opacity: monthSheetAnim }]}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeMonthSheet} />
+          <Animated.View style={[styles.monthSheet, { transform: [{ translateY: monthSheetTranslateY }] }]}>
+            <View style={styles.sheetHandleArea} {...monthSheetPanResponder.panHandlers}>
+              <View style={styles.dateSheetHandle} />
+            </View>
+            {(() => {
+              const MONTH_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+              const cursorDate = new Date(monthSheetCursor + 'T12:00:00');
+              const year = cursorDate.getFullYear();
+              const month = cursorDate.getMonth();
+              const firstOfMonth = new Date(year, month, 1);
+              const startDow = firstOfMonth.getDay(); // 0 = Sun
+              const daysInMonth = new Date(year, month + 1, 0).getDate();
+              // 6 rows × 7 cols = 42 cells. Pad leading and trailing with nulls.
+              const cells: (number | null)[] = [
+                ...Array(startDow).fill(null),
+                ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+              ];
+              while (cells.length < 42) cells.push(null);
+              const rows: (number | null)[][] = [];
+              for (let i = 0; i < 6; i++) rows.push(cells.slice(i * 7, i * 7 + 7));
+              const goPrev = () => {
+                const d = new Date(year, month - 1, 1);
+                setMonthSheetCursor(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`);
+              };
+              const goNext = () => {
+                const d = new Date(year, month + 1, 1);
+                setMonthSheetCursor(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`);
+              };
+              const todayDate = new Date(today + 'T12:00:00');
+              const isToday = (day: number) => day === todayDate.getDate() && month === todayDate.getMonth() && year === todayDate.getFullYear();
+              const selDate = new Date(selectedDate + 'T12:00:00');
+              const isSelected = (day: number) => day === selDate.getDate() && month === selDate.getMonth() && year === selDate.getFullYear();
+              const pickDay = (day: number) => {
+                const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                setSelectedDate(iso);
+                setWeekStart(iso);
+                closeMonthSheet();
+              };
+              return (
+                <>
+                  <View style={styles.monthSheetHeader}>
+                    <Text style={styles.monthSheetMonthYear}>{MONTH_LONG[month]} {year}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 24 }}>
+                      <TouchableOpacity onPress={goPrev}>
+                        <Ionicons name="chevron-back" size={22} color={ORANGE} />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={goNext}>
+                        <Ionicons name="chevron-forward" size={22} color={ORANGE} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  <View style={styles.monthSheetDayRow}>
+                    {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => (
+                      <Text key={d} style={styles.monthSheetDayLabel}>{d}</Text>
+                    ))}
+                  </View>
+                  <View style={styles.monthSheetGrid}>
+                    {rows.map((row, ri) => (
+                      <View key={ri} style={styles.monthSheetGridRow}>
+                        {row.map((day, ci) => {
+                          if (day === null) return <View key={ci} style={styles.monthSheetCell} />;
+                          const sel = isSelected(day);
+                          const td = isToday(day);
+                          return (
+                            <TouchableOpacity
+                              key={ci}
+                              style={[styles.monthSheetCell, sel && styles.monthSheetCellSelected]}
+                              onPress={() => pickDay(day)}
+                              activeOpacity={0.6}
+                            >
+                              <Text style={[
+                                styles.monthSheetDayNum,
+                                td && !sel && { color: ORANGE },
+                                sel && styles.monthSheetDayNumSelected,
+                              ]}>
+                                {day}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    ))}
+                  </View>
+                  <View style={{ height: insets.bottom + 16 }} />
+                </>
+              );
+            })()}
+            <TouchableOpacity onPress={closeMonthSheet} style={styles.monthSheetCloseBtn}>
+              <Ionicons name="close" size={20} color={COLORS.Black[200]} />
+            </TouchableOpacity>
+          </Animated.View>
         </Animated.View>
       </Modal>
     </View>
@@ -2828,6 +2998,62 @@ const styles = StyleSheet.create({
   },
   dateSheetApplyPillDisabled: { backgroundColor: '#9ca3af' },
   dateSheetApplyPillText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+
+  // Segmented control (demo flags sheet — date selector variant)
+  demoVariantRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingVertical: 10,
+  },
+  segmentedControl: {
+    flexDirection: 'row',
+    backgroundColor: '#f1f3f5',
+    borderRadius: 8,
+    padding: 2,
+  },
+  segmentedBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
+  segmentedBtnActive: {
+    backgroundColor: '#fff',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 2,
+    elevation: 1,
+  },
+  segmentedBtnText: { fontSize: 13, fontWeight: '500', color: COLORS.Black[400] },
+  segmentedBtnTextActive: { color: COLORS.Black[200], fontWeight: '700' },
+
+  // Month sheet (variant C — Figma 655:2956)
+  monthSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingHorizontal: 16,
+  },
+  monthSheetHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingTop: 12, paddingBottom: 9, paddingHorizontal: 3,
+  },
+  monthSheetMonthYear: {
+    fontSize: 17, fontWeight: '600', color: '#484b4b', letterSpacing: -0.408,
+  },
+  monthSheetDayRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    paddingHorizontal: 3, paddingBottom: 9,
+  },
+  monthSheetDayLabel: {
+    fontSize: 13, fontWeight: '600', color: '#9ba0a0', letterSpacing: -0.078,
+    width: 40, textAlign: 'center',
+  },
+  monthSheetGrid: { gap: 4 },
+  monthSheetGridRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  monthSheetCell: {
+    width: 40, height: 40, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  monthSheetCellSelected: { backgroundColor: '#FFE2D7' },
+  monthSheetDayNum: { fontSize: 20, fontWeight: '400', color: '#484b4b', letterSpacing: 0.38 },
+  monthSheetDayNumSelected: { color: ORANGE, fontWeight: '600' },
+  monthSheetCloseBtn: {
+    position: 'absolute', top: 16, right: 16,
+    width: 24, height: 24, alignItems: 'center', justifyContent: 'center',
+  },
 
   // Sort bottom sheet
   sortSheetOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.35)' },

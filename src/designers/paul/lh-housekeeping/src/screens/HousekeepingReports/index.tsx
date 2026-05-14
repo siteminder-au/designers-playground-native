@@ -564,8 +564,31 @@ function RoomRow({
       </View>
 
 
-      {/* Row 2: Bed config (only for special configs) */}
-      {flags.showBedConfig && shouldShowBedConfig(bedConfig) && (
+      {/* COMPACT VARIANT: hide bed config + full guest info section. Show the
+          check-in/out badge anchored to the LEFT (where guest name normally sits). */}
+      {flags.compactCard ? (
+        ((item.hasCheckoutToday && item.isOccupied) || (!item.isOccupied && item.guestName !== null)) && (
+          <View style={styles.compactBadgeRow}>
+            {item.hasCheckoutToday && item.isOccupied && (
+              <View style={item.checkOutTime ? styles.lateCheckoutBadge : styles.standardBadge}>
+                <Text style={item.checkOutTime ? styles.lateCheckoutText : styles.standardBadgeText}>
+                  {item.checkOutTime ? `${formatTime(item.checkOutTime).toUpperCase()} check-out` : 'Checking out'}
+                </Text>
+              </View>
+            )}
+            {!item.isOccupied && item.guestName !== null && (
+              <View style={item.checkInTime ? styles.lateCheckoutBadge : styles.standardBadge}>
+                <Text style={item.checkInTime ? styles.lateCheckoutText : styles.standardBadgeText}>
+                  {item.checkInTime ? `${formatTime(item.checkInTime).toUpperCase()} check-in` : 'Checking in'}
+                </Text>
+              </View>
+            )}
+          </View>
+        )
+      ) : null}
+
+      {/* Row 2: Bed config (only for special configs) — hidden in compact mode */}
+      {!flags.compactCard && flags.showBedConfig && shouldShowBedConfig(bedConfig) && (
         <View style={styles.bedConfigRow}>
           <View style={styles.bedConfigLeft}>
             <BedConfigDisplay config={bedConfig} />
@@ -573,8 +596,8 @@ function RoomRow({
         </View>
       )}
 
-      {/* Row 3 (occupied or arriving today): guest name · reservation ID · badges · pax — individually flagged */}
-      {(item.isOccupied || item.guestName !== null) && (flags.showGuestName || flags.showGuestPax || flags.showGuestDates || flags.showReservationId || flags.showLateCheckout) && (
+      {/* Row 3 (occupied or arriving today): guest name · reservation ID · badges · pax — hidden in compact mode */}
+      {!flags.compactCard && (item.isOccupied || item.guestName !== null) && (flags.showGuestName || flags.showGuestPax || flags.showGuestDates || flags.showReservationId || flags.showLateCheckout) && (
         <View style={styles.guestInfoSection}>
           {/* Main row: left (name + resID) | right (badges) */}
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -1794,6 +1817,56 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                 </TouchableOpacity>
               </View>
               <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 24 }} keyboardShouldPersistTaps="handled">
+                {/* Guest details — surfaced here only in compact card variant
+                    (these fields are hidden from the room card to save space) */}
+                {flags.compactCard && notesSheetItem && (notesSheetItem.guestName || notesSheetItem.reservationId || notesSheetItem.adults > 0 || shouldShowBedConfig(notesSheetItem.bedConfiguration)) && (
+                  <>
+                    <Text style={styles.notesSheetSectionLabel}>Guest details</Text>
+                    <View style={{ gap: 8, marginBottom: 12 }}>
+                      {notesSheetItem.guestName && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <MaterialCommunityIcons name="card-account-details-outline" size={14} color={COLORS.Black[200]} />
+                          <Text style={styles.notesSheetBody}>{notesSheetItem.guestName}</Text>
+                        </View>
+                      )}
+                      {notesSheetItem.reservationId && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <MaterialCommunityIcons name="tag-outline" size={14} color={COLORS.Black[200]} />
+                          <Text style={styles.notesSheetBody}>#{toBookingRef(notesSheetItem.reservationId)}</Text>
+                        </View>
+                      )}
+                      {(notesSheetItem.adults > 0 || notesSheetItem.children > 0 || notesSheetItem.infants > 0) && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                          {notesSheetItem.adults > 0 && (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                              <MaterialCommunityIcons name="account-outline" size={14} color={COLORS.Black[200]} />
+                              <Text style={styles.notesSheetBody}>{notesSheetItem.adults}</Text>
+                            </View>
+                          )}
+                          {notesSheetItem.children > 0 && (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                              <MaterialCommunityIcons name="account-child-outline" size={14} color={COLORS.Black[200]} />
+                              <Text style={styles.notesSheetBody}>{notesSheetItem.children}</Text>
+                            </View>
+                          )}
+                          {notesSheetItem.infants > 0 && (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                              <MaterialCommunityIcons name="baby-face-outline" size={14} color={COLORS.Black[200]} />
+                              <Text style={styles.notesSheetBody}>{notesSheetItem.infants}</Text>
+                            </View>
+                          )}
+                        </View>
+                      )}
+                      {shouldShowBedConfig(notesSheetItem.bedConfiguration) && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <MaterialCommunityIcons name="bed-outline" size={14} color={COLORS.Black[200]} />
+                          <Text style={styles.notesSheetBody}>{notesSheetItem.bedConfiguration}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <View style={styles.notesSheetDivider} />
+                  </>
+                )}
                 {notesSheetItem?.guestComments ? (
                   <>
                     <Text style={styles.notesSheetSectionLabel}>Guest comments</Text>
@@ -2179,7 +2252,8 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
               { key: 'showLateCheckout',      label: 'Early check-in & late check-out badge' },
               { key: 'showReservationId',    label: 'Reservation ID' },
               { key: 'roomStatsChips',       label: 'Room stats as tappable chips' },
-            ] as { key: 'showGuestName' | 'showGuestPax' | 'showBedConfig' | 'showLateCheckout' | 'showReservationId' | 'roomStatsChips'; label: string }[]).map((item, i) => (
+              { key: 'compactCard',          label: 'Compact room card (details in notes sheet)' },
+            ] as { key: 'showGuestName' | 'showGuestPax' | 'showBedConfig' | 'showLateCheckout' | 'showReservationId' | 'roomStatsChips' | 'compactCard'; label: string }[]).map((item, i) => (
               <React.Fragment key={item.key}>
                 {i > 0 && <View style={styles.dropdownDivider} />}
                 <View style={styles.demoFlagRow}>
@@ -2914,6 +2988,7 @@ const styles = StyleSheet.create({
 
   // Bed config
   bedConfigRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },
+  compactBadgeRow: { flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 6 },
   bedConfigLeft: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
   bedConfigPipe: { width: 1, height: 14, backgroundColor: '#d1d5db' },
   bedConfigBadge: {

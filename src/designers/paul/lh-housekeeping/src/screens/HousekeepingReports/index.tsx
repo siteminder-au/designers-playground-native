@@ -1441,6 +1441,31 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         </View>
       </View>
 
+      {/* ── Week strip (single-date variant) ── */}
+      {singleDateSelector && (
+        <View style={styles.weekStripRow}>
+          <TouchableOpacity onPress={() => setWeekStart(addDays(weekStart, -NUM_DAYS))} style={styles.arrow}>
+            <Text style={styles.arrowText}>‹</Text>
+          </TouchableOpacity>
+          {visibleDates.map(d => {
+            const isActive = d === selectedDate;
+            const { day, date } = formatDayStrip(d);
+            const dayIndex = new Date(d + 'T12:00:00').getDay();
+            const isWeekend = dayIndex === 0 || dayIndex === 6;
+            return (
+              <TouchableOpacity key={d} style={styles.dayBtn} onPress={() => setSelectedDate(d)}>
+                <Text style={[styles.dayLabel, isWeekend && !isActive && { color: '#b91c1c' }, isActive && styles.activeText]}>{day}</Text>
+                <Text style={[styles.dayNum, isWeekend && !isActive && { color: '#b91c1c' }, isActive && styles.activeText]}>{date}</Text>
+                {isActive && <View style={styles.dayUnderline} />}
+              </TouchableOpacity>
+            );
+          })}
+          <TouchableOpacity onPress={() => setWeekStart(addDays(weekStart, NUM_DAYS))} style={styles.arrow}>
+            <Text style={styles.arrowText}>›</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* ── Sort toolbar ── */}
       <View style={styles.sortToolbar}>
         <TouchableOpacity style={styles.sortBtn} onPress={() => setSortModalVisible(true)}>
@@ -2489,6 +2514,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     height: '100%',
+  },
+  weekStripRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.Background.Stroke,
   },
   arrow:     { width: 22, alignItems: 'center' },
   arrowText: { fontSize: 20, color: '#9ca3af', lineHeight: 24 },

@@ -1819,23 +1819,28 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
               <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 24 }} keyboardShouldPersistTaps="handled">
                 {/* Guest details — surfaced here only in compact card variant
                     (these fields are hidden from the room card to save space) */}
-                {flags.compactCard && notesSheetItem && (notesSheetItem.guestName || notesSheetItem.reservationId || notesSheetItem.adults > 0 || shouldShowBedConfig(notesSheetItem.bedConfiguration)) && (
+                {flags.compactCard && notesSheetItem && (
+                  (flags.showGuestName && notesSheetItem.guestName) ||
+                  (flags.showReservationId && notesSheetItem.reservationId) ||
+                  (flags.showGuestPax && (notesSheetItem.adults > 0 || notesSheetItem.children > 0 || notesSheetItem.infants > 0)) ||
+                  (flags.showBedConfig && shouldShowBedConfig(notesSheetItem.bedConfiguration))
+                ) && (
                   <>
                     <Text style={styles.notesSheetSectionLabel}>Guest details</Text>
                     <View style={{ gap: 8, marginBottom: 12 }}>
-                      {notesSheetItem.guestName && (
+                      {flags.showGuestName && notesSheetItem.guestName && (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <MaterialCommunityIcons name="card-account-details-outline" size={14} color={COLORS.Black[200]} />
                           <Text style={styles.notesSheetBody}>{notesSheetItem.guestName}</Text>
                         </View>
                       )}
-                      {notesSheetItem.reservationId && (
+                      {flags.showReservationId && notesSheetItem.reservationId && (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <MaterialCommunityIcons name="tag-outline" size={14} color={COLORS.Black[200]} />
                           <Text style={styles.notesSheetBody}>#{toBookingRef(notesSheetItem.reservationId)}</Text>
                         </View>
                       )}
-                      {(notesSheetItem.adults > 0 || notesSheetItem.children > 0 || notesSheetItem.infants > 0) && (
+                      {flags.showGuestPax && (notesSheetItem.adults > 0 || notesSheetItem.children > 0 || notesSheetItem.infants > 0) && (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                           {notesSheetItem.adults > 0 && (
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -1857,7 +1862,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                           )}
                         </View>
                       )}
-                      {shouldShowBedConfig(notesSheetItem.bedConfiguration) && (
+                      {flags.showBedConfig && shouldShowBedConfig(notesSheetItem.bedConfiguration) && (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <MaterialCommunityIcons name="bed-outline" size={14} color={COLORS.Black[200]} />
                           <Text style={styles.notesSheetBody}>{notesSheetItem.bedConfiguration}</Text>

@@ -26,362 +26,32 @@ import { useHousekeepingStatus, RoomStatus } from '../../context/HousekeepingSta
 import { STATUS_VARIANT, SYMBOL_CONTAINER } from '../../config/statusVariant';
 import FLAGS from '../../config/featureFlags';
 import { COLORS } from '../../config/colors';
-import CleanSvg from '../../../assets/Clean.svg';
-import DirtySvg from '../../../assets/Dirty.svg';
-import InspectionSvg from '../../../assets/Inspection.svg';
-import SnoozeSvg from '../../../assets/Snooze.svg';
-
-interface RoomDaySchedule {
-  isOccupied: boolean;
-  hasCheckoutToday: boolean;
-  guestCount: number;
-  adults: number;
-  children: number;
-  infants: number;
-  reservationId: string | null;
-  guestName: string | null;
-  checkIn: string | null;
-  checkOut: string | null;
-  checkInTime: string | null;
-  checkOutTime: string | null;
-  lateCheckout: boolean;
-  earlyCheckout: boolean;
-  bedConfiguration: string;
-  guestComments: string | null;
-  extraItems: string[];
-  room: { id: string; number: string; type: string; status: RoomStatus; notes: string | null; isClosed: boolean };
-}
-
-interface DaySchedule {
-  date: string;
-  rooms: RoomDaySchedule[];
-}
-
-interface StaffNote {
-  id: string;
-  roomId: string;
-  author: string;
-  text: string;
-  tag: 'room' | 'guest';
-  reservationId: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-const ORANGE = '#e8722a';
-const NUM_DAYS = 5;
-const WINDOW_HEIGHT = Dimensions.get('window').height;
-
-const HOUSEKEEPERS = ['Maria S.', 'James T.', 'Jacqueline W.'];
-
-const STATUS_CONFIG: Record<RoomStatus, { label: string; bg: string; border: string; text: string; icon: React.ComponentProps<typeof MaterialIcons>['name'] }> = {
-  CLEANED:              { label: 'Clean',              bg: '#9AE0BD',               border: '#258548',               text: '#258548',               icon: 'auto-awesome'    },
-  UNCLEANED:            { label: 'Needs clean',        bg: '#f1bfbf',               border: '#b81919',               text: '#b81919',               icon: 'auto-awesome'    },
-  DEEP_CLEAN:           { label: 'Needs deep clean',   bg: '#f1bfbf',               border: '#b81919',               text: '#b81919',               icon: 'auto-awesome'    },
-  SKIP_CLEANING:        { label: 'Skip clean',         bg: '#fef9c3',               border: '#d97706',               text: '#a16207',               icon: 'do-not-disturb'  },
-  AWAITING_INSPECTION:  { label: 'Awaiting inspection',bg: COLORS.Blue[600],        border: COLORS.Blue[200],        text: COLORS.Blue[200],        icon: 'auto-fix-high'   },
-};
-
-const STATUS_SVG_ICON: Partial<Record<RoomStatus, React.FC<{ width?: number; height?: number }>>> = {
-  CLEANED:             CleanSvg,
-  UNCLEANED:           DirtySvg,
-  DEEP_CLEAN:          DirtySvg,
-  AWAITING_INSPECTION: InspectionSvg,
-  SKIP_CLEANING:       SnoozeSvg,
-};
-
-// 'symbol' variant — MaterialCommunityIcons with housekeeping-semantic meaning
-// shimmer = sparkling clean · water = stain/spill (dirty) · do-not-disturb = skip service
-type SymbolEntry =
-  | { set: 'MI';  name: React.ComponentProps<typeof MaterialIcons>['name'];          color: string; tint: string }
-  | { set: 'MCI'; name: React.ComponentProps<typeof MaterialCommunityIcons>['name']; color: string; tint: string };
-
-const STATUS_SYMBOL: Record<RoomStatus, SymbolEntry> = {
-  CLEANED:             { set: 'MI',  name: 'auto-awesome',      color: '#258548',        tint: '#9AE0BD'        },
-  UNCLEANED:           { set: 'MI',  name: 'cleaning-services', color: '#b81919',        tint: '#f1bfbf'        },
-  DEEP_CLEAN:          { set: 'MCI', name: 'broom',             color: '#b81919',        tint: '#f1bfbf'        },
-  SKIP_CLEANING:       { set: 'MCI', name: 'sleep',             color: '#d97706',        tint: '#fef9c3'        },
-  AWAITING_INSPECTION: { set: 'MI',  name: 'auto-fix-high',     color: COLORS.Blue[200], tint: COLORS.Blue[600] },
-};
+import type { RoomDaySchedule, DaySchedule, StaffNote } from './types';
+import {
+  ORANGE, NUM_DAYS, WINDOW_HEIGHT, HOUSEKEEPERS,
+  STATUS_CONFIG, STATUS_SVG_ICON, STATUS_SYMBOL, STATUS_ABBR,
+  type SymbolEntry,
+} from './constants';
+import {
+  addDays, formatLong, formatShort, formatDayStrip, formatSectionHeader,
+  formatCardDate, toBookingRef, formatTime,
+} from './utils/dateFormat';
+import {
+  type SortField, type SortDirection, type SortState,
+  SORT_OPTIONS, DEFAULT_SORT, sortRooms,
+} from './utils/priority';
+import {
+  type FilterState,
+  ROOM_TYPE_OPTIONS, ROOM_STATUS_OPTIONS, CLEANING_STATUS_OPTIONS,
+  DEFAULT_FILTERS, applyFilters, activeFilterCount,
+} from './utils/filters';
+import { shouldShowBedConfig } from './utils/bedConfig';
 
 function SymbolIcon({ entry, size }: { entry: SymbolEntry; size: number }) {
   if (entry.set === 'MCI') {
     return <MaterialCommunityIcons name={entry.name} size={size} color={entry.color} />;
   }
   return <MaterialIcons name={entry.name} size={size} color={entry.color} />;
-}
-
-// 'abbr' variant — text label is primary, border colour is secondary
-const STATUS_ABBR: Record<RoomStatus, { label: string; fullLabel: string; color: string }> = {
-  CLEANED:             { label: 'CLN', fullLabel: 'Clean',               color: '#258548'        },
-  UNCLEANED:           { label: 'DRT', fullLabel: 'Needs clean',         color: '#b81919'        },
-  DEEP_CLEAN:          { label: 'DPC', fullLabel: 'Needs deep clean',    color: '#b81919'        },
-  SKIP_CLEANING:       { label: 'SKP', fullLabel: 'Skip Clean',          color: '#d97706'        },
-  AWAITING_INSPECTION: { label: 'AWI', fullLabel: 'Awaiting inspection', color: COLORS.Blue[200] },
-};
-
-type SortField = 'priority' | 'room_number' | 'room_type' | 'occupancy' | 'guest_count' | 'notes' | 'cleanliness';
-type SortDirection = 'asc' | 'desc';
-interface SortState { field: SortField; direction: SortDirection }
-
-const SORT_OPTIONS: { value: SortField; label: string }[] = [
-  { value: 'priority',    label: 'Priority' },
-  { value: 'cleanliness', label: 'Cleaning status' },
-  { value: 'notes',       label: 'Room notes' },
-  { value: 'occupancy',   label: 'Room status' },
-  { value: 'room_number', label: 'Room name' },
-  { value: 'room_type',   label: 'Room type' },
-  { value: 'guest_count', label: 'Number of guests' },
-];
-
-const DEFAULT_SORT: SortState = { field: 'priority', direction: 'desc' };
-
-
-const STATUS_SORT_ORDER: Record<RoomStatus, number> = {
-  UNCLEANED:           0,
-  DEEP_CLEAN:          1,
-  SKIP_CLEANING:       2,
-  AWAITING_INSPECTION: 3,
-  CLEANED:             4,
-};
-
-// Returns priority bucket 1 (most urgent) → 7 (not actionable)
-function getPriority(
-  item: RoomDaySchedule,
-  date: string,
-  notes: Record<string, string>,
-  overrides: Record<string, RoomStatus>,
-): number {
-  const noteKey = item.reservationId ?? item.room.id;
-  const effectiveStatus = overrides[item.room.id] ?? item.room.status;
-  const hasNotes = !!(notes[noteKey] || item.room.notes || item.guestComments || item.extraItems.length > 0);
-
-  // Actioned statuses always drop to the bottom, sub-ordered so awaiting
-  // inspection sits above skip-clean which sits above clean (the truly "done"
-  // tier). Closed rooms join the bottom alongside cleaned. Active statuses
-  // (UNCLEANED, DEEP_CLEAN) fall through to the urgency logic below.
-  if (item.room.isClosed) return 9;
-  if (effectiveStatus === 'CLEANED') return 9;
-  if (effectiveStatus === 'SKIP_CLEANING') return 8;
-  if (effectiveStatus === 'AWAITING_INSPECTION') return 7;
-
-  // P6: Late checkout — guest still in room, push down until window passes
-  if (item.lateCheckout && item.isOccupied) return 6;
-
-  // P1: Early check-in / time-critical arrival prep — guest arriving soonest
-  if (!item.isOccupied && item.checkIn === date && item.checkInTime !== null) return 1;
-
-  // P2: Checkout today + arriving today — same-day turnover needed
-  if (item.hasCheckoutToday && item.guestName !== null && item.checkIn === date) return 2;
-
-  // P3: Stayover — in-house guest needs regular service today
-  if (item.isOccupied) return 3;
-
-  // P4: VIP / special notes — needs attention but not time-critical
-  if (hasNotes) return 4;
-
-  // P5: Checkout + no near-term arrival, or vacant with nothing pending
-  return 5;
-}
-
-function sortRooms(
-  rooms: RoomDaySchedule[],
-  sort: SortState,
-  overrides: Record<string, RoomStatus>,
-  notes: Record<string, string>,
-  date: string = '',
-): RoomDaySchedule[] {
-  const dir = sort.direction === 'asc' ? 1 : -1;
-  return [...rooms].sort((a, b) => {
-    let result = 0;
-    switch (sort.field) {
-      case 'priority': {
-        // Inverted so ↓ (desc) puts P1 (most urgent) first
-        const pA = getPriority(a, date, notes, overrides);
-        const pB = getPriority(b, date, notes, overrides);
-        if (pA !== pB) { result = pB - pA; break; }
-        // Same bucket tiebreaker: earlier check-in time is more urgent
-        if (a.checkInTime && b.checkInTime) {
-          // b.localeCompare(a): '11:00' > '10:00' → positive → * dir(-1) → a first ✓
-          result = b.checkInTime.localeCompare(a.checkInTime);
-        }
-        break;
-      }
-      case 'room_number': {
-        const na = parseInt(a.room.number, 10);
-        const nb = parseInt(b.room.number, 10);
-        result = (!isNaN(na) && !isNaN(nb)) ? na - nb : a.room.number.localeCompare(b.room.number);
-        break;
-      }
-      case 'room_type':
-        result = a.room.type.localeCompare(b.room.type);
-        break;
-      case 'occupancy':
-        result = (a.isOccupied ? 1 : 0) - (b.isOccupied ? 1 : 0);
-        break;
-      case 'guest_count':
-        result = a.guestCount - b.guestCount;
-        break;
-      case 'notes': {
-        const keyA = a.reservationId ?? a.room.id;
-        const keyB = b.reservationId ?? b.room.id;
-        const hasStaffA   = !!(notes[keyA] || a.room.notes);
-        const hasGuestA   = !!a.guestComments;
-        const hasExtrasA  = a.extraItems.length > 0;
-        const hasStaffB   = !!(notes[keyB] || b.room.notes);
-        const hasGuestB   = !!b.guestComments;
-        const hasExtrasB  = b.extraItems.length > 0;
-        const countA = (hasStaffA ? 1 : 0) + (hasGuestA ? 1 : 0) + (hasExtrasA ? 1 : 0);
-        const countB = (hasStaffB ? 1 : 0) + (hasGuestB ? 1 : 0) + (hasExtrasB ? 1 : 0);
-        if (countA !== countB) { result = countA - countB; break; }
-        // Tiebreaker when count is equal: Extras (4) > Guest comments (2) > Staff notes (1)
-        const prioA = (hasExtrasA ? 4 : 0) + (hasGuestA ? 2 : 0) + (hasStaffA ? 1 : 0);
-        const prioB = (hasExtrasB ? 4 : 0) + (hasGuestB ? 2 : 0) + (hasStaffB ? 1 : 0);
-        result = prioA - prioB;
-        break;
-      }
-      case 'cleanliness': {
-        const sa = overrides[a.room.id] ?? a.room.status;
-        const sb = overrides[b.room.id] ?? b.room.status;
-        result = STATUS_SORT_ORDER[sa] - STATUS_SORT_ORDER[sb];
-        break;
-      }
-    }
-    if (result !== 0) return result * dir;
-    const ta = parseInt(a.room.number, 10);
-    const tb = parseInt(b.room.number, 10);
-    return (!isNaN(ta) && !isNaN(tb)) ? ta - tb : a.room.number.localeCompare(b.room.number);
-  });
-}
-
-interface FilterState {
-  statuses: RoomStatus[];
-  roomTypes: string[];
-  roomStatuses: string[];
-  cleaningStatuses: string[];
-  includeStaffNotes: boolean;
-  includeGuestComments: boolean;
-  includeExtras: boolean;
-  lateCheckout: boolean;
-  earlyCheckout: boolean;
-}
-const ROOM_TYPE_OPTIONS = ['Bridge Room', 'Deluxe Suite', 'Family Room'];
-const ROOM_STATUS_OPTIONS = ['Occupied', 'Unoccupied', 'Check-in only', 'Check-out only', 'Check-out/in', 'Closed'];
-const CLEANING_STATUS_OPTIONS = ['Clean', 'Need cleaning', 'Need deep cleaning', 'Skip cleaning', 'Awaiting inspection'];
-const CLEANING_STATUS_MAP: Record<string, RoomStatus | null> = {
-  'Clean':               'CLEANED',
-  'Need cleaning':       'UNCLEANED',
-  'Need deep cleaning':  'DEEP_CLEAN',
-  'Skip cleaning':       'SKIP_CLEANING',
-  'Awaiting inspection': 'AWAITING_INSPECTION',
-};
-const DEFAULT_FILTERS: FilterState = { statuses: [], roomTypes: [], roomStatuses: [], cleaningStatuses: [], includeStaffNotes: false, includeGuestComments: false, includeExtras: false, lateCheckout: false, earlyCheckout: false };
-
-function getRoomStatusCategory(item: RoomDaySchedule, date: string): string {
-  if (item.room.isClosed)       return 'Closed';
-  const isCheckIn     = item.checkIn === date;
-  const hasCheckout   = item.hasCheckoutToday;
-  if (isCheckIn && hasCheckout) return 'Check-out/in';
-  if (isCheckIn)                return 'Check-in only';
-  if (hasCheckout)              return 'Check-out only';
-  if (!item.isOccupied)         return 'Unoccupied';
-  return 'Occupied';
-}
-
-function applyFilters(
-  rooms: RoomDaySchedule[],
-  filters: FilterState,
-  notes: Record<string, string>,
-  overrides: Record<string, RoomStatus>,
-  date: string,
-): RoomDaySchedule[] {
-  const { statuses, roomTypes, roomStatuses, cleaningStatuses, includeStaffNotes, includeGuestComments, includeExtras, lateCheckout, earlyCheckout } = filters;
-  if (!statuses.length && !roomTypes.length && !roomStatuses.length && !cleaningStatuses.length && !includeStaffNotes && !includeGuestComments && !includeExtras && !lateCheckout && !earlyCheckout) return rooms;
-  return rooms.filter(item => {
-    const noteKey = item.reservationId ?? item.room.id;
-    const effectiveStatus = overrides[item.room.id] ?? item.room.status;
-    if (statuses.length > 0 && !statuses.includes(effectiveStatus)) return false;
-    if (roomTypes.length > 0 && !roomTypes.includes(item.room.type)) return false;
-    if (roomStatuses.length > 0 && !roomStatuses.includes(getRoomStatusCategory(item, date))) return false;
-    if (cleaningStatuses.length > 0) {
-      const mapped = cleaningStatuses.map(s => CLEANING_STATUS_MAP[s]).filter(Boolean) as RoomStatus[];
-      if (!mapped.includes(effectiveStatus)) return false;
-    }
-    if (includeStaffNotes || includeGuestComments || includeExtras) {
-      const hasStaffNote = !!(notes[noteKey] || item.room.notes);
-      const hasGuestComment = !!item.guestComments;
-      const hasExtras = item.extraItems.length > 0;
-      const passes = (includeStaffNotes && hasStaffNote) || (includeGuestComments && hasGuestComment) || (includeExtras && hasExtras);
-      if (!passes) return false;
-    }
-    if (lateCheckout && !item.lateCheckout) return false;
-    if (earlyCheckout && !item.earlyCheckout) return false;
-    return true;
-  });
-}
-
-function activeFilterCount(filters: FilterState): number {
-  let n = 0;
-  if (filters.statuses.length > 0) n++;
-  if (filters.includeStaffNotes) n++;
-  if (filters.includeGuestComments) n++;
-  if (filters.includeExtras) n++;
-  if (filters.lateCheckout) n++;
-  if (filters.earlyCheckout) n++;
-  return n;
-}
-
-function addDays(dateStr: string, n: number): string {
-  const d = new Date(dateStr + 'T12:00:00');
-  d.setDate(d.getDate() + n);
-  return d.toISOString().split('T')[0];
-}
-
-function formatLong(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00');
-  return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
-}
-
-function formatShort(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00');
-  return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-function formatDayStrip(dateStr: string): { day: string; date: number } {
-  const d = new Date(dateStr + 'T12:00:00');
-  return {
-    day: d.toLocaleDateString('en-AU', { weekday: 'short' }).toUpperCase(),
-    date: d.getDate(),
-  };
-}
-
-function formatSectionHeader(dateStr: string, today: string): string {
-  if (dateStr === today) return `TODAY  ·  ${formatLong(dateStr)}`;
-  if (dateStr === addDays(today, 1)) return `TOMORROW  ·  ${formatLong(dateStr)}`;
-  const d = new Date(dateStr + 'T12:00:00');
-  return `${d.toLocaleDateString('en-AU', { weekday: 'short' }).toUpperCase()}  ·  ${formatLong(dateStr)}`;
-}
-
-function formatCardDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00');
-  return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
-}
-
-// Derives a stable 8-digit booking reference from any reservation ID string
-function toBookingRef(id: string): string {
-  let h = 5381;
-  for (let i = 0; i < id.length; i++) {
-    h = (((h << 5) + h) ^ id.charCodeAt(i)) >>> 0;
-  }
-  return String(10000000 + (h % 90000000));
-}
-
-// "14:00" → "2pm", "11:30" → "11:30am"
-function formatTime(t: string): string {
-  const [h, m] = t.split(':').map(Number);
-  const suffix = h >= 12 ? 'pm' : 'am';
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return m === 0 ? `${h12}${suffix}` : `${h12}:${String(m).padStart(2, '0')}${suffix}`;
 }
 
 // ── Shared row components ─────────────────────────────────────────────────────
@@ -494,13 +164,6 @@ function OccupancyBadge({ isOccupied, adults, children, infants }: {
       ))}
     </View>
   );
-}
-
-const BED_CONFIG_KEYWORDS = ['extra bed', 'rollaway', 'king bed'];
-
-function shouldShowBedConfig(config: string): boolean {
-  const lower = config.toLowerCase();
-  return BED_CONFIG_KEYWORDS.some(k => lower.includes(k));
 }
 
 function BedConfigDisplay({ config }: { config: string }) {

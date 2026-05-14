@@ -2213,65 +2213,67 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
               </TouchableOpacity>
             </View>
 
-            {/* View mode */}
-            <View style={styles.demoFlagRow}>
-              <Text style={styles.demoFlagLabel}>Housekeeper view</Text>
-              <Switch
-                value={housekeeperMode}
-                onValueChange={setHousekeeperMode}
-                trackColor={{ false: '#e5e7eb', true: ORANGE }}
-                thumbColor="#fff"
-              />
-            </View>
-            <View style={styles.dropdownDivider} />
-            <View style={[styles.dropdownDivider, { marginBottom: 8 }]} />
-
-            {/* Date selector variant — segmented control (3 options) */}
-            <View style={styles.demoVariantRow}>
-              <Text style={[styles.demoFlagLabel, { flex: 0, marginRight: 0 }]}>Date picker</Text>
-              <View style={styles.segmentedControl}>
-                {([
-                  { value: 'range',      label: 'Date range sheet' },
-                  { value: 'strip',      label: 'Date strip' },
-                  { value: 'monthSheet', label: 'Date sheet' },
-                ] as { value: typeof FLAGS.dateSelectorVariant; label: string }[]).map(opt => {
-                  const isActive = flags.dateSelectorVariant === opt.value;
-                  return (
-                    <TouchableOpacity
-                      key={opt.value}
-                      style={[styles.segmentedBtn, isActive && styles.segmentedBtnActive]}
-                      onPress={() => setFlags(prev => ({ ...prev, dateSelectorVariant: opt.value }))}
-                    >
-                      <Text style={[styles.segmentedBtnText, isActive && styles.segmentedBtnTextActive]} numberOfLines={1}>{opt.label}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
+            <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}>
+              {/* View mode */}
+              <View style={styles.demoFlagRow}>
+                <Text style={styles.demoFlagLabel}>Housekeeper view</Text>
+                <Switch
+                  value={housekeeperMode}
+                  onValueChange={setHousekeeperMode}
+                  trackColor={{ false: '#e5e7eb', true: ORANGE }}
+                  thumbColor="#fff"
+                />
               </View>
-            </View>
-            <View style={styles.dropdownDivider} />
+              <View style={styles.dropdownDivider} />
+              <View style={[styles.dropdownDivider, { marginBottom: 8 }]} />
 
-            {([
-              { key: 'showGuestName',         label: 'Guest name' },
-              { key: 'showGuestPax',          label: 'Pax counts' },
-              { key: 'showBedConfig',         label: 'Bed configuration' },
-              { key: 'showLateCheckout',      label: 'Early check-in & late check-out badge' },
-              { key: 'showReservationId',    label: 'Reservation ID' },
-              { key: 'roomStatsChips',       label: 'Room stats as tappable chips' },
-              { key: 'compactCard',          label: 'Compact room card (details in notes sheet)' },
-            ] as { key: 'showGuestName' | 'showGuestPax' | 'showBedConfig' | 'showLateCheckout' | 'showReservationId' | 'roomStatsChips' | 'compactCard'; label: string }[]).map((item, i) => (
-              <React.Fragment key={item.key}>
-                {i > 0 && <View style={styles.dropdownDivider} />}
-                <View style={styles.demoFlagRow}>
-                  <Text style={styles.demoFlagLabel}>{item.label}</Text>
-                  <Switch
-                    value={flags[item.key] as boolean}
-                    onValueChange={val => setFlags(prev => ({ ...prev, [item.key]: val }))}
-                    trackColor={{ false: '#e5e7eb', true: ORANGE }}
-                    thumbColor="#fff"
-                  />
+              {/* Date selector variant — segmented control (3 options) */}
+              <View style={styles.demoVariantRow}>
+                <Text style={[styles.demoFlagLabel, { flex: 0, marginRight: 0 }]}>Date picker</Text>
+                <View style={styles.segmentedControl}>
+                  {([
+                    { value: 'range',      label: 'Date range sheet' },
+                    { value: 'strip',      label: 'Date strip' },
+                    { value: 'monthSheet', label: 'Date sheet' },
+                  ] as { value: typeof FLAGS.dateSelectorVariant; label: string }[]).map(opt => {
+                    const isActive = flags.dateSelectorVariant === opt.value;
+                    return (
+                      <TouchableOpacity
+                        key={opt.value}
+                        style={[styles.segmentedBtn, isActive && styles.segmentedBtnActive]}
+                        onPress={() => setFlags(prev => ({ ...prev, dateSelectorVariant: opt.value }))}
+                      >
+                        <Text style={[styles.segmentedBtnText, isActive && styles.segmentedBtnTextActive]} numberOfLines={1}>{opt.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
-              </React.Fragment>
-            ))}
+              </View>
+              <View style={styles.dropdownDivider} />
+
+              {([
+                { key: 'showGuestName',         label: 'Guest name' },
+                { key: 'showGuestPax',          label: 'Pax counts' },
+                { key: 'showBedConfig',         label: 'Bed configuration' },
+                { key: 'showLateCheckout',      label: 'Early check-in & late check-out badge' },
+                { key: 'showReservationId',    label: 'Reservation ID' },
+                { key: 'roomStatsChips',       label: 'Room stats as tappable chips' },
+                { key: 'compactCard',          label: 'Compact room card (details in notes sheet)' },
+              ] as { key: 'showGuestName' | 'showGuestPax' | 'showBedConfig' | 'showLateCheckout' | 'showReservationId' | 'roomStatsChips' | 'compactCard'; label: string }[]).map((item, i) => (
+                <React.Fragment key={item.key}>
+                  {i > 0 && <View style={styles.dropdownDivider} />}
+                  <View style={styles.demoFlagRow}>
+                    <Text style={styles.demoFlagLabel}>{item.label}</Text>
+                    <Switch
+                      value={flags[item.key] as boolean}
+                      onValueChange={val => setFlags(prev => ({ ...prev, [item.key]: val }))}
+                      trackColor={{ false: '#e5e7eb', true: ORANGE }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                </React.Fragment>
+              ))}
+            </ScrollView>
           </Animated.View>
         </Animated.View>
       </Modal>
@@ -2288,45 +2290,47 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                 <Text style={styles.sortResetText}>Reset</Text>
               </TouchableOpacity>
             </View>
-            <Text style={styles.autoSheetSubtitle}>Rules that run on page load to keep cleaning statuses up to date.</Text>
+            <ScrollView>
+              <Text style={styles.autoSheetSubtitle}>Rules that run on page load to keep cleaning statuses up to date.</Text>
 
-            {/* Deep clean section */}
-            <View style={styles.autoSection}>
-              <Text style={styles.autoSectionTitle}>Deep clean after N days of occupancy</Text>
-              <Text style={styles.autoSectionDesc}>Flags rooms occupied for N or more consecutive days as Need Deep Cleaning.</Text>
-              <View style={styles.autoInputRow}>
-                <TextInput
-                  style={styles.autoInput}
-                  value={deepCleanDays}
-                  onChangeText={setDeepCleanDays}
-                  keyboardType="numeric"
-                  maxLength={3}
-                />
-                <Text style={styles.autoInputSuffix}>days</Text>
-              </View>
-            </View>
-
-            <View style={styles.autoSeparator} />
-
-            {/* Checkbox rows */}
-            {([
-              { key: 'nightlyResetOccupied',  label: 'Nightly reset for occupied rooms',         desc: 'Resets all occupied rooms to Need Cleaning each day.',                            value: nightlyResetOccupied, set: setNightlyResetOccupied },
-              { key: 'resetAfterCheckout',    label: 'Reset to Need Cleaning after check-out',   desc: 'Sets departing rooms to Need Cleaning on check-out day.',                        value: resetAfterCheckout,   set: setResetAfterCheckout },
-              { key: 'resetAfterClosure',     label: 'Reset to Need Cleaning after room closure ends', desc: 'Clears rooms returning from maintenance or renovation closures.',           value: resetAfterClosure,    set: setResetAfterClosure },
-            ] as const).map(({ key, label, desc, value, set }) => (
-              <TouchableOpacity key={key} style={styles.autoCheckRow} onPress={() => (set as (v: boolean) => void)(!value)} activeOpacity={0.7}>
-                <MaterialIcons
-                  name={value ? 'check-box' : 'check-box-outline-blank'}
-                  size={22}
-                  color={value ? '#e8722a' : '#9ca3af'}
-                  style={{ marginTop: 1 }}
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.autoCheckLabel}>{label}</Text>
-                  <Text style={styles.autoCheckDesc}>{desc}</Text>
+              {/* Deep clean section */}
+              <View style={styles.autoSection}>
+                <Text style={styles.autoSectionTitle}>Deep clean after N days of occupancy</Text>
+                <Text style={styles.autoSectionDesc}>Flags rooms occupied for N or more consecutive days as Need Deep Cleaning.</Text>
+                <View style={styles.autoInputRow}>
+                  <TextInput
+                    style={styles.autoInput}
+                    value={deepCleanDays}
+                    onChangeText={setDeepCleanDays}
+                    keyboardType="numeric"
+                    maxLength={3}
+                  />
+                  <Text style={styles.autoInputSuffix}>days</Text>
                 </View>
-              </TouchableOpacity>
-            ))}
+              </View>
+
+              <View style={styles.autoSeparator} />
+
+              {/* Checkbox rows */}
+              {([
+                { key: 'nightlyResetOccupied',  label: 'Nightly reset for occupied rooms',         desc: 'Resets all occupied rooms to Need Cleaning each day.',                            value: nightlyResetOccupied, set: setNightlyResetOccupied },
+                { key: 'resetAfterCheckout',    label: 'Reset to Need Cleaning after check-out',   desc: 'Sets departing rooms to Need Cleaning on check-out day.',                        value: resetAfterCheckout,   set: setResetAfterCheckout },
+                { key: 'resetAfterClosure',     label: 'Reset to Need Cleaning after room closure ends', desc: 'Clears rooms returning from maintenance or renovation closures.',           value: resetAfterClosure,    set: setResetAfterClosure },
+              ] as const).map(({ key, label, desc, value, set }) => (
+                <TouchableOpacity key={key} style={styles.autoCheckRow} onPress={() => (set as (v: boolean) => void)(!value)} activeOpacity={0.7}>
+                  <MaterialIcons
+                    name={value ? 'check-box' : 'check-box-outline-blank'}
+                    size={22}
+                    color={value ? '#e8722a' : '#9ca3af'}
+                    style={{ marginTop: 1 }}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.autoCheckLabel}>{label}</Text>
+                    <Text style={styles.autoCheckDesc}>{desc}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
 
             {/* Done button */}
             <View style={[styles.autoFooter, { paddingBottom: insets.bottom + 16 }]}>
@@ -3117,7 +3121,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
     paddingBottom: 0,
-    maxHeight: '92%',
+    maxHeight: '85%',
   },
   dateSheetHandle: { width: 44, height: 4, borderRadius: 4, backgroundColor: '#C6CEDA' },
   dateSheetHeader: {
@@ -3187,6 +3191,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingHorizontal: 16,
+    maxHeight: '85%',
   },
   monthSheetHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -3224,6 +3229,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingBottom: 36,
+    maxHeight: '85%',
   },
   sortSheetHandle: {
     width: 36, height: 4, borderRadius: 2,

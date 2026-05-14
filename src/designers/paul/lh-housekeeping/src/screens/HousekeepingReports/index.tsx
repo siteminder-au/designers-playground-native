@@ -2084,7 +2084,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
             {/* Date selector variant — segmented control (3 options) */}
             <View style={styles.demoVariantRow}>
-              <Text style={styles.demoFlagLabel}>Date selector</Text>
+              <Text style={styles.demoFlagLabel}>Date picker</Text>
               <View style={styles.segmentedControl}>
                 {([
                   { value: 'range',      label: 'Date range sheet' },
@@ -3005,13 +3005,13 @@ const styles = StyleSheet.create({
   },
   segmentedControl: {
     flexDirection: 'row',
-    alignSelf: 'flex-start',
     backgroundColor: '#f1f3f5',
     borderRadius: 8,
     padding: 2,
   },
   segmentedBtn: {
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6,
+    flex: 1,
+    paddingHorizontal: 8, paddingVertical: 8, borderRadius: 6,
     alignItems: 'center', justifyContent: 'center',
   },
   segmentedBtnActive: {

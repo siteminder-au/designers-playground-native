@@ -2252,11 +2252,10 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
       </Modal>
 
       {/* ── Select dates bottom sheet ── */}
-      <Modal visible={modalVisible} animationType="none" transparent onRequestClose={closeDateSheet}>
+      <Modal visible={modalVisible} animationType="none" transparent onRequestClose={closeDateSheet} statusBarTranslucent>
         <Animated.View style={[styles.sortSheetOverlay, { opacity: dateSheetAnim }]}>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeDateSheet} />
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-            <Animated.View style={[styles.dateSheet, { transform: [{ translateY: dateSheetTranslateY }] }]}>
+          <Animated.View style={[styles.dateSheet, { transform: [{ translateY: dateSheetTranslateY }] }]}>
               <View style={styles.sheetHandleArea} {...dateSheetPanResponder.panHandlers}>
                 <View style={styles.dateSheetHandle} />
               </View>
@@ -2357,7 +2356,6 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                 </TouchableOpacity>
               </View>
             </Animated.View>
-          </KeyboardAvoidingView>
         </Animated.View>
       </Modal>
     </View>

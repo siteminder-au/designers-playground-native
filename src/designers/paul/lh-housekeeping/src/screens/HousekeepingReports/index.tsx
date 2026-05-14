@@ -2084,7 +2084,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
             {/* Date selector variant — segmented control (3 options) */}
             <View style={styles.demoVariantRow}>
-              <Text style={styles.demoFlagLabel}>Date picker</Text>
+              <Text style={[styles.demoFlagLabel, { flex: 0, marginRight: 0 }]}>Date picker</Text>
               <View style={styles.segmentedControl}>
                 {([
                   { value: 'range',      label: 'Date range sheet' },

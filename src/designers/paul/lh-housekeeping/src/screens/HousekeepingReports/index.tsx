@@ -1441,30 +1441,45 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         </View>
       </View>
 
-      {/* ── Week strip (single-date variant) ── */}
-      {singleDateSelector && (
-        <View style={styles.weekStripRow}>
-          <TouchableOpacity onPress={() => setWeekStart(addDays(weekStart, -NUM_DAYS))} style={styles.arrow}>
-            <Text style={styles.arrowText}>‹</Text>
-          </TouchableOpacity>
-          {visibleDates.map(d => {
-            const isActive = d === selectedDate;
-            const { day, date } = formatDayStrip(d);
-            const dayIndex = new Date(d + 'T12:00:00').getDay();
-            const isWeekend = dayIndex === 0 || dayIndex === 6;
-            return (
-              <TouchableOpacity key={d} style={styles.dayBtn} onPress={() => setSelectedDate(d)}>
-                <Text style={[styles.dayLabel, isWeekend && !isActive && { color: '#b91c1c' }, isActive && styles.activeText]}>{day}</Text>
-                <Text style={[styles.dayNum, isWeekend && !isActive && { color: '#b91c1c' }, isActive && styles.activeText]}>{date}</Text>
-                {isActive && <View style={styles.dayUnderline} />}
-              </TouchableOpacity>
-            );
-          })}
-          <TouchableOpacity onPress={() => setWeekStart(addDays(weekStart, NUM_DAYS))} style={styles.arrow}>
-            <Text style={styles.arrowText}>›</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {/* ── Week strip (single-date variant) — mirrors Reservations screen ── */}
+      {singleDateSelector && (() => {
+        const DAY_NAMES_STRIP = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        // 7 days centered around the selected date (Reservations pattern: -3 to +3)
+        const stripDays: string[] = Array.from({ length: 7 }, (_, i) => addDays(selectedDate, i - 3));
+        return (
+          <View style={styles.weekStripWrapper}>
+            <TouchableOpacity onPress={() => setSelectedDate(addDays(selectedDate, -7))} style={styles.weekArrow}>
+              <Ionicons name="chevron-back" size={18} color="#484b4b" />
+            </TouchableOpacity>
+            <View style={styles.weekStrip}>
+              {stripDays.map(d => {
+                const isSelected = d === selectedDate;
+                const isToday = d === today;
+                const dayObj = new Date(d + 'T12:00:00');
+                return (
+                  <TouchableOpacity
+                    key={d}
+                    style={[styles.weekDay, isSelected && styles.weekDaySelected]}
+                    onPress={() => setSelectedDate(d)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.weekDayName, isSelected && styles.weekDayNameSelected]}>
+                      {DAY_NAMES_STRIP[dayObj.getDay()]}
+                    </Text>
+                    <Text style={[styles.weekDayNum, isSelected && styles.weekDayNumSelected, isToday && !isSelected && styles.weekDayNumToday]}>
+                      {dayObj.getDate()}
+                    </Text>
+                    {isSelected && <View style={styles.weekDayUnderline} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <TouchableOpacity onPress={() => setSelectedDate(addDays(selectedDate, 7))} style={styles.weekArrow}>
+              <Ionicons name="chevron-forward" size={18} color="#484b4b" />
+            </TouchableOpacity>
+          </View>
+        );
+      })()}
 
       {/* ── Sort toolbar ── */}
       <View style={styles.sortToolbar}>
@@ -2515,15 +2530,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: '100%',
   },
-  weekStripRow: {
+  // Week strip — mirrors the Reservations screen
+  weekStripWrapper: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 10,
+    alignItems: 'stretch',
     backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.Background.Stroke,
+    borderBottomColor: '#e5e8e8',
   },
+  weekArrow: { width: 32, alignItems: 'center', justifyContent: 'center' },
+  weekStrip: { flex: 1, flexDirection: 'row' },
+  weekDay: { flex: 1, alignItems: 'center', paddingVertical: 10, position: 'relative' },
+  weekDaySelected: { backgroundColor: '#fff5ee' },
+  weekDayName: { fontSize: 11, color: '#484b4b', fontWeight: '400', textTransform: 'uppercase', marginBottom: 3 },
+  weekDayNameSelected: { color: ORANGE, fontWeight: '600' },
+  weekDayNum: { fontSize: 15, color: '#484b4b', fontWeight: '400' },
+  weekDayNumSelected: { color: ORANGE, fontWeight: '700' },
+  weekDayNumToday: { color: ORANGE },
+  weekDayUnderline: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, backgroundColor: ORANGE },
   arrow:     { width: 22, alignItems: 'center' },
   arrowText: { fontSize: 20, color: '#9ca3af', lineHeight: 24 },
   dayBtn:    { flex: 1, alignItems: 'center', paddingVertical: 4 },

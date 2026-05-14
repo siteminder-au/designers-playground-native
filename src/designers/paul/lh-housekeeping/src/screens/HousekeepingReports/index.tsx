@@ -951,6 +951,40 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     })
   ).current;
 
+  // Date range sheet animation (slide up from bottom, drag to dismiss)
+  const dateSheetAnim = useRef(new Animated.Value(0)).current;
+  const dateSheetTranslateY = useRef(new Animated.Value(600)).current;
+
+  useEffect(() => {
+    if (modalVisible) {
+      dateSheetTranslateY.setValue(600);
+      dateSheetAnim.setValue(0);
+      Animated.parallel([
+        Animated.spring(dateSheetTranslateY, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }),
+        Animated.spring(dateSheetAnim,       { toValue: 1, useNativeDriver: true, damping: 22, stiffness: 220 }),
+      ]).start();
+    }
+  }, [modalVisible]);
+
+  function closeDateSheet() {
+    Animated.parallel([
+      Animated.timing(dateSheetTranslateY, { toValue: 600, duration: 200, useNativeDriver: true }),
+      Animated.timing(dateSheetAnim,       { toValue: 0,   duration: 200, useNativeDriver: true }),
+    ]).start(() => setModalVisible(false));
+  }
+
+  const dateSheetPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, g) => { if (g.dy > 0) dateSheetTranslateY.setValue(g.dy); },
+      onPanResponderRelease: (_, g) => {
+        if (g.dy > 80) { closeDateSheet(); }
+        else { Animated.spring(dateSheetTranslateY, { toValue: 0, useNativeDriver: true }).start(); }
+      },
+    })
+  ).current;
+
   // Assign housekeeper state
   const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [assignModalVisible, setAssignModalVisible] = useState(false);
@@ -1226,7 +1260,13 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   function applyRange() {
     if (!pendingStart || !pendingEnd) return;
     setDateRange({ start: pendingStart, end: pendingEnd });
-    setModalVisible(false);
+    closeDateSheet();
+  }
+
+  function resetDateSheet() {
+    setPendingStart(null);
+    setPendingEnd(null);
+    setExpandedField('start');
   }
 
   function clearRange() {
@@ -2211,100 +2251,114 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         </View>
       </Modal>
 
-      {/* ── Select dates modal ── */}
-      <Modal visible={modalVisible} animationType="slide" presentationStyle="fullScreen">
-        <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
-
-          {/* Modal header */}
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setModalVisible(false)}>
-              <Ionicons name="close" size={24} color="#111" />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Select dates</Text>
-            <View style={{ width: 24 }} />
-          </View>
-          <Text style={styles.dateModalHelper}>Start date is within 28 days of today. End date is within 28 days of start.</Text>
-
-          <ScrollView>
-            {/* Start date field */}
-            <TouchableOpacity
-              style={[styles.dateField, expandedField === 'start' && styles.dateFieldActive]}
-              onPress={() => setExpandedField(expandedField === 'start' ? null : 'start')}
-            >
-              <View style={styles.dateFieldLeft}>
-                <Text style={styles.dateFieldLabel}>Start date</Text>
-                <Text style={[styles.dateFieldValue, !pendingStart && styles.dateFieldPlaceholder]}>
-                  {pendingStart ? formatLong(pendingStart) : 'Select a date'}
-                </Text>
+      {/* ── Select dates bottom sheet ── */}
+      <Modal visible={modalVisible} animationType="none" transparent onRequestClose={closeDateSheet}>
+        <Animated.View style={[styles.sortSheetOverlay, { opacity: dateSheetAnim }]}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeDateSheet} />
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <Animated.View style={[styles.dateSheet, { transform: [{ translateY: dateSheetTranslateY }] }]}>
+              <View style={styles.sheetHandleArea} {...dateSheetPanResponder.panHandlers}>
+                <View style={styles.dateSheetHandle} />
               </View>
-              <Ionicons
-                name={expandedField === 'start' ? 'chevron-up' : 'chevron-down'}
-                size={18}
-                color="#9ca3af"
-              />
-            </TouchableOpacity>
-
-            {expandedField === 'start' && (
-              <Calendar
-                minDate={addDays(today, -28)}
-                maxDate={addDays(today, 28)}
-                onDayPress={(day: { dateString: string }) => {
-                  setPendingStart(day.dateString);
-                  setPendingEnd(null);
-                  setExpandedField('end');
-                }}
-                markedDates={pendingStart ? { [pendingStart]: { selected: true, selectedColor: ORANGE } } : {}}
-                theme={{ selectedDayBackgroundColor: ORANGE, todayTextColor: ORANGE, arrowColor: ORANGE }}
-              />
-            )}
-
-            {/* Divider */}
-            <View style={styles.fieldDivider} />
-
-            {/* End date field */}
-            <TouchableOpacity
-              style={[styles.dateField, expandedField === 'end' && styles.dateFieldActive]}
-              onPress={() => setExpandedField(expandedField === 'end' ? null : 'end')}
-            >
-              <View style={styles.dateFieldLeft}>
-                <Text style={styles.dateFieldLabel}>End date</Text>
-                <Text style={[styles.dateFieldValue, !pendingEnd && styles.dateFieldPlaceholder]}>
-                  {pendingEnd ? formatLong(pendingEnd) : 'Select a date'}
-                </Text>
+              <View style={styles.dateSheetHeader}>
+                <Text style={styles.dateSheetTitle}>Select dates</Text>
+                <TouchableOpacity onPress={closeDateSheet} style={styles.dateSheetCloseBtn}>
+                  <Ionicons name="close" size={20} color={COLORS.Black[200]} />
+                </TouchableOpacity>
               </View>
-              <Ionicons
-                name={expandedField === 'end' ? 'chevron-up' : 'chevron-down'}
-                size={18}
-                color="#9ca3af"
-              />
-            </TouchableOpacity>
+              <Text style={styles.dateSheetHelper}>Start date is within 28 days of today. End date is within 28 days of start.</Text>
 
-            {expandedField === 'end' && (
-              <Calendar
-                minDate={pendingStart ?? undefined}
-                maxDate={pendingStart ? addDays(pendingStart, 28) : addDays(today, 28)}
-                onDayPress={(day: { dateString: string }) => {
-                  setPendingEnd(day.dateString);
-                  setExpandedField(null);
-                }}
-                markedDates={pendingEnd ? { [pendingEnd]: { selected: true, selectedColor: ORANGE } } : {}}
-                theme={{ selectedDayBackgroundColor: ORANGE, todayTextColor: ORANGE, arrowColor: ORANGE }}
-              />
-            )}
-          </ScrollView>
+              <ScrollView style={styles.dateSheetScroll} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+                {/* Start date panel */}
+                <View style={styles.dateSheetPanel}>
+                  <TouchableOpacity
+                    style={styles.dateSheetFieldRow}
+                    onPress={() => setExpandedField(expandedField === 'start' ? null : 'start')}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.dateSheetFieldLabel}>Start date</Text>
+                      <Text style={[styles.dateSheetFieldValue, !pendingStart && styles.dateSheetFieldPlaceholder]}>
+                        {pendingStart ? formatLong(pendingStart) : 'Select a date'}
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name={expandedField === 'start' ? 'chevron-up' : 'chevron-down'}
+                      size={18}
+                      color={COLORS.Black[500]}
+                    />
+                  </TouchableOpacity>
+                  {expandedField === 'start' && (
+                    <Calendar
+                      minDate={addDays(today, -28)}
+                      maxDate={addDays(today, 28)}
+                      onDayPress={(day: { dateString: string }) => {
+                        setPendingStart(day.dateString);
+                        setPendingEnd(null);
+                        setExpandedField('end');
+                      }}
+                      markedDates={pendingStart ? { [pendingStart]: { selected: true, selectedColor: ORANGE } } : {}}
+                      theme={{ selectedDayBackgroundColor: ORANGE, todayTextColor: ORANGE, arrowColor: ORANGE, calendarBackground: 'transparent' }}
+                      style={{ backgroundColor: 'transparent' }}
+                    />
+                  )}
+                </View>
 
-          {/* Apply button */}
-          <View style={styles.modalFooter}>
-            <TouchableOpacity
-              style={[styles.applyBtn, (!pendingStart || !pendingEnd) && styles.applyBtnDisabled]}
-              onPress={applyRange}
-              disabled={!pendingStart || !pendingEnd}
-            >
-              <Text style={styles.applyBtnText}>Apply</Text>
-            </TouchableOpacity>
-          </View>
+                {/* End date panel */}
+                <View style={styles.dateSheetPanel}>
+                  <TouchableOpacity
+                    style={styles.dateSheetFieldRow}
+                    onPress={() => setExpandedField(expandedField === 'end' ? null : 'end')}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.dateSheetFieldLabel}>End date</Text>
+                      <Text style={[styles.dateSheetFieldValue, !pendingEnd && styles.dateSheetFieldPlaceholder]}>
+                        {pendingEnd ? formatLong(pendingEnd) : 'Select a date'}
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name={expandedField === 'end' ? 'chevron-up' : 'chevron-down'}
+                      size={18}
+                      color={COLORS.Black[500]}
+                    />
+                  </TouchableOpacity>
+                  {expandedField === 'end' && (
+                    <Calendar
+                      minDate={pendingStart ?? undefined}
+                      maxDate={pendingStart ? addDays(pendingStart, 28) : addDays(today, 28)}
+                      onDayPress={(day: { dateString: string }) => {
+                        setPendingEnd(day.dateString);
+                        setExpandedField(null);
+                      }}
+                      markedDates={pendingEnd ? { [pendingEnd]: { selected: true, selectedColor: ORANGE } } : {}}
+                      theme={{ selectedDayBackgroundColor: ORANGE, todayTextColor: ORANGE, arrowColor: ORANGE, calendarBackground: 'transparent' }}
+                      style={{ backgroundColor: 'transparent' }}
+                    />
+                  )}
+                </View>
+              </ScrollView>
 
-        </View>
+              {/* Sticky footer toolbar: Reset (left) + Apply pill (right) */}
+              <View style={styles.dateSheetFooter}>
+                <TouchableOpacity
+                  style={styles.dateSheetResetBtn}
+                  onPress={resetDateSheet}
+                  disabled={!pendingStart && !pendingEnd}
+                >
+                  <Ionicons name="refresh" size={20} color={(!pendingStart && !pendingEnd) ? COLORS.Black[500] : ORANGE} />
+                  <Text style={[styles.dateSheetResetText, (!pendingStart && !pendingEnd) && { color: COLORS.Black[500] }]}>Reset</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.dateSheetApplyPill, (!pendingStart || !pendingEnd) && styles.dateSheetApplyPillDisabled]}
+                  onPress={applyRange}
+                  disabled={!pendingStart || !pendingEnd}
+                >
+                  <Ionicons name="arrow-forward" size={16} color="#fff" />
+                  <Text style={styles.dateSheetApplyPillText}>Apply</Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          </KeyboardAvoidingView>
+        </Animated.View>
       </Modal>
     </View>
     </SafeAreaView>
@@ -2654,6 +2708,54 @@ const styles = StyleSheet.create({
 
   // Sort toolbar direction toggle
   sortDirToggle: { padding: 6, marginLeft: 0, marginRight: -2 },
+
+  // Date range bottom sheet (Figma node 653:2819 styling — grey panels, drag handle,
+  // sticky footer with Reset + dark pill Apply button)
+  dateSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    paddingBottom: 0,
+    maxHeight: '92%',
+  },
+  dateSheetHandle: { width: 44, height: 4, borderRadius: 4, backgroundColor: '#C6CEDA' },
+  dateSheetHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingBottom: 8,
+  },
+  dateSheetTitle: { fontSize: 16, fontWeight: '700', color: COLORS.Black[200] },
+  dateSheetCloseBtn: { padding: 4 },
+  dateSheetHelper: {
+    fontSize: 12, color: COLORS.Black[500],
+    paddingHorizontal: 16, paddingBottom: 12, lineHeight: 16,
+  },
+  dateSheetScroll: { flexGrow: 0 },
+  dateSheetPanel: {
+    backgroundColor: '#F2F2F7', borderRadius: 6,
+    padding: 12, marginBottom: 8,
+  },
+  dateSheetFieldRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  dateSheetFieldLabel: { fontSize: 11, fontWeight: '600', color: COLORS.Black[500], textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
+  dateSheetFieldValue: { fontSize: 17, color: COLORS.Black[200] },
+  dateSheetFieldPlaceholder: { color: COLORS.Black[500] },
+  dateSheetFooter: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 28,
+    borderTopWidth: 1, borderTopColor: '#E5E8E8',
+    backgroundColor: '#fff',
+  },
+  dateSheetResetBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
+  dateSheetResetText: { fontSize: 15, fontWeight: '700', color: ORANGE, letterSpacing: -0.23 },
+  dateSheetApplyPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#212323', borderRadius: 20,
+    paddingHorizontal: 16, paddingVertical: 9,
+  },
+  dateSheetApplyPillDisabled: { backgroundColor: '#9ca3af' },
+  dateSheetApplyPillText: { color: '#fff', fontSize: 12, fontWeight: '700' },
 
   // Sort bottom sheet
   sortSheetOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.35)' },

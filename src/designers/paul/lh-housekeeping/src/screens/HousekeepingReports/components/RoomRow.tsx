@@ -44,12 +44,6 @@ export function RoomRow({
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
             <Text style={styles.roomType}>{item.room.type.toUpperCase()}</Text>
-            {item.isOccupied && !item.room.isClosed && (
-              <>
-                <View style={styles.roomTitleSep} />
-                <Text style={[styles.occupancyStatusText, { color: '#b81919' }]}>Occupied</Text>
-              </>
-            )}
             {item.room.isClosed && (
               <>
                 <View style={styles.roomTitleSep} />
@@ -67,8 +61,13 @@ export function RoomRow({
       {/* COMPACT VARIANT: hide bed config + full guest info section. Show the
           check-in/out badge anchored to the LEFT (where guest name normally sits). */}
       {flags.compactCard ? (
-        ((item.hasCheckoutToday && item.isOccupied) || (!item.isOccupied && item.guestName !== null)) && (
+        ((item.isOccupied && !item.room.isClosed) || (!item.isOccupied && item.guestName !== null)) && (
           <View style={styles.compactBadgeRow}>
+            {item.isOccupied && !item.hasCheckoutToday && !item.room.isClosed && (
+              <View style={styles.standardBadge}>
+                <Text style={styles.standardBadgeText}>Stay-through</Text>
+              </View>
+            )}
             {item.hasCheckoutToday && item.isOccupied && (
               <View style={item.checkOutTime ? styles.lateCheckoutBadge : styles.standardBadge}>
                 <Text style={item.checkOutTime ? styles.lateCheckoutText : styles.standardBadgeText}>
@@ -116,9 +115,14 @@ export function RoomRow({
                 </View>
               )}
             </View>
-            {/* Right column — check-in / check-out badges */}
-            {flags.showLateCheckout && ((item.hasCheckoutToday && item.isOccupied) || (!item.isOccupied && item.guestName !== null)) && (
+            {/* Right column — stay-through / check-in / check-out badges */}
+            {flags.showLateCheckout && ((item.isOccupied && !item.room.isClosed) || (!item.isOccupied && item.guestName !== null)) && (
               <View style={{ gap: 6, alignItems: 'flex-end' }}>
+                {item.isOccupied && !item.hasCheckoutToday && !item.room.isClosed && (
+                  <View style={styles.standardBadge}>
+                    <Text style={styles.standardBadgeText}>Stay-through</Text>
+                  </View>
+                )}
                 {item.hasCheckoutToday && item.isOccupied && (
                   <View style={item.checkOutTime ? styles.lateCheckoutBadge : styles.standardBadge}>
                     <Text style={item.checkOutTime ? styles.lateCheckoutText : styles.standardBadgeText}>

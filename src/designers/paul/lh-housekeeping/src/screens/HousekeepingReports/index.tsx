@@ -2098,7 +2098,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                       style={[styles.segmentedBtn, isActive && styles.segmentedBtnActive]}
                       onPress={() => setFlags(prev => ({ ...prev, dateSelectorVariant: opt.value }))}
                     >
-                      <Text style={[styles.segmentedBtnText, isActive && styles.segmentedBtnTextActive]} numberOfLines={2}>{opt.label}</Text>
+                      <Text style={[styles.segmentedBtnText, isActive && styles.segmentedBtnTextActive]} numberOfLines={1}>{opt.label}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -3005,13 +3005,14 @@ const styles = StyleSheet.create({
   },
   segmentedControl: {
     flexDirection: 'row',
+    alignSelf: 'flex-start',
     backgroundColor: '#f1f3f5',
     borderRadius: 8,
     padding: 2,
   },
   segmentedBtn: {
-    flex: 1, paddingHorizontal: 8, paddingVertical: 8, borderRadius: 6,
-    alignItems: 'center', justifyContent: 'center', minHeight: 36,
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6,
+    alignItems: 'center', justifyContent: 'center',
   },
   segmentedBtnActive: {
     backgroundColor: '#fff',

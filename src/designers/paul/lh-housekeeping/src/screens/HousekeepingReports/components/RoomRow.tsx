@@ -61,25 +61,25 @@ export function RoomRow({
       {/* COMPACT VARIANT: hide bed config + full guest info section. Show the
           check-in/out badge anchored to the LEFT (where guest name normally sits). */}
       {flags.compactCard ? (
-        ((item.isOccupied && !item.room.isClosed) || (!item.isOccupied && item.guestName !== null)) && (
+        (item.guestName !== null && !item.room.isClosed) && (
           <View style={styles.compactBadgeRow}>
-            {item.isOccupied && !item.hasCheckoutToday && !item.room.isClosed && (
-              <View style={styles.standardBadge}>
-                <Text style={styles.standardBadgeText}>Stay-through</Text>
+            {item.hasCheckInToday && (
+              <View style={item.checkInTime ? styles.lateCheckoutBadge : styles.standardBadge}>
+                <Text style={item.checkInTime ? styles.lateCheckoutText : styles.standardBadgeText}>
+                  {item.checkInTime ? `${formatTime(item.checkInTime).toUpperCase()} check-in` : 'Checking in'}
+                </Text>
               </View>
             )}
-            {item.hasCheckoutToday && item.isOccupied && (
+            {item.hasCheckoutToday && (
               <View style={item.checkOutTime ? styles.lateCheckoutBadge : styles.standardBadge}>
                 <Text style={item.checkOutTime ? styles.lateCheckoutText : styles.standardBadgeText}>
                   {item.checkOutTime ? `${formatTime(item.checkOutTime).toUpperCase()} check-out` : 'Checking out'}
                 </Text>
               </View>
             )}
-            {!item.isOccupied && item.guestName !== null && (
-              <View style={item.checkInTime ? styles.lateCheckoutBadge : styles.standardBadge}>
-                <Text style={item.checkInTime ? styles.lateCheckoutText : styles.standardBadgeText}>
-                  {item.checkInTime ? `${formatTime(item.checkInTime).toUpperCase()} check-in` : 'Checking in'}
-                </Text>
+            {!item.hasCheckInToday && !item.hasCheckoutToday && (
+              <View style={styles.standardBadge}>
+                <Text style={styles.standardBadgeText}>Stay-through</Text>
               </View>
             )}
           </View>
@@ -116,25 +116,25 @@ export function RoomRow({
               )}
             </View>
             {/* Right column — stay-through / check-in / check-out badges */}
-            {flags.showLateCheckout && ((item.isOccupied && !item.room.isClosed) || (!item.isOccupied && item.guestName !== null)) && (
+            {flags.showLateCheckout && item.guestName !== null && !item.room.isClosed && (
               <View style={{ gap: 6, alignItems: 'flex-end' }}>
-                {item.isOccupied && !item.hasCheckoutToday && !item.room.isClosed && (
-                  <View style={styles.standardBadge}>
-                    <Text style={styles.standardBadgeText}>Stay-through</Text>
+                {item.hasCheckInToday && (
+                  <View style={item.checkInTime ? styles.lateCheckoutBadge : styles.standardBadge}>
+                    <Text style={item.checkInTime ? styles.lateCheckoutText : styles.standardBadgeText}>
+                      {item.checkInTime ? `${formatTime(item.checkInTime).toUpperCase()} check-in` : 'Checking in'}
+                    </Text>
                   </View>
                 )}
-                {item.hasCheckoutToday && item.isOccupied && (
+                {item.hasCheckoutToday && (
                   <View style={item.checkOutTime ? styles.lateCheckoutBadge : styles.standardBadge}>
                     <Text style={item.checkOutTime ? styles.lateCheckoutText : styles.standardBadgeText}>
                       {item.checkOutTime ? `${formatTime(item.checkOutTime).toUpperCase()} check-out` : 'Checking out'}
                     </Text>
                   </View>
                 )}
-                {!item.isOccupied && item.guestName !== null && (
-                  <View style={item.checkInTime ? styles.lateCheckoutBadge : styles.standardBadge}>
-                    <Text style={item.checkInTime ? styles.lateCheckoutText : styles.standardBadgeText}>
-                      {item.checkInTime ? `${formatTime(item.checkInTime).toUpperCase()} check-in` : 'Checking in'}
-                    </Text>
+                {!item.hasCheckInToday && !item.hasCheckoutToday && (
+                  <View style={styles.standardBadge}>
+                    <Text style={styles.standardBadgeText}>Stay-through</Text>
                   </View>
                 )}
               </View>

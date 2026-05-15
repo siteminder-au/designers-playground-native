@@ -52,6 +52,7 @@ export const GET_HOUSEKEEPING_SCHEDULE = gql`
       rooms {
         isOccupied
         hasCheckoutToday
+        hasCheckInToday
         guestCount
         adults
         children

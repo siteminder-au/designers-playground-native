@@ -3,6 +3,7 @@ import type { RoomStatus } from '../../context/HousekeepingStatus';
 export interface RoomDaySchedule {
   isOccupied: boolean;
   hasCheckoutToday: boolean;
+  hasCheckInToday: boolean;
   guestCount: number;
   adults: number;
   children: number;

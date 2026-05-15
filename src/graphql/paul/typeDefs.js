@@ -100,6 +100,7 @@ export const typeDefs = `#graphql
     room: Room!
     isOccupied: Boolean!
     hasCheckoutToday: Boolean!
+    hasCheckInToday: Boolean!
     guestCount: Int!
     adults: Int!
     children: Int!

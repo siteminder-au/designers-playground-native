@@ -200,10 +200,14 @@ export const resolvers = {
           const hasCheckoutToday = reservations.some(
             r => r.roomId === room.id && r.checkOut === current
           );
+          const hasCheckInToday = reservations.some(
+            r => r.roomId === room.id && r.checkIn === current
+          );
           return {
             room,
             isOccupied: !!res && res.guestStatus === 'CHECKED_IN',
             hasCheckoutToday,
+            hasCheckInToday,
             guestCount: (res?.adults ?? 0) + (res?.children ?? 0) + (res?.infants ?? 0),
             adults:   res?.adults   ?? 0,
             children: res?.children ?? 0,

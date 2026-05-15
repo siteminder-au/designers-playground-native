@@ -155,6 +155,10 @@ export default function PaulLHHousekeepingApp() {
           height: min(844px, calc(100vh - 40px)) !important;
           margin: 0 !important;
           border-radius: 36px !important;
+          /* clip-path enforces the rounded mask even for descendants with
+             their own stacking context (RNW's portaled modals, the bottom
+             tab bar). overflow:hidden + border-radius alone isn't enough. */
+          clip-path: inset(0 round 36px) !important;
           box-shadow:
             0 0 0 12px #111,
             0 0 0 14px #2d2d2d,

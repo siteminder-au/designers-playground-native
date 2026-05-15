@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useQuery } from '@apollo/client';
 import { GET_TODAY_RESERVATIONS } from '../../apollo/queries';
+import CleaningServicesSvg from '../../../assets/CleaningServices.svg';
 
 const ORANGE = '#ff6842';
 const GREEN = '#1b7b3e';
@@ -284,7 +285,7 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity style={[styles.headerIconBtn, styles.headerIconBtnOrange]} onPress={() => navigation.navigate('Housekeeping')}>
-              <Ionicons name="sparkles-outline" size={20} color={ORANGE} />
+              <CleaningServicesSvg width={22} height={22} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.headerIconBtn}>
               <Ionicons name="options-outline" size={20} color="#333" />

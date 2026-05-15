@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@apollo/client';
@@ -20,11 +20,9 @@ import DirtySvg from '../../../assets/Dirty.svg';
 import InspectionSvg from '../../../assets/Inspection.svg';
 import SnoozeSvg from '../../../assets/Snooze.svg';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
 const ROOM_COL_WIDTH = 90;
 const RIGHT_ARROW_WIDTH = 28;
 const NUM_DAYS = 5;
-const DAY_WIDTH = (SCREEN_WIDTH - ROOM_COL_WIDTH - RIGHT_ARROW_WIDTH) / NUM_DAYS;
 const ROW_HEIGHT = 58;
 const GROUP_HEADER_HEIGHT = 36;
 
@@ -135,6 +133,11 @@ export default function CalendarScreen() {
   const [selectedDate, setSelectedDate] = useState(today);
   const [weekStart, setWeekStart] = useState(today);
   const { statusOverrides } = useHousekeepingStatus();
+  // Compute per-day column width reactively so resizing the browser (or
+  // viewport orientation on native) reflows the grid instead of getting stuck
+  // with the value sampled at module load.
+  const { width: windowWidth } = useWindowDimensions();
+  const DAY_WIDTH = (windowWidth - ROOM_COL_WIDTH - RIGHT_ARROW_WIDTH) / NUM_DAYS;
 
   const queryStart = addDays(weekStart, -7);
   const queryEnd = addDays(weekStart, NUM_DAYS + 7);
@@ -197,7 +200,7 @@ export default function CalendarScreen() {
           return (
             <TouchableOpacity
               key={d}
-              style={styles.weekDay}
+              style={[styles.weekDay, { width: DAY_WIDTH }]}
               onPress={() => setSelectedDate(d)}
             >
               <Text style={styles.weekDayLabel}>{day}</Text>
@@ -298,7 +301,7 @@ export default function CalendarScreen() {
                       />
                     ))}
                     {/* Filler covers the gap right of last day cell, hiding row bottom borders */}
-                    <View style={styles.dayCellFiller} />
+                    <View style={[styles.dayCellFiller, { left: NUM_DAYS * DAY_WIDTH }]} />
 
                     {/* Reservation blocks */}
                     {room.reservations.map(res => {
@@ -403,7 +406,7 @@ const styles = StyleSheet.create({
   weekArrowLeft: { width: ROOM_COL_WIDTH, alignItems: 'flex-end', justifyContent: 'center', paddingRight: 14 },
   weekArrowRight: { position: 'absolute', right: 0, width: 28, alignItems: 'center', top: 0, bottom: 0, justifyContent: 'center' },
   weekArrowText: { fontSize: 22, color: '#9ca3af', lineHeight: 26 },
-  weekDay: { width: DAY_WIDTH, alignItems: 'center', justifyContent: 'center', paddingTop: 8, paddingBottom: 10, position: 'relative' },
+  weekDay: { alignItems: 'center', justifyContent: 'center', paddingTop: 8, paddingBottom: 10, position: 'relative' },
   weekDayLabel: { fontSize: 12, color: '#484b4b', fontWeight: '400', letterSpacing: 0.5, textTransform: 'uppercase' },
   weekDayNum: { fontSize: 16, fontWeight: '400', color: '#484b4b', marginTop: 2 },
   weekDayUnderline: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, backgroundColor: ORANGE },
@@ -475,7 +478,6 @@ const styles = StyleSheet.create({
   dayCellFiller: {
     position: 'absolute',
     top: 0,
-    left: NUM_DAYS * DAY_WIDTH,
     width: RIGHT_ARROW_WIDTH,
     height: ROW_HEIGHT,
     backgroundColor: '#fff',

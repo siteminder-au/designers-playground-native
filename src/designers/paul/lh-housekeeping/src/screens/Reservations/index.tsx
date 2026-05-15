@@ -285,7 +285,7 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity style={[styles.headerIconBtn, styles.headerIconBtnOrange]} onPress={() => navigation.navigate('Housekeeping')}>
-              <CleaningServicesSvg width={22} height={22} />
+              <CleaningServicesSvg width={32} height={32} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.headerIconBtn}>
               <Ionicons name="options-outline" size={20} color="#333" />

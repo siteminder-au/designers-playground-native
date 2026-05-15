@@ -137,6 +137,10 @@ export default function PaulLHHousekeepingApp() {
         height: 100% !important;
         overflow: hidden !important;
         background: #fff !important;
+        /* Make body a containing block for position:fixed children so
+           modals + bottom tab bar are clipped by body's border-radius
+           instead of escaping to the viewport. */
+        transform: translateZ(0) !important;
       }
       @media (min-width: 600px) {
         html {
@@ -150,7 +154,7 @@ export default function PaulLHHousekeepingApp() {
           max-width: 390px !important;
           height: min(844px, calc(100vh - 40px)) !important;
           margin: 0 !important;
-          border-radius: 47px !important;
+          border-radius: 36px !important;
           box-shadow:
             0 0 0 12px #111,
             0 0 0 14px #2d2d2d,

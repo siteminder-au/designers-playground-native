@@ -224,6 +224,13 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   standardBadgeText: { fontSize: 11, fontWeight: '600', color: COLORS.Black[400], letterSpacing: -0.1, lineHeight: 20 },
+  checkInOutBadge: {
+    backgroundColor: '#E5E7EB',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    alignSelf: 'flex-start',
+  },
+  checkInOutText: { fontSize: 11, fontWeight: '600', color: '#4B5563', letterSpacing: -0.1, lineHeight: 20 },
   notesSheetSectionLabel: { fontSize: 11, fontWeight: '700' as const, color: COLORS.Black[500], letterSpacing: 0.5, textTransform: 'uppercase' as const, marginBottom: 8 },
   notesSheetBody: { fontSize: 14, color: COLORS.Black[200], lineHeight: 21 },
   notesSheetDivider: { height: 1, backgroundColor: COLORS.Background.Stroke, marginVertical: 20 },

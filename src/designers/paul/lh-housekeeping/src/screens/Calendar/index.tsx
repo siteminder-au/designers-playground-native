@@ -133,11 +133,14 @@ export default function CalendarScreen() {
   const [selectedDate, setSelectedDate] = useState(today);
   const [weekStart, setWeekStart] = useState(today);
   const { statusOverrides } = useHousekeepingStatus();
-  // Compute per-day column width reactively so resizing the browser (or
-  // viewport orientation on native) reflows the grid instead of getting stuck
-  // with the value sampled at module load.
+  // Measure the actual rendered container width via onLayout. Using
+  // useWindowDimensions() is unreliable on Expo Web's static prerender
+  // (returns a default ~1280 before hydration), which made each day column
+  // huge and only one fit in the mobile viewport.
   const { width: windowWidth } = useWindowDimensions();
-  const DAY_WIDTH = (windowWidth - ROOM_COL_WIDTH - RIGHT_ARROW_WIDTH) / NUM_DAYS;
+  const [measuredWidth, setMeasuredWidth] = useState(0);
+  const containerWidth = measuredWidth || windowWidth;
+  const DAY_WIDTH = (containerWidth - ROOM_COL_WIDTH - RIGHT_ARROW_WIDTH) / NUM_DAYS;
 
   const queryStart = addDays(weekStart, -7);
   const queryEnd = addDays(weekStart, NUM_DAYS + 7);
@@ -164,7 +167,11 @@ export default function CalendarScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView
+      style={styles.safeArea}
+      edges={['top']}
+      onLayout={(e) => setMeasuredWidth(e.nativeEvent.layout.width)}
+    >
     <View style={styles.container}>
       {/* ── Header ── */}
       <View style={styles.header}>

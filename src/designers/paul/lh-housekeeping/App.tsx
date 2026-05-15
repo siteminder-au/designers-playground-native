@@ -121,22 +121,41 @@ export default function PaulLHHousekeepingApp() {
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-    // RNW renders Modal via ReactDOM.createPortal into document.body,
-    // making modal divs direct children of <body> — not our React container.
-    // Adding a CSS transform to <body> makes it the containing block for all
-    // position:fixed descendants, so modals are scoped to body's 390px width.
+    // RNW renders Modal via ReactDOM.createPortal into document.body, so the
+    // body itself must be the mobile-frame container — anything wrapping
+    // children at the React level would be bypassed by modal portals.
+    //
+    // On wide viewports (desktop testers): centred 390x844 "device" with
+    // rounded screen corners + a 12px solid black bezel (via box-shadow
+    // spread so it doesn't shrink the content area). On narrow viewports
+    // (real mobile testers): styles collapse and the app fills the screen.
     const style = document.createElement('style');
     style.id = 'paul-lh-mobile-frame';
     style.textContent = `
-      html { background: #d1d5db !important; height: 100%; }
+      html { height: 100%; }
       body {
-        max-width: 390px !important;
-        margin: 0 auto !important;
         height: 100% !important;
         overflow: hidden !important;
-        transform: translateX(0) !important;
-        box-shadow: 0 0 40px rgba(0,0,0,0.35) !important;
         background: #fff !important;
+      }
+      @media (min-width: 600px) {
+        html {
+          background: #1f2937 !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+        body {
+          width: 390px !important;
+          max-width: 390px !important;
+          height: min(844px, calc(100vh - 40px)) !important;
+          margin: 0 !important;
+          border-radius: 47px !important;
+          box-shadow:
+            0 0 0 12px #111,
+            0 0 0 14px #2d2d2d,
+            0 20px 60px rgba(0,0,0,0.45) !important;
+        }
       }
     `;
     document.head.appendChild(style);

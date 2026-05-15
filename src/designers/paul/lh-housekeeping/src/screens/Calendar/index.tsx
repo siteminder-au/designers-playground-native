@@ -331,7 +331,15 @@ export default function CalendarScreen() {
                           {block.startsInView && (
                             <View style={[styles.resFlag, { backgroundColor: block.isConfirmed ? CONFIRMED_BORDER : ORANGE }]} />
                           )}
-                          <View style={styles.resContent}>
+                          <View
+                            style={[
+                              styles.resContent,
+                              // Reservation started before the visible week — shift content
+                              // right by the off-screen amount so the guest name doesn't
+                              // get clipped at the day-grid's left edge.
+                              !block.startsInView && { paddingLeft: -block.left + 6 },
+                            ]}
+                          >
                             <Text
                               style={styles.resName}
                               numberOfLines={1}

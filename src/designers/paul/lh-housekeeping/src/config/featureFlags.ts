@@ -31,7 +31,7 @@ const FLAGS = {
 
   /** Render the room stats row as tappable chips that filter the list,
    *  instead of the default static informational strip. */
-  roomStatsChips: false,
+  roomStatsChips: true,
 
   /** Compact card variant — hides guest name, reservation ID, PAX, and bed
    *  config from the room card (moves them into the Notes sheet) and re-anchors

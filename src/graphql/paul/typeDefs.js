@@ -146,7 +146,7 @@ export const typeDefs = `#graphql
 
   type Mutation {
     updateRoomStatus(roomId: ID!, status: RoomStatus!): Room!
-    addStaffNote(id: ID!, roomId: ID!, author: String!, text: String!, tag: String!, reservationId: String): StaffNote!
+    addStaffNote(id: ID!, roomId: ID!, author: String!, text: String!, reservationId: String!): StaffNote!
     updateStaffNote(id: ID!, text: String!): StaffNote!
   }
 `;

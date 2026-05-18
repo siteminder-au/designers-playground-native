@@ -193,9 +193,13 @@ export function RoomRow({
                   <Text style={styles.staffNoteLabel}>Staff note: </Text>{note}
                 </Text>
               </View>
-            ) : (
+            ) : item.reservationId ? (
               <View style={styles.noteRow}>
                 <Text style={styles.addNoteText}>+ Staff notes</Text>
+              </View>
+            ) : (
+              <View style={styles.noteRow}>
+                <Text style={[styles.addNoteText, { color: COLORS.Black[500] }]}>—</Text>
               </View>
             )}
           </View>

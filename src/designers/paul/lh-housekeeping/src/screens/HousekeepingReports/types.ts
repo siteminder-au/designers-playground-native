@@ -32,7 +32,6 @@ export interface StaffNote {
   roomId: string;
   author: string;
   text: string;
-  tag: 'room' | 'guest';
   reservationId: string | null;
   createdAt: string;
   updatedAt: string;

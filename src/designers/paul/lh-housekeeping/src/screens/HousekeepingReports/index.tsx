@@ -213,14 +213,12 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const [addStaffNoteMutation] = useMutation(ADD_STAFF_NOTE, { refetchQueries: [{ query: GET_STAFF_NOTES }] });
   const [updateStaffNoteMutation] = useMutation(UPDATE_STAFF_NOTE, { refetchQueries: [{ query: GET_STAFF_NOTES }] });
 
-  // Map of noteKey → latest visible staff-note text, where noteKey is
-  // `reservationId ?? roomId`. A 'guest' note attaches to its reservation; a
-  // 'room' note attaches to the physical room and is visible regardless of who
-  // is checked in. This preserves the existing UI lookup pattern.
+  // Per Si's 2026-05-18 contract: housekeeping notes are always scoped to a
+  // reservation, keyed by reservationId. When the active reservation changes
+  // (checkout → next guest), the thread resets to empty automatically.
   const notes: Record<string, string> = {};
   for (const n of allStaffNotes) {
-    if (n.tag === 'room') notes[n.roomId] = n.text;
-    else if (n.tag === 'guest' && n.reservationId) notes[n.reservationId] = n.text;
+    if (n.reservationId) notes[n.reservationId] = n.text;
   }
 
   // Legacy modal kept around for backward compat; not currently triggered.
@@ -234,10 +232,8 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     sheetAnim: notesSheetAnim, translateY: notesSheetTranslateY, panResponder: notesSheetPanResponder,
   } = useBottomSheet(400);
   const [notesSheetItem, setNotesSheetItem] = useState<RoomDaySchedule | null>(null);
-  const [notesSheetKey, setNotesSheetKey] = useState<string | null>(null);
   const [notesSheetEditing, setNotesSheetEditing] = useState(false);
   const [notesSheetDraft, setNotesSheetDraft] = useState('');
-  const [newNoteTag, setNewNoteTag] = useState<'room' | 'guest'>('room');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
 
   // Query: either the current week or the selected range
@@ -470,21 +466,20 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     setPrintSettingsVisible(true);
   }
 
-  function openNotesSheet(item: RoomDaySchedule, noteKey: string) {
+  function openNotesSheet(item: RoomDaySchedule) {
     setNotesSheetItem(item);
-    setNotesSheetKey(noteKey);
     setNotesSheetEditing(false);
     setNotesSheetDraft('');
     setEditingNoteId(null);
-    // Default the tag based on whether the room has an active reservation: a
-    // checked-in / arriving guest → notes are about that stay; otherwise it's
-    // about the physical room.
-    setNewNoteTag(item.reservationId ? 'guest' : 'room');
     setNotesSheetVisible(true);
   }
 
   function saveSheetNote() {
     if (!notesSheetItem) return;
+    // Per Si's 2026-05-18 contract: writes require an active reservation.
+    // Vacant rooms open the sheet read-only; the UI shouldn't trigger a save,
+    // but guard here in case it does.
+    if (!notesSheetItem.reservationId) return;
     const trimmed = notesSheetDraft.trim();
     if (!trimmed) {
       setNotesSheetEditing(false);
@@ -501,8 +496,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
           roomId: notesSheetItem.room.id,
           author: 'You',
           text: trimmed,
-          tag: newNoteTag,
-          reservationId: newNoteTag === 'guest' ? notesSheetItem.reservationId : null,
+          reservationId: notesSheetItem.reservationId,
         },
       }).catch(err => console.warn('[paul] addStaffNote failed', err));
     }
@@ -511,15 +505,14 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     setEditingNoteId(null);
   }
 
-  // Visible staff notes for the room currently open in the sheet — room-tagged
-  // notes are always shown; guest-tagged notes only when their reservation_id
-  // matches the room's current reservation.
-  const sheetNotes: StaffNote[] = notesSheetItem
-    ? allStaffNotes.filter(n => {
-        if (n.roomId !== notesSheetItem.room.id) return false;
-        if (n.tag === 'room') return true;
-        return !!notesSheetItem.reservationId && n.reservationId === notesSheetItem.reservationId;
-      })
+  // Per Si's 2026-05-18 contract: housekeeping notes are visible only when
+  // their reservation_id matches the active reservation in the room being
+  // viewed. Vacant rooms (no reservationId) show an empty thread.
+  const sheetNotes: StaffNote[] = (notesSheetItem && notesSheetItem.reservationId)
+    ? allStaffNotes.filter(n =>
+        n.roomId === notesSheetItem.room.id &&
+        n.reservationId === notesSheetItem.reservationId
+      )
     : [];
 
   function openNotesModal(noteKey: string) {
@@ -683,17 +676,16 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
           )}
           renderItem={({ item }) => {
             const effectiveStatus = statusOverrides[item.room.id] ?? item.room.status;
-            const noteKey = item.reservationId ?? item.room.id;
             const bedConfig = item.bedConfiguration;
             return (
               <AnimatedRoomWrapper id={item.room.id} positionsRef={roomPositionsRef} shouldAnimate={orderChanged}>
                 <RoomRow
                   item={item}
                   status={effectiveStatus}
-                  note={notes[noteKey] ?? ''}
+                  note={item.reservationId ? (notes[item.reservationId] ?? '') : ''}
                   bedConfig={bedConfig}
                   flags={flags}
-                  onNotePress={() => openNotesSheet(item, noteKey)}
+                  onNotePress={() => openNotesSheet(item)}
                   onStatusPress={(rect) => openStatusDropdown(item.room.id, effectiveStatus, rect)}
                   assignedTo={assignments[item.room.id] ?? null}
                   onAssignPress={() => openAssignModal(item.room.id)}
@@ -721,17 +713,16 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
           ListHeaderComponent={statsStrip}
           renderItem={({ item }) => {
             const effectiveStatus = statusOverrides[item.room.id] ?? item.room.status;
-            const noteKey = item.reservationId ?? item.room.id;
             const bedConfig = item.bedConfiguration;
             return (
               <AnimatedRoomWrapper id={item.room.id} positionsRef={roomPositionsRef} shouldAnimate={orderChanged}>
                 <RoomRow
                   item={item}
                   status={effectiveStatus}
-                  note={notes[noteKey] ?? ''}
+                  note={item.reservationId ? (notes[item.reservationId] ?? '') : ''}
                   bedConfig={bedConfig}
                   flags={flags}
-                  onNotePress={() => openNotesSheet(item, noteKey)}
+                  onNotePress={() => openNotesSheet(item)}
                   onStatusPress={(rect) => openStatusDropdown(item.room.id, effectiveStatus, rect)}
                   assignedTo={assignments[item.room.id] ?? null}
                   onAssignPress={() => openAssignModal(item.room.id)}
@@ -830,8 +821,6 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         setNotesSheetDraft={setNotesSheetDraft}
         editingNoteId={editingNoteId}
         setEditingNoteId={setEditingNoteId}
-        newNoteTag={newNoteTag}
-        setNewNoteTag={setNewNoteTag}
         saveSheetNote={saveSheetNote}
         insetsBottom={insets.bottom}
       />

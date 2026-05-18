@@ -24,8 +24,6 @@ export function NotesSheet({
   setNotesSheetDraft,
   editingNoteId,
   setEditingNoteId,
-  newNoteTag,
-  setNewNoteTag,
   saveSheetNote,
   insetsBottom,
 }: {
@@ -43,11 +41,13 @@ export function NotesSheet({
   setNotesSheetDraft: React.Dispatch<React.SetStateAction<string>>;
   editingNoteId: string | null;
   setEditingNoteId: React.Dispatch<React.SetStateAction<string | null>>;
-  newNoteTag: 'room' | 'guest';
-  setNewNoteTag: React.Dispatch<React.SetStateAction<'room' | 'guest'>>;
   saveSheetNote: () => void;
   insetsBottom: number;
 }) {
+  // Per Si's 2026-05-18 contract: housekeeping notes require an active
+  // reservation. Vacant rooms still open the sheet (parity with web) but
+  // show "—" and no Add affordance.
+  const canAddNote = !!item?.reservationId;
   return (
     <Modal visible={visible} animationType="none" transparent onRequestClose={onClose}>
       <Animated.View style={[styles.sortSheetOverlay, { opacity: sheetAnim }]}>
@@ -129,7 +129,7 @@ export function NotesSheet({
               <Text style={styles.notesSheetSectionLabel}>Staff notes</Text>
               {sheetNotes.length === 0 && !notesSheetEditing && (
                 <Text style={[styles.notesSheetBody, { color: COLORS.Black[600], fontStyle: 'italic', marginBottom: 8 }]}>
-                  No staff notes yet.
+                  {canAddNote ? 'No staff notes yet.' : '—'}
                 </Text>
               )}
               {sheetNotes.map(note => {
@@ -138,7 +138,7 @@ export function NotesSheet({
                   <View key={note.id} style={{ marginBottom: 10 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 }}>
                       <Text style={[styles.notesSheetBody, { fontSize: 11, color: COLORS.Black[500] }]}>
-                        {note.tag === 'room' ? 'Room' : 'Guest'} · {note.author} · {new Date(note.createdAt).toLocaleString([], { hour: 'numeric', minute: '2-digit' })}
+                        {note.author} · {new Date(note.createdAt).toLocaleString([], { hour: 'numeric', minute: '2-digit' })}
                       </Text>
                       {!isEditing && (
                         <TouchableOpacity onPress={() => { setEditingNoteId(note.id); setNotesSheetDraft(note.text); setNotesSheetEditing(true); }}>
@@ -174,24 +174,8 @@ export function NotesSheet({
                   </View>
                 );
               })}
-              {notesSheetEditing && !editingNoteId ? (
+              {notesSheetEditing && !editingNoteId && canAddNote ? (
                 <>
-                  {item?.reservationId && (
-                    <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-                      <TouchableOpacity
-                        onPress={() => setNewNoteTag('room')}
-                        style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: newNoteTag === 'room' ? ORANGE : COLORS.Background.Stroke, backgroundColor: newNoteTag === 'room' ? '#FFF4ED' : 'transparent' }}
-                      >
-                        <Text style={{ color: newNoteTag === 'room' ? ORANGE : COLORS.Black[400], fontSize: 12, fontWeight: '600' }}>Room</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => setNewNoteTag('guest')}
-                        style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: newNoteTag === 'guest' ? ORANGE : COLORS.Background.Stroke, backgroundColor: newNoteTag === 'guest' ? '#FFF4ED' : 'transparent' }}
-                      >
-                        <Text style={{ color: newNoteTag === 'guest' ? ORANGE : COLORS.Black[400], fontSize: 12, fontWeight: '600' }}>Guest</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
                   <TextInput
                     style={styles.notesSheetInput}
                     value={notesSheetDraft}
@@ -212,7 +196,7 @@ export function NotesSheet({
                     </TouchableOpacity>
                   </View>
                 </>
-              ) : !editingNoteId ? (
+              ) : !editingNoteId && canAddNote ? (
                 <TouchableOpacity onPress={() => { setNotesSheetDraft(''); setNotesSheetEditing(true); }}>
                   <Text style={styles.addNoteText}>+ Add staff note</Text>
                 </TouchableOpacity>

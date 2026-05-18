@@ -152,7 +152,6 @@ export const GET_STAFF_NOTES = gql`
       roomId
       author
       text
-      tag
       reservationId
       createdAt
       updatedAt
@@ -161,13 +160,12 @@ export const GET_STAFF_NOTES = gql`
 `;
 
 export const ADD_STAFF_NOTE = gql`
-  mutation AddStaffNote($id: ID!, $roomId: ID!, $author: String!, $text: String!, $tag: String!, $reservationId: String) {
-    addStaffNote(id: $id, roomId: $roomId, author: $author, text: $text, tag: $tag, reservationId: $reservationId) {
+  mutation AddStaffNote($id: ID!, $roomId: ID!, $author: String!, $text: String!, $reservationId: String!) {
+    addStaffNote(id: $id, roomId: $roomId, author: $author, text: $text, reservationId: $reservationId) {
       id
       roomId
       author
       text
-      tag
       reservationId
       createdAt
       updatedAt

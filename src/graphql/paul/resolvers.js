@@ -193,10 +193,14 @@ export const resolvers = {
       let current = startDate;
       while (current <= endDate) {
         const dayRooms = rooms.map(room => {
-          const res = reservations.find(
-            r => r.roomId === room.id && r.checkIn <= current &&
-                 (r.lateCheckout ? r.checkOut >= current : r.checkOut > current)
-          );
+          // Active reservation per Si's contract (2026-05-18):
+          //   currentStay > checkingIn > checkingOut.
+          // Notes attached to a reservation stay visible through checkout day.
+          const inRoom = r => r.roomId === room.id;
+          const res =
+                reservations.find(r => inRoom(r) && r.checkIn  <  current && r.checkOut >  current)  // currentStay
+             || reservations.find(r => inRoom(r) && r.checkIn  === current)                          // checkingIn
+             || reservations.find(r => inRoom(r) && r.checkOut === current);                         // checkingOut
           const hasCheckoutToday = reservations.some(
             r => r.roomId === room.id && r.checkOut === current
           );
@@ -264,9 +268,14 @@ export const resolvers = {
     },
 
     staffNotes: async () => {
+      // Per Si's 2026-05-18 contract: housekeeping notes are visible only
+      // when scoped to a reservation. Legacy orphan rows (tag='room' with
+      // null reservation_id) stay in the DB for history but are hidden on
+      // read. The new model always writes reservation_id.
       const { rows } = await query(
         `SELECT id, room_id, author, text, tag, reservation_id, created_at, updated_at
          FROM si_staff_notes
+         WHERE reservation_id IS NOT NULL
          ORDER BY created_at ASC`,
       );
       return rows.map(buildStaffNote);
@@ -289,14 +298,17 @@ export const resolvers = {
       return buildRoom(rows[0].room_id, rows[0].cleaning_status);
     },
 
-    addStaffNote: async (_, { id, roomId, author, text, tag, reservationId }) => {
-      if (tag !== 'room' && tag !== 'guest') throw new Error(`Invalid tag: ${tag}`);
+    addStaffNote: async (_, { id, roomId, author, text, reservationId }) => {
+      // Per Si's 2026-05-18 contract: reservation_id is required and tag is
+      // deprecated. Force tag='room' on every write for forward-compat with
+      // the shared schema; drop the old tag arg entirely.
+      if (!reservationId) throw new Error('reservationId is required');
       // Idempotent on id per Si's contract — re-posting the same id is a no-op.
       await query(
         `INSERT INTO si_staff_notes (id, room_id, author, text, tag, reservation_id)
-         VALUES ($1, $2, $3, $4, $5, $6)
+         VALUES ($1, $2, $3, $4, 'room', $5)
          ON CONFLICT (id) DO NOTHING`,
-        [id, roomId, author, text, tag, reservationId ?? null],
+        [id, roomId, author, text, reservationId],
       );
       const { rows } = await query(
         `SELECT id, room_id, author, text, tag, reservation_id, created_at, updated_at

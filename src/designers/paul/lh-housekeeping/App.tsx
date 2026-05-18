@@ -137,10 +137,11 @@ export default function PaulLHHousekeepingApp() {
         height: 100% !important;
         overflow: hidden !important;
         background: #fff !important;
-        /* Make body a containing block for position:fixed children so
-           modals + bottom tab bar are clipped by body's border-radius
-           instead of escaping to the viewport. */
-        transform: translateZ(0) !important;
+        /* NOTE: do NOT set transform here. It would make body the containing
+           block for position:fixed descendants, but RNW Modal positioning
+           (status dropdown) uses viewport coordinates from measure(), so the
+           offsets break. clip-path below handles the rounded clipping on
+           its own. */
       }
       @media (min-width: 600px) {
         html {

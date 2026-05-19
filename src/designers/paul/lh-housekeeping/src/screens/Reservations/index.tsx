@@ -131,6 +131,12 @@ function ReservationCard({ res, variant }: CardProps) {
   const hasProblem = !!(res.outstandingBalance || res.paymentExpired);
   const isUnallocated = !!res.isUnallocated;
   const borderColor = (hasProblem || isUnallocated) ? RED : '#e5e8e8';
+  // Mock reservations from the Paul-side demo overlay are visual-only; their
+  // CTAs render but don't act. See src/graphql/paul/demoOverlay.js.
+  const isMock = res.id.startsWith('paul-mock-');
+  const ctaProps = isMock
+    ? { disabled: true, activeOpacity: 1, style: { opacity: 0.45 } as const }
+    : {};
 
   const nights = Math.round(
     (new Date(res.checkOut + 'T12:00:00').getTime() - new Date(res.checkIn + 'T12:00:00').getTime()) / 86400000
@@ -184,20 +190,20 @@ function ReservationCard({ res, variant }: CardProps) {
       {variant === 'check-in' && (
         <View style={styles.btnRow}>
           {isUnallocated ? (
-            <TouchableOpacity style={[styles.btn, styles.btnOutlined, { flex: 1 }]}>
+            <TouchableOpacity {...ctaProps} style={[styles.btn, styles.btnOutlined, { flex: 1 }, ctaProps.style]}>
               <Text style={styles.btnOutlinedText}>Assign room</Text>
             </TouchableOpacity>
           ) : hasProblem ? (
             <>
-              <TouchableOpacity style={[styles.btn, styles.btnOutlined, { flex: 1, marginRight: 8 }]}>
+              <TouchableOpacity {...ctaProps} style={[styles.btn, styles.btnOutlined, { flex: 1, marginRight: 8 }, ctaProps.style]}>
                 <Text style={styles.btnOutlinedText}>Take payment</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.btn, styles.btnGreen, { flex: 1 }]}>
+              <TouchableOpacity {...ctaProps} style={[styles.btn, styles.btnGreen, { flex: 1 }, ctaProps.style]}>
                 <Text style={styles.btnGreenText}>Check in</Text>
               </TouchableOpacity>
             </>
           ) : (
-            <TouchableOpacity style={[styles.btn, styles.btnGreen, { flex: 1 }]}>
+            <TouchableOpacity {...ctaProps} style={[styles.btn, styles.btnGreen, { flex: 1 }, ctaProps.style]}>
               <Text style={styles.btnGreenText}>Check in · {nights} night{nights !== 1 ? 's' : ''}</Text>
             </TouchableOpacity>
           )}
@@ -206,7 +212,7 @@ function ReservationCard({ res, variant }: CardProps) {
 
       {variant === 'check-out' && (
         <View style={styles.btnRow}>
-          <TouchableOpacity style={[styles.btn, styles.btnDark, { flex: 1 }]}>
+          <TouchableOpacity {...ctaProps} style={[styles.btn, styles.btnDark, { flex: 1 }, ctaProps.style]}>
             <Text style={styles.btnDarkText}>Check-out</Text>
           </TouchableOpacity>
         </View>

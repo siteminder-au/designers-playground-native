@@ -1,4 +1,5 @@
 import { query } from '../../db/pool.js';
+import { demoReservationsForToday } from './demoOverlay.js';
 
 const BASE_DATE_MS = Date.UTC(2026, 3, 21);
 
@@ -239,7 +240,11 @@ export const resolvers = {
 
     todayReservations: async (_, { date }) => {
       const today = date ?? new Date().toISOString().split('T')[0];
-      const [rooms, reservations] = await Promise.all([loadRooms(), loadReservations()]);
+      const [rooms, realReservations] = await Promise.all([loadRooms(), loadReservations()]);
+      // Paul-side demo overlay: scoped to this resolver only so the
+      // Reservations page is always populated. Housekeeping & Calendar see
+      // real data only. See src/graphql/paul/demoOverlay.js.
+      const reservations = [...realReservations, ...demoReservationsForToday(today)];
 
       const checkingOut = reservations
         .filter(r => r.checkOut === today && r.guestStatus === 'CHECKED_IN')

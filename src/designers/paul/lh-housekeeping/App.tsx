@@ -137,11 +137,11 @@ export default function PaulLHHousekeepingApp() {
         height: 100% !important;
         overflow: hidden !important;
         background: #fff !important;
-        /* NOTE: do NOT set transform here. It would make body the containing
-           block for position:fixed descendants, but RNW Modal positioning
-           (status dropdown) uses viewport coordinates from measure(), so the
-           offsets break. clip-path below handles the rounded clipping on
-           its own. */
+        /* Make body the containing block for position:fixed descendants so
+           RNW Modals (bottom sheets) anchor to the iPhone frame's bottom,
+           not the desktop viewport. The status dropdown's coordinate math
+           is body-relative (see CleaningControl + status dropdown render). */
+        transform: translateZ(0) !important;
       }
       @media (min-width: 600px) {
         html {

@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import type { RoomStatus } from '../../../context/HousekeepingStatus';
 import { STATUS_VARIANT, SYMBOL_CONTAINER } from '../../../config/statusVariant';
@@ -21,7 +21,18 @@ export function CleaningControl({
 
   function handlePress() {
     ref.current?.measure((_x, _y, width, height, pageX, pageY) => {
-      onPress({ x: pageX, y: pageY, width, height });
+      // On web the App.tsx wrapper applies transform:translateZ(0) to body
+      // so RNW Modals are anchored inside the iPhone frame. That makes body
+      // the containing block for the dropdown's absolute positioning, so we
+      // must convert page (viewport) coords to body-relative coords here.
+      let x = pageX;
+      let y = pageY;
+      if (Platform.OS === 'web' && typeof document !== 'undefined') {
+        const bodyRect = document.body.getBoundingClientRect();
+        x -= bodyRect.left;
+        y -= bodyRect.top;
+      }
+      onPress({ x, y, width, height });
     });
   }
 

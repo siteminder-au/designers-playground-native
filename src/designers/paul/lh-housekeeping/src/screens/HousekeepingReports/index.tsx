@@ -747,7 +747,13 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
           <TouchableOpacity style={styles.dropdownOverlay} activeOpacity={1} onPress={() => setStatusDropdown(null)}>
             <View style={[styles.dropdownCard, {
               top: statusDropdown.y + statusDropdown.height + 6,
-              right: Dimensions.get('window').width - statusDropdown.x - statusDropdown.width,
+              // body is the modal's containing block (App.tsx applies a
+              // transform on web for the iPhone frame). statusDropdown.x is
+              // already body-relative (see CleaningControl), so use body's
+              // width here, not the desktop viewport width.
+              right: (Platform.OS === 'web' && typeof document !== 'undefined'
+                ? document.body.getBoundingClientRect().width
+                : Dimensions.get('window').width) - statusDropdown.x - statusDropdown.width,
             }]}>
               {(Object.keys(STATUS_CONFIG) as RoomStatus[]).filter(s => !(housekeeperMode && s === 'CLEANED')).map((s, i) => {
                 const isActive = (statusOverrides[statusDropdown.roomId] ?? statusDropdown.currentStatus) === s;

@@ -23,7 +23,7 @@ function AppNavigator() {
 
   return (
     <Tab.Navigator
-      initialRouteName={housekeeperMode ? 'Housekeeping' : 'Home'}
+      initialRouteName={housekeeperMode ? 'Housekeeping' : 'Reservations'}
       screenOptions={{
         tabBarActiveTintColor: '#ff6842',
         tabBarInactiveTintColor: '#717171',

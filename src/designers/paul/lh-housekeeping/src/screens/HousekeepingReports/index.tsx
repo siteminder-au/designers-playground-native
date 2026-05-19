@@ -293,7 +293,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
       const s = statusOverrides[r.room.id] ?? r.room.status;
       return s === 'UNCLEANED' || s === 'DEEP_CLEAN';
     }
-    if (activeStatFilter === 'earlyCheckIn') return r.checkInTime !== null;
+    if (activeStatFilter === 'earlyCheckIn') return r.checkInTime !== null && r.hasCheckInToday;
     if (activeStatFilter === 'lateCheckOut') return r.lateCheckout && r.hasCheckoutToday;
     if (activeStatFilter === 'outOfOrder')   return r.room.isClosed;
     if (activeStatFilter === 'issues')       return r.room.notes !== null;
@@ -332,7 +332,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   type StatKey = 'dirty' | 'earlyCheckIn' | 'lateCheckOut' | 'outOfOrder' | 'issues';
   const statPredicates: Record<StatKey, (r: RoomDaySchedule) => boolean> = {
     dirty:        r => { const s = statusOverrides[r.room.id] ?? r.room.status; return s === 'UNCLEANED' || s === 'DEEP_CLEAN'; },
-    earlyCheckIn: r => r.checkInTime !== null,
+    earlyCheckIn: r => r.checkInTime !== null && r.hasCheckInToday,
     lateCheckOut: r => r.lateCheckout && r.hasCheckoutToday,
     outOfOrder:   r => r.room.isClosed,
     issues:       r => r.room.notes !== null,

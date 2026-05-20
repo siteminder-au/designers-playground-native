@@ -183,8 +183,8 @@ export function RoomRow({
                   <Text style={styles.guestCommentsLabel}>Guest comments: </Text>{item.guestComments}
                 </Text>
                 {note ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text numberOfLines={2} style={[styles.noteText, { flex: 1 }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text numberOfLines={2} style={[styles.noteText, { flexShrink: 1 }]}>
                       <Text style={styles.staffNoteLabel}>Housekeeping note: </Text>{note}
                     </Text>
                     {onEditNotePress && (
@@ -198,8 +198,8 @@ export function RoomRow({
                 )}
               </View>
             ) : note ? (
-              <View style={[styles.noteRow, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
-                <Text numberOfLines={2} style={[styles.noteText, { flex: 1 }]}>
+              <View style={[styles.noteRow, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+                <Text numberOfLines={2} style={[styles.noteText, { flexShrink: 1 }]}>
                   <Text style={styles.staffNoteLabel}>Housekeeping note: </Text>{note}
                 </Text>
                 {onEditNotePress && (

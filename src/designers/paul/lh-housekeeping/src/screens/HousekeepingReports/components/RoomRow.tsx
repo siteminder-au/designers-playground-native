@@ -36,7 +36,7 @@ export function RoomRow({
   onAssignPress: () => void;
 }) {
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, !item.reservationId && { paddingBottom: 16 }]}>
       {/* Row 1: Room number · Occupied/Unoccupied  |  CleaningControl */}
       <View style={styles.rowTop}>
         <View style={styles.rowLeft}>

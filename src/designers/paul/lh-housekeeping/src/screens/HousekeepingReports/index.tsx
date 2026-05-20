@@ -216,9 +216,15 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   // Per Si's 2026-05-18 contract: housekeeping notes are always scoped to a
   // reservation, keyed by reservationId. When the active reservation changes
   // (checkout → next guest), the thread resets to empty automatically.
+  // latestNoteIds tracks which note's text is currently displayed on the
+  // card, so the inline pencil can open the sheet pre-set to edit that note.
   const notes: Record<string, string> = {};
+  const latestNoteIds: Record<string, string> = {};
   for (const n of allStaffNotes) {
-    if (n.reservationId) notes[n.reservationId] = n.text;
+    if (n.reservationId) {
+      notes[n.reservationId] = n.text;
+      latestNoteIds[n.reservationId] = n.id;
+    }
   }
 
   // Legacy modal kept around for backward compat; not currently triggered.
@@ -466,11 +472,22 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     setPrintSettingsVisible(true);
   }
 
-  function openNotesSheet(item: RoomDaySchedule) {
+  function openNotesSheet(item: RoomDaySchedule, autoEditNoteId?: string) {
     setNotesSheetItem(item);
-    setNotesSheetEditing(false);
-    setNotesSheetDraft('');
-    setEditingNoteId(null);
+    // When opened with autoEditNoteId, jump straight into edit mode for that
+    // note (used by the inline pencil on the card). Otherwise open in view mode.
+    const noteToEdit = autoEditNoteId
+      ? allStaffNotes.find(n => n.id === autoEditNoteId)
+      : null;
+    if (noteToEdit) {
+      setEditingNoteId(noteToEdit.id);
+      setNotesSheetDraft(noteToEdit.text);
+      setNotesSheetEditing(true);
+    } else {
+      setNotesSheetEditing(false);
+      setNotesSheetDraft('');
+      setEditingNoteId(null);
+    }
     setNotesSheetVisible(true);
   }
 
@@ -686,6 +703,9 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                   bedConfig={bedConfig}
                   flags={flags}
                   onNotePress={() => openNotesSheet(item)}
+                  onEditNotePress={item.reservationId && latestNoteIds[item.reservationId]
+                    ? () => openNotesSheet(item, latestNoteIds[item.reservationId])
+                    : undefined}
                   onStatusPress={(rect) => openStatusDropdown(item.room.id, effectiveStatus, rect)}
                   assignedTo={assignments[item.room.id] ?? null}
                   onAssignPress={() => openAssignModal(item.room.id)}
@@ -723,6 +743,9 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                   bedConfig={bedConfig}
                   flags={flags}
                   onNotePress={() => openNotesSheet(item)}
+                  onEditNotePress={item.reservationId && latestNoteIds[item.reservationId]
+                    ? () => openNotesSheet(item, latestNoteIds[item.reservationId])
+                    : undefined}
                   onStatusPress={(rect) => openStatusDropdown(item.room.id, effectiveStatus, rect)}
                   assignedTo={assignments[item.room.id] ?? null}
                   onAssignPress={() => openAssignModal(item.room.id)}

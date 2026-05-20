@@ -1,9 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { RoomStatus } from '../../../context/HousekeepingStatus';
 import { COLORS } from '../../../config/colors';
 import type FLAGS from '../../../config/featureFlags';
+import { ORANGE } from '../constants';
 import type { RoomDaySchedule } from '../types';
 import { formatTime, toBookingRef } from '../utils/dateFormat';
 import { shouldShowBedConfig } from '../utils/bedConfig';
@@ -19,6 +20,7 @@ export function RoomRow({
   assignedTo,
   flags,
   onNotePress,
+  onEditNotePress,
   onStatusPress,
   onAssignPress,
 }: {
@@ -29,6 +31,7 @@ export function RoomRow({
   assignedTo: string | null;
   flags: typeof FLAGS;
   onNotePress: () => void;
+  onEditNotePress?: () => void;
   onStatusPress: (rect: BadgeRect) => void;
   onAssignPress: () => void;
 }) {
@@ -180,18 +183,30 @@ export function RoomRow({
                   <Text style={styles.guestCommentsLabel}>Guest comments: </Text>{item.guestComments}
                 </Text>
                 {note ? (
-                  <Text numberOfLines={2} style={[styles.noteText, { flex: 1 }]}>
-                    <Text style={styles.staffNoteLabel}>Housekeeping note: </Text>{note}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text numberOfLines={2} style={[styles.noteText, { flex: 1 }]}>
+                      <Text style={styles.staffNoteLabel}>Housekeeping note: </Text>{note}
+                    </Text>
+                    {onEditNotePress && (
+                      <TouchableOpacity onPress={onEditNotePress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                        <Ionicons name="pencil-outline" size={14} color={ORANGE} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 ) : (
                   <Text style={styles.addNoteText}>+ Housekeeping notes</Text>
                 )}
               </View>
             ) : note ? (
-              <View style={styles.noteRow}>
+              <View style={[styles.noteRow, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
                 <Text numberOfLines={2} style={[styles.noteText, { flex: 1 }]}>
                   <Text style={styles.staffNoteLabel}>Housekeeping note: </Text>{note}
                 </Text>
+                {onEditNotePress && (
+                  <TouchableOpacity onPress={onEditNotePress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Ionicons name="pencil-outline" size={14} color={ORANGE} />
+                  </TouchableOpacity>
+                )}
               </View>
             ) : item.reservationId ? (
               <View style={styles.noteRow}>

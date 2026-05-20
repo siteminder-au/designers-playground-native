@@ -173,6 +173,9 @@ export function RoomRow({
         </View>
       )}
 
+      {/* Notes/extras row — only renders when the room has an active
+          reservation. Vacant rooms collapse to just the header card. */}
+      {item.reservationId && (
       <TouchableOpacity style={styles.noteArea} onPress={onNotePress} activeOpacity={0.7}>
         <View style={styles.noteActionRow}>
           {/* Notes section — 70% when extras present, full width otherwise */}
@@ -208,13 +211,9 @@ export function RoomRow({
                   </TouchableOpacity>
                 )}
               </View>
-            ) : item.reservationId ? (
-              <View style={styles.noteRow}>
-                <Text style={styles.addNoteText}>+ Housekeeping notes</Text>
-              </View>
             ) : (
               <View style={styles.noteRow}>
-                <Text style={[styles.addNoteText, { color: COLORS.Black[500] }]}>—</Text>
+                <Text style={styles.addNoteText}>+ Housekeeping notes</Text>
               </View>
             )}
           </View>
@@ -231,6 +230,7 @@ export function RoomRow({
           )}
         </View>
       </TouchableOpacity>
+      )}
     </View>
   );
 }

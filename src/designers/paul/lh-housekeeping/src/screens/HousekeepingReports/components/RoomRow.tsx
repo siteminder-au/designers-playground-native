@@ -178,30 +178,24 @@ export function RoomRow({
       {item.reservationId && (
       <TouchableOpacity style={styles.noteArea} onPress={onNotePress} activeOpacity={0.7}>
         <View style={styles.noteActionRow}>
-          {/* Notes section — 70% when extras present, full width otherwise */}
-          <View style={{ flex: item.extraItems.length > 0 ? 0.8 : 1 }}>
-            {item.guestComments ? (
-              <View style={{ gap: 6 }}>
-                <Text numberOfLines={2} style={[styles.guestCommentsText, { flex: 1 }]}>
-                  <Text style={styles.guestCommentsLabel}>Guest comments: </Text>{item.guestComments}
-                </Text>
-                {note ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Text numberOfLines={2} style={[styles.noteText, { flexShrink: 1 }]}>
-                      <Text style={styles.staffNoteLabel}>Housekeeping note: </Text>{note}
-                    </Text>
-                    {onEditNotePress && (
-                      <TouchableOpacity onPress={onEditNotePress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                        <Ionicons name="pencil-outline" size={14} color={ORANGE} />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                ) : (
-                  <Text style={styles.addNoteText}>+ Housekeeping notes</Text>
-                )}
-              </View>
-            ) : note ? (
-              <View style={[styles.noteRow, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+          {/* Notes section — 70% when extras present, full width otherwise.
+              Render up to three stacked lines: guest comments → staff note
+              (read-only) → housekeeping note (editable, with pencil) or the
+              "+ Housekeeping notes" CTA when no thread yet. Each truncates
+              to 2 lines. */}
+          <View style={{ flex: item.extraItems.length > 0 ? 0.8 : 1, gap: 6 }}>
+            {item.guestComments && (
+              <Text numberOfLines={2} style={[styles.guestCommentsText, { flex: 1 }]}>
+                <Text style={styles.guestCommentsLabel}>Guest comments: </Text>{item.guestComments}
+              </Text>
+            )}
+            {item.staffNote && (
+              <Text numberOfLines={2} style={[styles.noteText, { flexShrink: 1 }]}>
+                <Text style={styles.staffNoteLabel}>Staff note: </Text>{item.staffNote}
+              </Text>
+            )}
+            {note ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Text numberOfLines={2} style={[styles.noteText, { flexShrink: 1 }]}>
                   <Text style={styles.staffNoteLabel}>Housekeeping note: </Text>{note}
                 </Text>
@@ -212,9 +206,7 @@ export function RoomRow({
                 )}
               </View>
             ) : (
-              <View style={styles.noteRow}>
-                <Text style={styles.addNoteText}>+ Housekeeping notes</Text>
-              </View>
+              <Text style={styles.addNoteText}>+ Housekeeping notes</Text>
             )}
           </View>
           {item.extraItems.length > 0 && (

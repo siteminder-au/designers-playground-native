@@ -68,6 +68,7 @@ export const GET_HOUSEKEEPING_SCHEDULE = gql`
         bedConfiguration
         guestComments
         extraItems
+        staffNote
         room {
           id
           number

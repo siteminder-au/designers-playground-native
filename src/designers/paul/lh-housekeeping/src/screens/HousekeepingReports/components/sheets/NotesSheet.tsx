@@ -142,10 +142,25 @@ export function NotesSheet({
                   <View style={styles.notesSheetDivider} />
                 </>
               ) : null}
-              <Text style={styles.notesSheetSectionLabel}>Staff notes</Text>
+              {/* Staff notes — read-only single string at si_reservations.data.staffNote.
+                  Written only by front desk per Si's 2026-05-18 contract. Shown here
+                  for context; mobile cannot edit. */}
+              {item?.reservationId && (
+                <>
+                  <Text style={styles.notesSheetSectionLabel}>Staff notes</Text>
+                  <Text style={[
+                    styles.notesSheetBody,
+                    !item.staffNote && { color: COLORS.Black[600], fontStyle: 'italic' },
+                  ]}>
+                    {item.staffNote ?? '—'}
+                  </Text>
+                  <View style={styles.notesSheetDivider} />
+                </>
+              )}
+              <Text style={styles.notesSheetSectionLabel}>Housekeeping notes</Text>
               {sheetNotes.length === 0 && !notesSheetEditing && (
                 <Text style={[styles.notesSheetBody, { color: COLORS.Black[600], fontStyle: 'italic', marginBottom: 8 }]}>
-                  {canAddNote ? 'No staff notes yet.' : '—'}
+                  {canAddNote ? 'No housekeeping notes yet.' : '—'}
                 </Text>
               )}
               {sheetNotes.map(note => {
@@ -214,7 +229,7 @@ export function NotesSheet({
                 </>
               ) : !editingNoteId && canAddNote ? (
                 <TouchableOpacity onPress={() => { setNotesSheetDraft(''); setNotesSheetEditing(true); }}>
-                  <Text style={styles.addNoteText}>+ Add staff note</Text>
+                  <Text style={styles.addNoteText}>+ Add housekeeping note</Text>
                 </TouchableOpacity>
               ) : null}
               {(item?.extraItems?.length ?? 0) > 0 && (

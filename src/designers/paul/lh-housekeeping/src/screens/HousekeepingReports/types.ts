@@ -19,6 +19,7 @@ export interface RoomDaySchedule {
   bedConfiguration: string;
   guestComments: string | null;
   extraItems: string[];
+  staffNote: string | null;
   room: { id: string; number: string; type: string; status: RoomStatus; notes: string | null; isClosed: boolean };
 }
 

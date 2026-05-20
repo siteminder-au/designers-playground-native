@@ -181,21 +181,21 @@ export function RoomRow({
                 </Text>
                 {note ? (
                   <Text numberOfLines={2} style={[styles.noteText, { flex: 1 }]}>
-                    <Text style={styles.staffNoteLabel}>Staff note: </Text>{note}
+                    <Text style={styles.staffNoteLabel}>Housekeeping note: </Text>{note}
                   </Text>
                 ) : (
-                  <Text style={styles.addNoteText}>+ Staff notes</Text>
+                  <Text style={styles.addNoteText}>+ Housekeeping notes</Text>
                 )}
               </View>
             ) : note ? (
               <View style={styles.noteRow}>
                 <Text numberOfLines={2} style={[styles.noteText, { flex: 1 }]}>
-                  <Text style={styles.staffNoteLabel}>Staff note: </Text>{note}
+                  <Text style={styles.staffNoteLabel}>Housekeeping note: </Text>{note}
                 </Text>
               </View>
             ) : item.reservationId ? (
               <View style={styles.noteRow}>
-                <Text style={styles.addNoteText}>+ Staff notes</Text>
+                <Text style={styles.addNoteText}>+ Housekeeping notes</Text>
               </View>
             ) : (
               <View style={styles.noteRow}>

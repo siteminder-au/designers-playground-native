@@ -117,6 +117,9 @@ function buildReservation(data) {
     guestComments: data.guestComment ?? null,
     extraItems: data.hasExtras ? ['Extras'] : [],
     bedConfiguration: null,
+    // Per Si's 2026-05-18 contract: staffNote is a single string written by
+    // front desk only; mobile displays it read-only inside the Notes sheet.
+    staffNote: data.staffNote ?? null,
   };
 }
 
@@ -228,6 +231,7 @@ export const resolvers = {
             bedConfiguration: res?.bedConfiguration ?? room.bedConfiguration,
             guestComments: res?.guestComments ?? null,
             extraItems:    res?.extraItems    ?? [],
+            staffNote:     res?.staffNote     ?? null,
           };
         });
         days.push({ date: current, rooms: dayRooms });

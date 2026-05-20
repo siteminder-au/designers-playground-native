@@ -100,7 +100,7 @@ export function PrintPreviewModal({
                         <Text style={styles.printNoteText}><Text style={styles.printNoteLabel}>Guest comments: </Text>{item.guestComments}</Text>
                       )}
                       {!!note && (
-                        <Text style={styles.printNoteText}><Text style={styles.printNoteLabel}>Staff note: </Text>{note}</Text>
+                        <Text style={styles.printNoteText}><Text style={styles.printNoteLabel}>Housekeeping note: </Text>{note}</Text>
                       )}
                     </View>
                   )}

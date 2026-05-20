@@ -116,6 +116,7 @@ export const typeDefs = `#graphql
     bedConfiguration: String!
     guestComments: String
     extraItems: [String!]!
+    staffNote: String
   }
 
   type DaySchedule {

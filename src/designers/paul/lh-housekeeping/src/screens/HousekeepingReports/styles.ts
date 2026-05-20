@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   // Notes area
   noteArea: { marginTop: 16, borderTopWidth: 1, borderColor: '#F2F2F7', marginHorizontal: -12, paddingHorizontal: 12, paddingTop: 8, paddingBottom: 8 },
   guestCommentsLabel: { fontSize: 11, color: '#9ca3af', fontWeight: '600' as const, flexShrink: 0 },
-  staffNoteLabel:     { fontSize: 11, color: '#9ca3af', fontWeight: '600' as const, fontStyle: 'normal' as const },
+  staffNoteLabel:     { fontSize: 11, color: '#9ca3af', fontWeight: '600' as const, flexShrink: 0 },
   guestCommentsText: { fontSize: 12, color: '#9ca3af', fontStyle: 'italic' as const },
   noteActionRow: { flexDirection: 'row', alignItems: 'stretch' },
   noteRow:  { flex: 1, height: 24, justifyContent: 'center' },

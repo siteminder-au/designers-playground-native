@@ -9,6 +9,19 @@ import { toBookingRef } from '../../utils/dateFormat';
 import { shouldShowBedConfig } from '../../utils/bedConfig';
 import styles from '../../styles';
 
+// Wraps children in KeyboardAvoidingView on native (so the iOS keyboard
+// pushes the sheet up) but passes through unchanged on web, where the
+// wrapper would shrink to its content width and visually detach the sheet
+// from the overlay's bottom edge.
+function ConditionalKeyboardAvoidingView({ children }: { children: React.ReactNode }) {
+  if (Platform.OS === 'web') return <>{children}</>;
+  return (
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      {children}
+    </KeyboardAvoidingView>
+  );
+}
+
 export function NotesSheet({
   visible,
   onClose,
@@ -52,7 +65,10 @@ export function NotesSheet({
     <Modal visible={visible} animationType="none" transparent onRequestClose={onClose}>
       <Animated.View style={[styles.sortSheetOverlay, { opacity: sheetAnim }]}>
         <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        {/* KeyboardAvoidingView is needed on native to push the sheet above
+            the iOS keyboard, but on web it sizes to content (not the overlay
+            width) and visually detaches the sheet from the bottom edge. */}
+        <ConditionalKeyboardAvoidingView>
           <Animated.View style={[styles.sortSheet, { paddingBottom: 0, transform: [{ translateY }] }]}>
             <View style={styles.sheetHandleArea} {...panResponder.panHandlers}>
               <View style={styles.sortSheetHandle} />
@@ -212,7 +228,7 @@ export function NotesSheet({
               )}
             </ScrollView>
           </Animated.View>
-        </KeyboardAvoidingView>
+        </ConditionalKeyboardAvoidingView>
       </Animated.View>
     </Modal>
   );

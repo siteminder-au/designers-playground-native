@@ -13,7 +13,7 @@ const FLAGS = {
   showGuestDates: true,
 
   /** Bed configuration row (only visible for extra bed / rollaway / king bed) */
-  showBedConfig: true,
+  showBedConfig: false,
 
   /** Late checkout badge on room number row */
   showLateCheckout: true,

@@ -128,8 +128,15 @@ function getNights(checkIn: string, checkOut: string): number {
   return daysBetween(checkIn, checkOut);
 }
 
+// Local-timezone YYYY-MM-DD. Using toISOString().split('T')[0] would give
+// the UTC date, which lags by a day for anyone east of UTC in local-morning.
+function localTodayISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export default function CalendarScreen() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localTodayISO();
   const [selectedDate, setSelectedDate] = useState(today);
   const [weekStart, setWeekStart] = useState(today);
   const { statusOverrides } = useHousekeepingStatus();

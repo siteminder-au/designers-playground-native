@@ -4,6 +4,17 @@ export function addDays(dateStr: string, n: number): string {
   return d.toISOString().split('T')[0];
 }
 
+// Returns today's date in the user's local timezone as YYYY-MM-DD.
+// `new Date().toISOString()` would give the UTC date, which is yesterday for
+// anyone east of UTC (e.g. Sydney) during local-morning hours.
+export function localTodayISO(): string {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 export function formatLong(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00');
   return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });

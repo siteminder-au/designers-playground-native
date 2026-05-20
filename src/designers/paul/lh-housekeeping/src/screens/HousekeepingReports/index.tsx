@@ -27,7 +27,7 @@ import {
 } from './constants';
 import {
   addDays, formatLong, formatShort, formatDayStrip, formatSectionHeader,
-  formatCardDate, toBookingRef, formatTime,
+  formatCardDate, toBookingRef, formatTime, localTodayISO,
 } from './utils/dateFormat';
 import {
   type SortField, type SortDirection, type SortState,
@@ -57,7 +57,7 @@ import { MonthSheet } from './components/sheets/MonthSheet';
 
 export default function HousekeepingScreen({ navigation }: { navigation: any }) {
   const insets = useSafeAreaInsets();
-  const today = new Date().toISOString().split('T')[0];
+  const today = localTodayISO();
 
   // Tracks each room card's last measured Y for FLIP reorder animation
   const roomPositionsRef = useRef(new Map<string, number>());

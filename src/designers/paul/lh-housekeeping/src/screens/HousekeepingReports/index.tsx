@@ -105,6 +105,21 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     );
     return () => timers.forEach(clearTimeout);
   }, []);
+  // On web, translate vertical mouse-wheel ticks to horizontal scroll on the
+  // stats strip so desktop testers without a trackpad can scroll the chips.
+  // Native ignores this. Cleanup on unmount/remount.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const node = (statsScrollRef.current as any)?.getScrollableNode?.();
+    if (!node) return;
+    const handler = (e: WheelEvent) => {
+      if (e.deltaY === 0) return;
+      e.preventDefault();
+      node.scrollBy({ left: e.deltaY, behavior: 'auto' });
+    };
+    node.addEventListener('wheel', handler, { passive: false });
+    return () => node.removeEventListener('wheel', handler);
+  }, []);
 
   // Feature flags (runtime toggles for demo)
   const [flags, setFlags] = useState({ ...FLAGS });

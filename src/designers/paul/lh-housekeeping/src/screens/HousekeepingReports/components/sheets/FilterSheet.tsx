@@ -140,10 +140,11 @@ export function FilterSheet({
               <Text style={styles.filterSectionLabel}>NOTES</Text>
               <View style={styles.filterChipRow}>
                 {([
-                  { key: 'includeStaffNotes',    label: 'Staff notes'     },
-                  { key: 'includeGuestComments', label: 'Guest comments'  },
-                  { key: 'includeExtras',        label: 'Extras'          },
-                ] as { key: 'includeStaffNotes' | 'includeGuestComments' | 'includeExtras'; label: string }[]).map(opt => {
+                  { key: 'includeStaffNotes',        label: 'Staff notes'        },
+                  { key: 'includeHousekeepingNotes', label: 'Housekeeping notes' },
+                  { key: 'includeGuestComments',     label: 'Guest comments'     },
+                  { key: 'includeExtras',            label: 'Extras'             },
+                ] as { key: 'includeStaffNotes' | 'includeHousekeepingNotes' | 'includeGuestComments' | 'includeExtras'; label: string }[]).map(opt => {
                   const isActive = filters[opt.key];
                   return (
                     <TouchableOpacity

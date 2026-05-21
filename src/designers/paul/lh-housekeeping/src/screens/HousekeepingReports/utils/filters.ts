@@ -6,7 +6,10 @@ export interface FilterState {
   roomTypes: string[];
   roomStatuses: string[];
   cleaningStatuses: string[];
+  // Staff note = single read-only string from si_reservations.data.staffNote.
+  // Housekeeping notes = thread in si_staff_notes scoped to active reservation.
   includeStaffNotes: boolean;
+  includeHousekeepingNotes: boolean;
   includeGuestComments: boolean;
   includeExtras: boolean;
   lateCheckout: boolean;
@@ -25,7 +28,7 @@ const CLEANING_STATUS_MAP: Record<string, RoomStatus | null> = {
   'Awaiting inspection': 'AWAITING_INSPECTION',
 };
 
-export const DEFAULT_FILTERS: FilterState = { statuses: [], roomTypes: [], roomStatuses: [], cleaningStatuses: [], includeStaffNotes: false, includeGuestComments: false, includeExtras: false, lateCheckout: false, earlyCheckout: false };
+export const DEFAULT_FILTERS: FilterState = { statuses: [], roomTypes: [], roomStatuses: [], cleaningStatuses: [], includeStaffNotes: false, includeHousekeepingNotes: false, includeGuestComments: false, includeExtras: false, lateCheckout: false, earlyCheckout: false };
 
 export function getRoomStatusCategory(item: RoomDaySchedule, date: string): string {
   if (item.room.isClosed)       return 'Closed';
@@ -45,10 +48,9 @@ export function applyFilters(
   overrides: Record<string, RoomStatus>,
   date: string,
 ): RoomDaySchedule[] {
-  const { statuses, roomTypes, roomStatuses, cleaningStatuses, includeStaffNotes, includeGuestComments, includeExtras, lateCheckout, earlyCheckout } = filters;
-  if (!statuses.length && !roomTypes.length && !roomStatuses.length && !cleaningStatuses.length && !includeStaffNotes && !includeGuestComments && !includeExtras && !lateCheckout && !earlyCheckout) return rooms;
+  const { statuses, roomTypes, roomStatuses, cleaningStatuses, includeStaffNotes, includeHousekeepingNotes, includeGuestComments, includeExtras, lateCheckout, earlyCheckout } = filters;
+  if (!statuses.length && !roomTypes.length && !roomStatuses.length && !cleaningStatuses.length && !includeStaffNotes && !includeHousekeepingNotes && !includeGuestComments && !includeExtras && !lateCheckout && !earlyCheckout) return rooms;
   return rooms.filter(item => {
-    const noteKey = item.reservationId ?? item.room.id;
     const effectiveStatus = overrides[item.room.id] ?? item.room.status;
     if (statuses.length > 0 && !statuses.includes(effectiveStatus)) return false;
     if (roomTypes.length > 0 && !roomTypes.includes(item.room.type)) return false;
@@ -57,11 +59,16 @@ export function applyFilters(
       const mapped = cleaningStatuses.map(s => CLEANING_STATUS_MAP[s]).filter(Boolean) as RoomStatus[];
       if (!mapped.includes(effectiveStatus)) return false;
     }
-    if (includeStaffNotes || includeGuestComments || includeExtras) {
-      const hasStaffNote = !!(notes[noteKey] || item.room.notes);
-      const hasGuestComment = !!item.guestComments;
-      const hasExtras = item.extraItems.length > 0;
-      const passes = (includeStaffNotes && hasStaffNote) || (includeGuestComments && hasGuestComment) || (includeExtras && hasExtras);
+    if (includeStaffNotes || includeHousekeepingNotes || includeGuestComments || includeExtras) {
+      const hasStaffNote          = !!item.staffNote;
+      const hasHousekeepingNote   = !!(item.reservationId && notes[item.reservationId]);
+      const hasGuestComment       = !!item.guestComments;
+      const hasExtras             = item.extraItems.length > 0;
+      const passes =
+        (includeStaffNotes        && hasStaffNote)        ||
+        (includeHousekeepingNotes && hasHousekeepingNote) ||
+        (includeGuestComments     && hasGuestComment)     ||
+        (includeExtras            && hasExtras);
       if (!passes) return false;
     }
     if (lateCheckout && !item.lateCheckout) return false;
@@ -74,6 +81,7 @@ export function activeFilterCount(filters: FilterState): number {
   let n = 0;
   if (filters.statuses.length > 0) n++;
   if (filters.includeStaffNotes) n++;
+  if (filters.includeHousekeepingNotes) n++;
   if (filters.includeGuestComments) n++;
   if (filters.includeExtras) n++;
   if (filters.lateCheckout) n++;

@@ -7,14 +7,17 @@ import {
   StyleSheet,
   ActivityIndicator,
   useWindowDimensions,
+  Modal,
+  Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@apollo/client';
 import { GET_CALENDAR_DATA } from '../../apollo/queries';
 import { useHousekeepingStatus, RoomStatus } from '../../context/HousekeepingStatus';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { STATUS_VARIANT, SYMBOL_CONTAINER } from '../../config/statusVariant';
 import { COLORS } from '../../config/colors';
+import { useBottomSheet } from '../HousekeepingReports/hooks/useBottomSheet';
 import CleanSvg from '../../../assets/Clean.svg';
 import DirtySvg from '../../../assets/Dirty.svg';
 import InspectionSvg from '../../../assets/Inspection.svg';
@@ -137,9 +140,16 @@ function localTodayISO(): string {
 
 export default function CalendarScreen() {
   const today = localTodayISO();
+  const insets = useSafeAreaInsets();
   const [selectedDate, setSelectedDate] = useState(today);
   const [weekStart, setWeekStart] = useState(today);
   const { statusOverrides } = useHousekeepingStatus();
+
+  // Demo flags sheet — scaffold only; flags will be added later.
+  const {
+    visible: demoSheetVisible, setVisible: setDemoSheetVisible, close: closeDemoSheet,
+    sheetAnim: demoSheetAnim, translateY: demoTranslateY, panResponder: demoPanResponder,
+  } = useBottomSheet(400);
   // Measure the actual rendered container width via onLayout. Using
   // useWindowDimensions() is unreliable on Expo Web's static prerender
   // (returns a default ~1280 before hydration), which made each day column
@@ -187,6 +197,9 @@ export default function CalendarScreen() {
           <Text style={styles.headerDate}>{formatLongDate(selectedDate)}</Text>
         </View>
         <View style={styles.headerButtons}>
+          <TouchableOpacity onPress={() => setDemoSheetVisible(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="flask-outline" size={18} color="#9ca3af" />
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.todayButton}
             onPress={() => { setSelectedDate(today); setWeekStart(today); }}
@@ -376,6 +389,27 @@ export default function CalendarScreen() {
           <View style={{ height: 24 }} />
         </ScrollView>
       )}
+
+      {/* ── Demo flags sheet (scaffold — flags TBD) ── */}
+      <Modal visible={demoSheetVisible} animationType="none" transparent onRequestClose={closeDemoSheet}>
+        <Animated.View style={[styles.demoSheetOverlay, { opacity: demoSheetAnim }]}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeDemoSheet} />
+          <Animated.View style={[styles.demoSheet, { transform: [{ translateY: demoTranslateY }] }]}>
+            <View style={styles.demoSheetHandleArea} {...demoPanResponder.panHandlers}>
+              <View style={styles.demoSheetHandle} />
+            </View>
+            <View style={styles.demoSheetHeader}>
+              <Text style={styles.demoSheetTitle}>Demo flags</Text>
+              <TouchableOpacity onPress={closeDemoSheet}>
+                <Text style={styles.demoSheetDone}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}>
+              {/* Flags go here */}
+            </ScrollView>
+          </Animated.View>
+        </Animated.View>
+      </Modal>
     </View>
     </SafeAreaView>
   );
@@ -540,4 +574,21 @@ const styles = StyleSheet.create({
   resMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   resMetaText: { fontSize: 11, color: '#484b4b' },
 
+  // Demo flags sheet
+  demoSheetOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.35)' },
+  demoSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 0,
+    maxHeight: '85%',
+  },
+  demoSheetHandleArea: { alignItems: 'center', paddingTop: 8, paddingBottom: 4 },
+  demoSheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#d1d5db' },
+  demoSheetHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16,
+  },
+  demoSheetTitle: { fontSize: 22, fontWeight: '700', color: '#111' },
+  demoSheetDone: { fontSize: 16, color: '#ff6842', fontWeight: '500' },
 });

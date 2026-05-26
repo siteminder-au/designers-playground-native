@@ -22,7 +22,7 @@ const FLAGS = {
   showReservationId: true,
 
   /** Icon on the cleaning status pill (brush, checkmark, etc.) */
-  showStatusIcon: true,
+  showStatusIcon: false,
 
   /**
    * Date selector variant — three options:

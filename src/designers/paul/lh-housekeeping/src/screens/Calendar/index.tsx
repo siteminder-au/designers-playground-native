@@ -284,25 +284,26 @@ export default function CalendarScreen() {
                 const isNumeric = /^\d+$/.test(room.number);
                 return (
                 <View key={room.id} style={styles.roomRow}>
-                  {/* Status keyline — only paired with the text-label variant.
-                      Colour-matched to status; dashed for UNCLEANED, solid for
-                      everything else (incl. DEEP_CLEAN). */}
-                  {cleaningStatusAsLabel && (() => {
-                    const color = STATUS_LABEL_TEXT[effectiveStatus].color;
-                    const isDashed = effectiveStatus === 'UNCLEANED';
-                    return (
-                      <View
-                        style={[
-                          styles.statusKeyline,
-                          isDashed
-                            ? { borderLeftWidth: 3, borderLeftColor: color, borderStyle: 'dashed', backgroundColor: '#fff' }
-                            : { backgroundColor: color },
-                        ]}
-                      />
-                    );
-                  })()}
                   {/* Room label */}
                   <View style={[styles.roomLabel, { width: ROOM_COL_WIDTH }]}>
+                    {/* Status keyline — overlays the left edge of the room
+                        label so it never bleeds outside the container. Only
+                        rendered with the text-label variant. Dashed for
+                        UNCLEANED, solid for everything else. */}
+                    {cleaningStatusAsLabel && (() => {
+                      const color = STATUS_LABEL_TEXT[effectiveStatus].color;
+                      const isDashed = effectiveStatus === 'UNCLEANED';
+                      return (
+                        <View
+                          style={[
+                            styles.statusKeyline,
+                            isDashed
+                              ? { borderLeftWidth: 3, borderLeftColor: color, borderStyle: 'dashed' }
+                              : { backgroundColor: color },
+                          ]}
+                        />
+                      );
+                    })()}
                     <View style={styles.roomLabelRow}>
                       <Text
                         style={styles.roomLabelName}
@@ -540,9 +541,11 @@ const styles = StyleSheet.create({
     borderColor: '#f0f0f0',
   },
   statusKeyline: {
-    width: 4,
-    height: '100%',
-    alignSelf: 'stretch',
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
   },
   roomLabel: {
     justifyContent: 'center',

@@ -21,6 +21,9 @@ const FLAGS = {
   /** 8-digit booking reference ID, pinned right in the guest info row */
   showReservationId: true,
 
+  /** Icon on the cleaning status pill (brush, checkmark, etc.) */
+  showStatusIcon: true,
+
   /**
    * Date selector variant — three options:
    *  - 'range'     : default. Date header + calendar icon → opens range bottom sheet.

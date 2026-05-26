@@ -56,7 +56,7 @@ export function RoomRow({
           </View>
         </View>
         <View style={styles.rowRight}>
-          <CleaningControl status={status} onPress={onStatusPress} />
+          <CleaningControl status={status} onPress={onStatusPress} showIcon={flags.showStatusIcon} />
         </View>
       </View>
 

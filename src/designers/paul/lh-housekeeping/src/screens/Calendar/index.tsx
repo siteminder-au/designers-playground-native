@@ -295,7 +295,7 @@ export default function CalendarScreen() {
                         style={[
                           styles.statusKeyline,
                           isDashed
-                            ? { borderLeftWidth: 3, borderLeftColor: color, borderStyle: 'dashed' }
+                            ? { borderLeftWidth: 3, borderLeftColor: color, borderStyle: 'dashed', backgroundColor: '#fff' }
                             : { backgroundColor: color },
                         ]}
                       />

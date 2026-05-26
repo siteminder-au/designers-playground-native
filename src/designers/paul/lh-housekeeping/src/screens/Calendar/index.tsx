@@ -9,6 +9,7 @@ import {
   useWindowDimensions,
   Modal,
   Animated,
+  Switch,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@apollo/client';
@@ -58,6 +59,16 @@ const STATUS_ICON: Record<RoomStatus, { name: React.ComponentProps<typeof Ionico
   DEEP_CLEAN:          { name: 'alert-circle',     color: '#b91c1c',        bg: '#f1bfbf'        },
   SKIP_CLEANING:       { name: 'remove-circle',    color: '#a16207',        bg: '#fef9c3'        },
   AWAITING_INSPECTION: { name: 'help-circle',      color: COLORS.Blue[200], bg: COLORS.Blue[600] },
+};
+
+// Text-label variant of the cleaning status (toggleable via demo flag).
+// Colors mirror STATUS_ICON.color so the visual treatment stays consistent.
+const STATUS_LABEL_TEXT: Record<RoomStatus, { label: string; color: string }> = {
+  CLEANED:             { label: 'Clean',          color: '#2d7d46'        },
+  UNCLEANED:           { label: 'Needs clean',    color: '#b91c1c'        },
+  DEEP_CLEAN:          { label: 'Deep clean',     color: '#b91c1c'        },
+  SKIP_CLEANING:       { label: 'Skip',           color: '#a16207'        },
+  AWAITING_INSPECTION: { label: 'Inspection',     color: COLORS.Blue[200] },
 };
 
 // 'symbol' variant — MaterialCommunityIcons with housekeeping-semantic meaning
@@ -145,11 +156,14 @@ export default function CalendarScreen() {
   const [weekStart, setWeekStart] = useState(today);
   const { statusOverrides } = useHousekeepingStatus();
 
-  // Demo flags sheet — scaffold only; flags will be added later.
+  // Demo flags sheet
   const {
     visible: demoSheetVisible, setVisible: setDemoSheetVisible, close: closeDemoSheet,
     sheetAnim: demoSheetAnim, translateY: demoTranslateY, panResponder: demoPanResponder,
   } = useBottomSheet(400);
+  // When on, the room column shows the cleaning status as a coloured text
+  // label (e.g. "Clean") below the room name instead of the circular icon.
+  const [cleaningStatusAsLabel, setCleaningStatusAsLabel] = useState(false);
   // Measure the actual rendered container width via onLayout. Using
   // useWindowDimensions() is unreliable on Expo Web's static prerender
   // (returns a default ~1280 before hydration), which made each day column
@@ -277,7 +291,7 @@ export default function CalendarScreen() {
                         style={styles.roomLabelName}
                         numberOfLines={2}
                       >{isNumeric ? `Room ${room.number}` : room.number}</Text>
-                      {STATUS_VARIANT === 'icon' && (() => {
+                      {!cleaningStatusAsLabel && STATUS_VARIANT === 'icon' && (() => {
                         const SvgIcon = STATUS_SVG_ICON[effectiveStatus];
                         const { bg, name, color } = STATUS_ICON[effectiveStatus];
                         return (
@@ -301,7 +315,7 @@ export default function CalendarScreen() {
                           </View>
                         );
                       })()}
-                      {STATUS_VARIANT === 'abbr' && (
+                      {STATUS_VARIANT === 'abbr' && !cleaningStatusAsLabel && (
                         <View style={[styles.abbrPill, { borderColor: STATUS_ABBR[effectiveStatus].color }]}>
                           <Text style={[styles.abbrText, { color: STATUS_ABBR[effectiveStatus].color }]}>
                             {STATUS_ABBR[effectiveStatus].label}
@@ -309,6 +323,11 @@ export default function CalendarScreen() {
                         </View>
                       )}
                     </View>
+                    {cleaningStatusAsLabel && (
+                      <Text style={[styles.roomLabelStatus, { color: STATUS_LABEL_TEXT[effectiveStatus].color }]} numberOfLines={1}>
+                        {STATUS_LABEL_TEXT[effectiveStatus].label}
+                      </Text>
+                    )}
                   </View>
 
                   {/* Day cells + reservation blocks */}
@@ -390,7 +409,7 @@ export default function CalendarScreen() {
         </ScrollView>
       )}
 
-      {/* ── Demo flags sheet (scaffold — flags TBD) ── */}
+      {/* ── Demo flags sheet ── */}
       <Modal visible={demoSheetVisible} animationType="none" transparent onRequestClose={closeDemoSheet}>
         <Animated.View style={[styles.demoSheetOverlay, { opacity: demoSheetAnim }]}>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeDemoSheet} />
@@ -405,7 +424,15 @@ export default function CalendarScreen() {
               </TouchableOpacity>
             </View>
             <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}>
-              {/* Flags go here */}
+              <View style={styles.demoFlagRow}>
+                <Text style={styles.demoFlagLabel}>Cleaning status as text label</Text>
+                <Switch
+                  value={cleaningStatusAsLabel}
+                  onValueChange={setCleaningStatusAsLabel}
+                  trackColor={{ false: '#e5e7eb', true: '#ff6842' }}
+                  thumbColor="#fff"
+                />
+              </View>
             </ScrollView>
           </Animated.View>
         </Animated.View>
@@ -506,6 +533,7 @@ const styles = StyleSheet.create({
   },
   roomLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   roomLabelName: { fontSize: 14, fontWeight: '400', color: '#000', flex: 1, lineHeight: 18 },
+  roomLabelStatus: { fontSize: 12, fontWeight: '500', marginTop: 2 },
   abbrPill: {
     borderWidth: 1.5,
     borderRadius: 4,
@@ -591,4 +619,10 @@ const styles = StyleSheet.create({
   },
   demoSheetTitle: { fontSize: 22, fontWeight: '700', color: '#111' },
   demoSheetDone: { fontSize: 16, color: '#ff6842', fontWeight: '500' },
+  demoFlagRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingVertical: 14,
+    borderTopWidth: 1, borderColor: '#f3f4f6',
+  },
+  demoFlagLabel: { fontSize: 15, color: '#111', flex: 1, marginRight: 12 },
 });

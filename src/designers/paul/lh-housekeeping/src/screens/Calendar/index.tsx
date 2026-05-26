@@ -154,16 +154,13 @@ export default function CalendarScreen() {
   const insets = useSafeAreaInsets();
   const [selectedDate, setSelectedDate] = useState(today);
   const [weekStart, setWeekStart] = useState(today);
-  const { statusOverrides } = useHousekeepingStatus();
+  const { statusOverrides, cleaningStatusAsLabel, setCleaningStatusAsLabel } = useHousekeepingStatus();
 
   // Demo flags sheet
   const {
     visible: demoSheetVisible, setVisible: setDemoSheetVisible, close: closeDemoSheet,
     sheetAnim: demoSheetAnim, translateY: demoTranslateY, panResponder: demoPanResponder,
   } = useBottomSheet(400);
-  // When on, the room column shows the cleaning status as a coloured text
-  // label (e.g. "Clean") below the room name instead of the circular icon.
-  const [cleaningStatusAsLabel, setCleaningStatusAsLabel] = useState(false);
   // Measure the actual rendered container width via onLayout. Using
   // useWindowDimensions() is unreliable on Expo Web's static prerender
   // (returns a default ~1280 before hydration), which made each day column

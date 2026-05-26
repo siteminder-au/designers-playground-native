@@ -16,6 +16,8 @@ export function DemoFlagsSheet({
   setFlags,
   housekeeperMode,
   setHousekeeperMode,
+  cleaningStatusAsLabel,
+  setCleaningStatusAsLabel,
   insetsBottom,
 }: {
   visible: boolean;
@@ -27,6 +29,8 @@ export function DemoFlagsSheet({
   setFlags: React.Dispatch<React.SetStateAction<FlagsState>>;
   housekeeperMode: boolean;
   setHousekeeperMode: React.Dispatch<React.SetStateAction<boolean>>;
+  cleaningStatusAsLabel: boolean;
+  setCleaningStatusAsLabel: (value: boolean) => void;
   insetsBottom: number;
 }) {
   return (
@@ -37,7 +41,7 @@ export function DemoFlagsSheet({
           <View style={styles.sheetHandleArea} {...panResponder.panHandlers}><View style={styles.sortSheetHandle} /></View>
           <View style={styles.sortSheetHeader}>
             <Text style={styles.sortSheetTitle}>Demo flags</Text>
-            <TouchableOpacity onPress={() => { setFlags({ ...FLAGS }); setHousekeeperMode(false); }}>
+            <TouchableOpacity onPress={() => { setFlags({ ...FLAGS }); setHousekeeperMode(false); setCleaningStatusAsLabel(false); }}>
               <Text style={styles.sortResetText}>Reset</Text>
             </TouchableOpacity>
           </View>
@@ -102,6 +106,16 @@ export function DemoFlagsSheet({
                 </View>
               </React.Fragment>
             ))}
+            <View style={styles.dropdownDivider} />
+            <View style={styles.demoFlagRow}>
+              <Text style={styles.demoFlagLabel}>Cleaning status as text label</Text>
+              <Switch
+                value={cleaningStatusAsLabel}
+                onValueChange={setCleaningStatusAsLabel}
+                trackColor={{ false: '#e5e7eb', true: ORANGE }}
+                thumbColor="#fff"
+              />
+            </View>
           </ScrollView>
         </Animated.View>
       </Animated.View>

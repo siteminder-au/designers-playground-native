@@ -88,7 +88,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const [pendingEnd, setPendingEnd] = useState<string | null>(null);
 
   // Status overrides (shared via context for cross-screen sync)
-  const { statusOverrides, setStatusOverride, housekeeperMode, setHousekeeperMode } = useHousekeepingStatus();
+  const { statusOverrides, setStatusOverride, housekeeperMode, setHousekeeperMode, cleaningStatusAsLabel, setCleaningStatusAsLabel } = useHousekeepingStatus();
   const [statusDropdown, setStatusDropdown] = useState<{
     roomId: string;
     currentStatus: RoomStatus;
@@ -912,6 +912,8 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         setFlags={setFlags}
         housekeeperMode={housekeeperMode}
         setHousekeeperMode={setHousekeeperMode}
+        cleaningStatusAsLabel={cleaningStatusAsLabel}
+        setCleaningStatusAsLabel={setCleaningStatusAsLabel}
         insetsBottom={insets.bottom}
       />
 

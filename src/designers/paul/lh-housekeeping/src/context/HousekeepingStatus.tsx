@@ -9,6 +9,11 @@ interface HousekeepingStatusContextValue {
   setStatusOverride: (roomId: string, status: RoomStatus) => void;
   housekeeperMode: boolean;
   setHousekeeperMode: (value: boolean) => void;
+  // Cross-screen demo flag: when true, cleaning status is shown as a coloured
+  // text label (Calendar room column + Housekeeping status pills) instead of
+  // the circular icon. Set from either screen's demo flags sheet.
+  cleaningStatusAsLabel: boolean;
+  setCleaningStatusAsLabel: (value: boolean) => void;
 }
 
 const HousekeepingStatusContext = createContext<HousekeepingStatusContextValue>({
@@ -16,11 +21,14 @@ const HousekeepingStatusContext = createContext<HousekeepingStatusContextValue>(
   setStatusOverride: () => {},
   housekeeperMode: false,
   setHousekeeperMode: () => {},
+  cleaningStatusAsLabel: false,
+  setCleaningStatusAsLabel: () => {},
 });
 
 export function HousekeepingStatusProvider({ children }: { children: React.ReactNode }) {
   const [statusOverrides, setStatusOverrides] = useState<Record<string, RoomStatus>>({});
   const [housekeeperMode, setHousekeeperMode] = useState(false);
+  const [cleaningStatusAsLabel, setCleaningStatusAsLabel] = useState(false);
   const [updateRoomStatusMutation] = useMutation(UPDATE_ROOM_STATUS);
 
   function setStatusOverride(roomId: string, status: RoomStatus) {
@@ -39,7 +47,7 @@ export function HousekeepingStatusProvider({ children }: { children: React.React
   }
 
   return (
-    <HousekeepingStatusContext.Provider value={{ statusOverrides, setStatusOverride, housekeeperMode, setHousekeeperMode }}>
+    <HousekeepingStatusContext.Provider value={{ statusOverrides, setStatusOverride, housekeeperMode, setHousekeeperMode, cleaningStatusAsLabel, setCleaningStatusAsLabel }}>
       {children}
     </HousekeepingStatusContext.Provider>
   );

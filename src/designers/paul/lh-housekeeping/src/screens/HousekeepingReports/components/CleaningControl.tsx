@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { type RoomStatus, useHousekeepingStatus } from '../../../context/HousekeepingStatus';
+import type { RoomStatus } from '../../../context/HousekeepingStatus';
 import { STATUS_VARIANT, SYMBOL_CONTAINER } from '../../../config/statusVariant';
 import { STATUS_CONFIG, STATUS_SVG_ICON, STATUS_SYMBOL, STATUS_ABBR } from '../constants';
 import { SymbolIcon } from './SymbolIcon';
@@ -12,15 +12,14 @@ export type BadgeRect = { x: number; y: number; width: number; height: number };
 export function CleaningControl({
   status,
   onPress,
+  showIcon = true,
 }: {
   status: RoomStatus;
   onPress: (rect: BadgeRect) => void;
+  showIcon?: boolean;
 }) {
   const ref = useRef<View>(null);
   const { label, bg, border, text, icon } = STATUS_CONFIG[status];
-  // When the Calendar demo flag is on, hide the icon in this pill too so
-  // the text-label treatment is consistent across screens.
-  const { cleaningStatusAsLabel } = useHousekeepingStatus();
 
   function handlePress() {
     ref.current?.measure((_x, _y, width, height, pageX, pageY) => {
@@ -93,7 +92,7 @@ export function CleaningControl({
     >
       <View ref={ref} style={[styles.cleaningBtn, { backgroundColor: bg, borderColor: border }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          {!cleaningStatusAsLabel && (
+          {showIcon && (
             SvgIcon
               ? <SvgIcon width={18} height={18} />
               : <MaterialIcons name={icon} size={18} color={text} />

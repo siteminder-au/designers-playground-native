@@ -533,7 +533,7 @@ const styles = StyleSheet.create({
   },
   roomLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   roomLabelName: { fontSize: 14, fontWeight: '400', color: '#000', flex: 1, lineHeight: 18 },
-  roomLabelStatus: { fontSize: 12, fontWeight: '500', marginTop: 2 },
+  roomLabelStatus: { fontSize: 12, fontWeight: '400', marginTop: 2 },
   abbrPill: {
     borderWidth: 1.5,
     borderRadius: 4,

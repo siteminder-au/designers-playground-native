@@ -288,21 +288,23 @@ export default function CalendarScreen() {
                   <View style={[styles.roomLabel, { width: ROOM_COL_WIDTH }]}>
                     {/* Status keyline — overlays the left edge of the room
                         label so it never bleeds outside the container. Only
-                        rendered with the text-label variant. Dashed for
-                        UNCLEANED, solid for everything else. */}
+                        rendered with the text-label variant. UNCLEANED uses a
+                        column of small segments (more distinctive than CSS
+                        border-style:dashed which looks near-solid at 3px).
+                        Other statuses get a solid bar. */}
                     {cleaningStatusAsLabel && (() => {
                       const color = STATUS_LABEL_TEXT[effectiveStatus].color;
                       const isDashed = effectiveStatus === 'UNCLEANED';
-                      return (
-                        <View
-                          style={[
-                            styles.statusKeyline,
-                            isDashed
-                              ? { borderLeftWidth: 3, borderLeftColor: color, borderStyle: 'dashed' }
-                              : { backgroundColor: color },
-                          ]}
-                        />
-                      );
+                      if (isDashed) {
+                        return (
+                          <View style={[styles.statusKeyline, { justifyContent: 'space-between' }]}>
+                            {Array.from({ length: 5 }, (_, i) => (
+                              <View key={i} style={{ height: 3, backgroundColor: color }} />
+                            ))}
+                          </View>
+                        );
+                      }
+                      return <View style={[styles.statusKeyline, { backgroundColor: color }]} />;
                     })()}
                     <View style={styles.roomLabelRow}>
                       <Text

@@ -284,10 +284,10 @@ export default function CalendarScreen() {
                 const isNumeric = /^\d+$/.test(room.number);
                 return (
                 <View key={room.id} style={styles.roomRow}>
-                  {/* Status keyline — vertical line at left edge of the row,
-                      colour-matched to the cleaning status. UNCLEANED uses a
-                      dashed line; everything else is solid. */}
-                  {(() => {
+                  {/* Status keyline — only paired with the text-label variant.
+                      Colour-matched to status; dashed for UNCLEANED, solid for
+                      everything else (incl. DEEP_CLEAN). */}
+                  {cleaningStatusAsLabel && (() => {
                     const color = STATUS_LABEL_TEXT[effectiveStatus].color;
                     const isDashed = effectiveStatus === 'UNCLEANED';
                     return (

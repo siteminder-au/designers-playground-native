@@ -287,15 +287,20 @@ export default function CalendarScreen() {
                   {/* Status keyline — vertical line at left edge of the row,
                       colour-matched to the cleaning status. UNCLEANED uses a
                       dashed line; everything else is solid. */}
-                  <View
-                    style={[
-                      styles.statusKeyline,
-                      {
-                        borderLeftColor: STATUS_LABEL_TEXT[effectiveStatus].color,
-                        borderStyle: effectiveStatus === 'UNCLEANED' ? 'dashed' : 'solid',
-                      },
-                    ]}
-                  />
+                  {(() => {
+                    const color = STATUS_LABEL_TEXT[effectiveStatus].color;
+                    const isDashed = effectiveStatus === 'UNCLEANED';
+                    return (
+                      <View
+                        style={[
+                          styles.statusKeyline,
+                          isDashed
+                            ? { borderLeftWidth: 3, borderLeftColor: color, borderStyle: 'dashed' }
+                            : { backgroundColor: color },
+                        ]}
+                      />
+                    );
+                  })()}
                   {/* Room label */}
                   <View style={[styles.roomLabel, { width: ROOM_COL_WIDTH }]}>
                     <View style={styles.roomLabelRow}>
@@ -539,7 +544,8 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    borderLeftWidth: 3,
+    width: 3,
+    zIndex: 1,
   },
   roomLabel: {
     justifyContent: 'center',

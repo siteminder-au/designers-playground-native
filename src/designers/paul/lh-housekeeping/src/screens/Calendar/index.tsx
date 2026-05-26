@@ -296,10 +296,24 @@ export default function CalendarScreen() {
                       const color = STATUS_LABEL_TEXT[effectiveStatus].color;
                       const isDashed = effectiveStatus === 'UNCLEANED';
                       if (isDashed) {
+                        // Diagonal stripes inside the keyline column. Each
+                        // stripe is a thin rectangle rotated −45°; the parent's
+                        // overflow:hidden clips them to the 3px-wide column.
                         return (
-                          <View style={[styles.statusKeyline, { justifyContent: 'space-between' }]}>
-                            {Array.from({ length: 5 }, (_, i) => (
-                              <View key={i} style={{ height: 3, backgroundColor: color }} />
+                          <View style={[styles.statusKeyline, { overflow: 'hidden' }]}>
+                            {Array.from({ length: 10 }, (_, i) => (
+                              <View
+                                key={i}
+                                style={{
+                                  position: 'absolute',
+                                  top: i * 6 - 3,
+                                  left: -3,
+                                  width: 9,
+                                  height: 1.5,
+                                  backgroundColor: color,
+                                  transform: [{ rotate: '-45deg' }],
+                                }}
+                              />
                             ))}
                           </View>
                         );

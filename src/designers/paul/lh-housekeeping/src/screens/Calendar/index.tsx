@@ -540,7 +540,8 @@ const styles = StyleSheet.create({
     borderColor: '#f0f0f0',
   },
   statusKeyline: {
-    width: 3,
+    width: 4,
+    height: '100%',
     alignSelf: 'stretch',
   },
   roomLabel: {

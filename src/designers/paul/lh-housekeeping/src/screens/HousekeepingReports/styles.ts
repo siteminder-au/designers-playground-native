@@ -234,6 +234,12 @@ const styles = StyleSheet.create({
   notesSheetSectionLabel: { fontSize: 11, fontWeight: '700' as const, color: COLORS.Black[500], letterSpacing: 0.5, textTransform: 'uppercase' as const, marginBottom: 8 },
   notesSheetBody: { fontSize: 14, color: COLORS.Black[200], lineHeight: 21 },
   notesSheetDivider: { height: 1, backgroundColor: COLORS.Background.Stroke, marginVertical: 20 },
+  notesCategoryRow: { flexDirection: 'row' as const, gap: 8, marginBottom: 10 },
+  notesCategoryTag: {
+    borderWidth: 1, borderRadius: 4,
+    paddingHorizontal: 6, paddingVertical: 1,
+  },
+  notesCategoryTagText: { fontSize: 10, fontWeight: '600' as const, letterSpacing: 0.3 },
   notesSheetInput: {
     borderWidth: 1, borderColor: COLORS.Background.Stroke, borderRadius: 8,
     paddingHorizontal: 12, paddingVertical: 10,

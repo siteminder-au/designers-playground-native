@@ -15,12 +15,12 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useQuery, useMutation } from '@apollo/client';
-import { GET_HOUSEKEEPING_SCHEDULE, GET_STAFF_NOTES, ADD_STAFF_NOTE, UPDATE_STAFF_NOTE } from '../../apollo/queries';
+import { useQuery } from '@apollo/client';
+import { GET_HOUSEKEEPING_SCHEDULE } from '../../apollo/queries';
 import { useHousekeepingStatus, RoomStatus } from '../../context/HousekeepingStatus';
 import FLAGS from '../../config/featureFlags';
 import { COLORS } from '../../config/colors';
-import type { RoomDaySchedule, DaySchedule, StaffNote } from './types';
+import type { RoomDaySchedule, DaySchedule, LocalNote, NoteCategory } from './types';
 import {
   ORANGE, NUM_DAYS,
   STATUS_CONFIG,
@@ -43,6 +43,7 @@ import { type BadgeRect } from './components/CleaningControl';
 import { RoomRow } from './components/RoomRow';
 import { AnimatedRoomWrapper } from './components/AnimatedRoomWrapper';
 import { useBottomSheet } from './hooks/useBottomSheet';
+import { useLocalNotes } from './hooks/useLocalNotes';
 import { NotesSheet } from './components/sheets/NotesSheet';
 import { SortSheet } from './components/sheets/SortSheet';
 import { AssignSheet } from './components/sheets/AssignSheet';
@@ -223,23 +224,18 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   }, [printPreviewVisible]);
 
   // Staff notes: fetched from si_staff_notes via GraphQL, polled every 15s like cleaning
-  const { data: staffNotesData } = useQuery(GET_STAFF_NOTES, { pollInterval: 15000 });
-  const allStaffNotes: StaffNote[] = staffNotesData?.staffNotes ?? [];
-  const [addStaffNoteMutation] = useMutation(ADD_STAFF_NOTE, { refetchQueries: [{ query: GET_STAFF_NOTES }] });
-  const [updateStaffNoteMutation] = useMutation(UPDATE_STAFF_NOTE, { refetchQueries: [{ query: GET_STAFF_NOTES }] });
+  // Room notes live entirely on-device (see useLocalNotes) — decoupled from the
+  // shared si_staff_notes table. They are tied to the room (keyed by roomId), so
+  // they persist across reservations rather than resetting on checkout.
+  const { notes: allRoomNotes, addNote, updateNote } = useLocalNotes();
 
-  // Per Si's 2026-05-18 contract: housekeeping notes are always scoped to a
-  // reservation, keyed by reservationId. When the active reservation changes
-  // (checkout → next guest), the thread resets to empty automatically.
-  // latestNoteIds tracks which note's text is currently displayed on the
-  // card, so the inline pencil can open the sheet pre-set to edit that note.
+  // notes/latestNoteIds drive the card's inline note line: the most recent note
+  // text per room, plus its id so the inline pencil can open straight into edit.
   const notes: Record<string, string> = {};
   const latestNoteIds: Record<string, string> = {};
-  for (const n of allStaffNotes) {
-    if (n.reservationId) {
-      notes[n.reservationId] = n.text;
-      latestNoteIds[n.reservationId] = n.id;
-    }
+  for (const n of allRoomNotes) {
+    notes[n.roomId] = n.text;
+    latestNoteIds[n.roomId] = n.id;
   }
 
   // Legacy modal kept around for backward compat; not currently triggered.
@@ -256,6 +252,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const [notesSheetEditing, setNotesSheetEditing] = useState(false);
   const [notesSheetDraft, setNotesSheetDraft] = useState('');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [noteCategory, setNoteCategory] = useState<NoteCategory>('Housekeeping');
 
   // Query: either the current week or the selected range
   const queryStart = dateRange?.start ?? weekStart;
@@ -492,59 +489,49 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     // When opened with autoEditNoteId, jump straight into edit mode for that
     // note (used by the inline pencil on the card). Otherwise open in view mode.
     const noteToEdit = autoEditNoteId
-      ? allStaffNotes.find(n => n.id === autoEditNoteId)
+      ? allRoomNotes.find(n => n.id === autoEditNoteId)
       : null;
     if (noteToEdit) {
       setEditingNoteId(noteToEdit.id);
       setNotesSheetDraft(noteToEdit.text);
+      setNoteCategory(noteToEdit.category);
       setNotesSheetEditing(true);
     } else {
       setNotesSheetEditing(false);
       setNotesSheetDraft('');
       setEditingNoteId(null);
+      setNoteCategory('Housekeeping');
     }
     setNotesSheetVisible(true);
   }
 
   function saveSheetNote() {
     if (!notesSheetItem) return;
-    // Per Si's 2026-05-18 contract: writes require an active reservation.
-    // Vacant rooms open the sheet read-only; the UI shouldn't trigger a save,
-    // but guard here in case it does.
-    if (!notesSheetItem.reservationId) return;
     const trimmed = notesSheetDraft.trim();
     if (!trimmed) {
       setNotesSheetEditing(false);
       return;
     }
     if (editingNoteId) {
-      updateStaffNoteMutation({ variables: { id: editingNoteId, text: trimmed } })
-        .catch(err => console.warn('[paul] updateStaffNote failed', err));
+      updateNote(editingNoteId, { text: trimmed, category: noteCategory });
     } else {
-      const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      addStaffNoteMutation({
-        variables: {
-          id,
-          roomId: notesSheetItem.room.id,
-          author: 'You',
-          text: trimmed,
-          reservationId: notesSheetItem.reservationId,
-        },
-      }).catch(err => console.warn('[paul] addStaffNote failed', err));
+      addNote({
+        roomId: notesSheetItem.room.id,
+        author: 'You',
+        text: trimmed,
+        category: noteCategory,
+      });
     }
     setNotesSheetDraft('');
     setNotesSheetEditing(false);
     setEditingNoteId(null);
+    setNoteCategory('Housekeeping');
   }
 
-  // Per Si's 2026-05-18 contract: housekeeping notes are visible only when
-  // their reservation_id matches the active reservation in the room being
-  // viewed. Vacant rooms (no reservationId) show an empty thread.
-  const sheetNotes: StaffNote[] = (notesSheetItem && notesSheetItem.reservationId)
-    ? allStaffNotes.filter(n =>
-        n.roomId === notesSheetItem.room.id &&
-        n.reservationId === notesSheetItem.reservationId
-      )
+  // Room notes are tied to the room, so the thread is every local note for this
+  // room (independent of the current reservation).
+  const sheetNotes: LocalNote[] = notesSheetItem
+    ? allRoomNotes.filter(n => n.roomId === notesSheetItem.room.id)
     : [];
 
   function openNotesModal(noteKey: string) {
@@ -714,12 +701,12 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                 <RoomRow
                   item={item}
                   status={effectiveStatus}
-                  note={item.reservationId ? (notes[item.reservationId] ?? '') : ''}
+                  note={notes[item.room.id] ?? ''}
                   bedConfig={bedConfig}
                   flags={flags}
                   onNotePress={() => openNotesSheet(item)}
-                  onEditNotePress={item.reservationId && latestNoteIds[item.reservationId]
-                    ? () => openNotesSheet(item, latestNoteIds[item.reservationId])
+                  onEditNotePress={latestNoteIds[item.room.id]
+                    ? () => openNotesSheet(item, latestNoteIds[item.room.id])
                     : undefined}
                   onStatusPress={(rect) => openStatusDropdown(item.room.id, effectiveStatus, rect)}
                   assignedTo={assignments[item.room.id] ?? null}
@@ -754,12 +741,12 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                 <RoomRow
                   item={item}
                   status={effectiveStatus}
-                  note={item.reservationId ? (notes[item.reservationId] ?? '') : ''}
+                  note={notes[item.room.id] ?? ''}
                   bedConfig={bedConfig}
                   flags={flags}
                   onNotePress={() => openNotesSheet(item)}
-                  onEditNotePress={item.reservationId && latestNoteIds[item.reservationId]
-                    ? () => openNotesSheet(item, latestNoteIds[item.reservationId])
+                  onEditNotePress={latestNoteIds[item.room.id]
+                    ? () => openNotesSheet(item, latestNoteIds[item.room.id])
                     : undefined}
                   onStatusPress={(rect) => openStatusDropdown(item.room.id, effectiveStatus, rect)}
                   assignedTo={assignments[item.room.id] ?? null}
@@ -863,6 +850,8 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         setNotesSheetEditing={setNotesSheetEditing}
         notesSheetDraft={notesSheetDraft}
         setNotesSheetDraft={setNotesSheetDraft}
+        noteCategory={noteCategory}
+        setNoteCategory={setNoteCategory}
         editingNoteId={editingNoteId}
         setEditingNoteId={setEditingNoteId}
         saveSheetNote={saveSheetNote}

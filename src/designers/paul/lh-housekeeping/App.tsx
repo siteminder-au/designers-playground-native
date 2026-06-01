@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { ApolloProvider } from '@apollo/client';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +12,7 @@ import HomeScreen from './src/screens/Home';
 import HousekeepingReportsScreen from './src/screens/HousekeepingReports';
 import DistributionScreen from './src/screens/Distribution';
 import NotificationsScreen from './src/screens/Notifications';
+import { ReviewCaptureFab } from './src/components/ReviewCaptureFab';
 
 // NavigationContainer is handled by the playground root (App.tsx).
 // This component renders Paul's prototype as a nested bottom-tab navigator.
@@ -176,10 +177,20 @@ export default function PaulLHHousekeepingApp() {
   const content = (
     <ApolloProvider client={client}>
       <HousekeepingStatusProvider>
-        <AppNavigator />
+        <AppShell />
       </HousekeepingStatusProvider>
     </ApolloProvider>
   );
 
   return content;
+}
+
+function AppShell() {
+  const { reviewCaptureFabEnabled } = useHousekeepingStatus();
+  return (
+    <View style={{ flex: 1 }}>
+      <AppNavigator />
+      {reviewCaptureFabEnabled && <ReviewCaptureFab />}
+    </View>
+  );
 }

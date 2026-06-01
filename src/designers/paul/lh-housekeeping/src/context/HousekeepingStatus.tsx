@@ -14,6 +14,10 @@ interface HousekeepingStatusContextValue {
   // the circular icon. Set from either screen's demo flags sheet.
   cleaningStatusAsLabel: boolean;
   setCleaningStatusAsLabel: (value: boolean) => void;
+  // Dev tool: floating "capture screenshot for design review" button. When
+  // true, a small FAB sits in the bottom-right of every screen.
+  reviewCaptureFabEnabled: boolean;
+  setReviewCaptureFabEnabled: (value: boolean) => void;
 }
 
 const HousekeepingStatusContext = createContext<HousekeepingStatusContextValue>({
@@ -23,12 +27,15 @@ const HousekeepingStatusContext = createContext<HousekeepingStatusContextValue>(
   setHousekeeperMode: () => {},
   cleaningStatusAsLabel: false,
   setCleaningStatusAsLabel: () => {},
+  reviewCaptureFabEnabled: false,
+  setReviewCaptureFabEnabled: () => {},
 });
 
 export function HousekeepingStatusProvider({ children }: { children: React.ReactNode }) {
   const [statusOverrides, setStatusOverrides] = useState<Record<string, RoomStatus>>({});
   const [housekeeperMode, setHousekeeperMode] = useState(false);
   const [cleaningStatusAsLabel, setCleaningStatusAsLabel] = useState(false);
+  const [reviewCaptureFabEnabled, setReviewCaptureFabEnabled] = useState(false);
   const [updateRoomStatusMutation] = useMutation(UPDATE_ROOM_STATUS);
 
   function setStatusOverride(roomId: string, status: RoomStatus) {
@@ -47,7 +54,7 @@ export function HousekeepingStatusProvider({ children }: { children: React.React
   }
 
   return (
-    <HousekeepingStatusContext.Provider value={{ statusOverrides, setStatusOverride, housekeeperMode, setHousekeeperMode, cleaningStatusAsLabel, setCleaningStatusAsLabel }}>
+    <HousekeepingStatusContext.Provider value={{ statusOverrides, setStatusOverride, housekeeperMode, setHousekeeperMode, cleaningStatusAsLabel, setCleaningStatusAsLabel, reviewCaptureFabEnabled, setReviewCaptureFabEnabled }}>
       {children}
     </HousekeepingStatusContext.Provider>
   );

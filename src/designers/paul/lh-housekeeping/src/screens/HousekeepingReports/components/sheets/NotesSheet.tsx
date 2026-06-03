@@ -10,6 +10,9 @@ import { toBookingRef } from '../../utils/dateFormat';
 import { shouldShowBedConfig } from '../../utils/bedConfig';
 import styles from '../../styles';
 
+// Max length for an editable room note (mirrored in the TextInput maxLength).
+const NOTE_MAX = 150;
+
 // Tracks the on-screen keyboard height so the bottom sheet can lift its
 // content above the keyboard. We apply this as white paddingBottom on the
 // sheet itself (rather than wrapping in KeyboardAvoidingView, which reserves
@@ -237,8 +240,9 @@ export function NotesSheet({
                           placeholder="Edit note..."
                           placeholderTextColor={COLORS.Black[600]}
                           textAlignVertical="top"
-                          maxLength={300}
+                          maxLength={NOTE_MAX}
                         />
+                        <Text style={[styles.notesCharCount, notesSheetDraft.length >= NOTE_MAX && styles.notesCharCountMax]}>{notesSheetDraft.length}/{NOTE_MAX}</Text>
                         <View style={styles.notesSheetSaveRow}>
                           <TouchableOpacity onPress={() => { setEditingNoteId(null); setNotesSheetEditing(false); setNotesSheetDraft(''); }}>
                             <Text style={styles.notesSheetCancel}>Cancel</Text>
@@ -266,8 +270,9 @@ export function NotesSheet({
                     placeholder="Add a note..."
                     placeholderTextColor={COLORS.Black[600]}
                     textAlignVertical="top"
-                    maxLength={300}
+                    maxLength={NOTE_MAX}
                   />
+                  <Text style={[styles.notesCharCount, notesSheetDraft.length >= NOTE_MAX && styles.notesCharCountMax]}>{notesSheetDraft.length}/{NOTE_MAX}</Text>
                   <View style={styles.notesSheetSaveRow}>
                     <TouchableOpacity onPress={() => { setNotesSheetEditing(false); setNotesSheetDraft(''); }}>
                       <Text style={styles.notesSheetCancel}>Cancel</Text>

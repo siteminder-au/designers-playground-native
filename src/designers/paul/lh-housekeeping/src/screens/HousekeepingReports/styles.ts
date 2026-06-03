@@ -246,6 +246,8 @@ const styles = StyleSheet.create({
     fontSize: 14, color: COLORS.Black[200], lineHeight: 21,
     minHeight: 80, textAlignVertical: 'top' as const,
   },
+  notesCharCount: { fontSize: 11, color: COLORS.Black[500], textAlign: 'right' as const, marginTop: 4 },
+  notesCharCountMax: { color: '#b81919', fontWeight: '600' as const },
   notesSheetSaveRow: { flexDirection: 'row' as const, justifyContent: 'flex-end' as const, alignItems: 'center' as const, gap: 16, marginTop: 12 },
   notesSheetCancel: { fontSize: 14, color: COLORS.Black[400] },
   notesSheetSaveBtn: { backgroundColor: ORANGE, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 8 },

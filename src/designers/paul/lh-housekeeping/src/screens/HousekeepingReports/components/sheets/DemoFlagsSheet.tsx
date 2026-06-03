@@ -97,7 +97,8 @@ export function DemoFlagsSheet({
               { key: 'showStatusIcon',       label: 'Cleaning status icon' },
               { key: 'roomStatsChips',       label: 'Room stats as tappable chips' },
               { key: 'compactCard',          label: 'Compact room card (details in notes sheet)' },
-            ] as { key: 'showGuestName' | 'showGuestPax' | 'showBedConfig' | 'showLateCheckout' | 'showReservationId' | 'showStatusIcon' | 'roomStatsChips' | 'compactCard'; label: string }[]).map((item, i) => (
+              { key: 'showPrint',            label: 'Print button' },
+            ] as { key: 'showGuestName' | 'showGuestPax' | 'showBedConfig' | 'showLateCheckout' | 'showReservationId' | 'showStatusIcon' | 'roomStatsChips' | 'compactCard' | 'showPrint'; label: string }[]).map((item, i) => (
               <React.Fragment key={item.key}>
                 {i > 0 && <View style={styles.dropdownDivider} />}
                 <View style={styles.demoFlagRow}>

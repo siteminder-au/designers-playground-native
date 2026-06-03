@@ -671,8 +671,11 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
             color={ORANGE}
           />
         </TouchableOpacity>
-        <View style={styles.sortToolbarSep} />
-        <TouchableOpacity style={styles.filterBtn} onPress={() => setFilterSheetVisible(true)}>
+        {flags.showPrint && <View style={styles.sortToolbarSep} />}
+        <TouchableOpacity
+          style={[styles.filterBtn, !flags.showPrint && { marginLeft: 'auto', marginRight: 16 }]}
+          onPress={() => setFilterSheetVisible(true)}
+        >
           <Ionicons name="options-outline" size={15} color={ORANGE} />
           <Text style={styles.filterBtnText}>Filter</Text>
           {filterCount > 0 && (
@@ -681,10 +684,12 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
             </View>
           )}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.sortToolbarPrint} onPress={() => setPrintPreviewVisible(true)}>
-          <Ionicons name="print-outline" size={15} color={ORANGE} />
-          <Text style={styles.sortToolbarPrintText}>Print</Text>
-        </TouchableOpacity>
+        {flags.showPrint && (
+          <TouchableOpacity style={styles.sortToolbarPrint} onPress={() => setPrintPreviewVisible(true)}>
+            <Ionicons name="print-outline" size={15} color={ORANGE} />
+            <Text style={styles.sortToolbarPrintText}>Print</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* ── Content ── */}

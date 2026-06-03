@@ -40,6 +40,9 @@ const FLAGS = {
    *  config from the room card (moves them into the Notes sheet) and re-anchors
    *  the check-in/out badge to the left side of the card. */
   compactCard: false,
+
+  /** Print button in the sort/filter toolbar (opens the print preview). */
+  showPrint: false,
 } as const;
 
 export default FLAGS;

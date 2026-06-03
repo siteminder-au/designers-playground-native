@@ -153,7 +153,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
   // Active stat chip filter — only used when flags.roomStatsChips is on.
   // null = no chip selected (show everything).
-  const [activeStatFilter, setActiveStatFilter] = useState<null | 'dirty' | 'earlyCheckIn' | 'lateCheckOut' | 'outOfOrder' | 'issues'>(null);
+  const [activeStatFilter, setActiveStatFilter] = useState<null | 'dirty' | 'deepClean' | 'awaitingInspection' | 'hasNotes' | 'outOfOrder'>(null);
   // Clear the chip filter when switching away from the chips variant.
   useEffect(() => {
     if (!flags.roomStatsChips) setActiveStatFilter(null);
@@ -304,6 +304,11 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
   // Single-day view
   const selectedDay = schedule.find(d => d.date === selectedDate);
+  // "Has notes" = any note or comment of any kind on the room: guest comment,
+  // reservation staff note, the room's issue note, or a local Room note.
+  const roomHasNotes = (r: RoomDaySchedule): boolean =>
+    !!r.guestComments || !!r.staffNote || !!r.room.notes || !!notes[r.room.id];
+
   // Chip-variant filter: only active when chip variant is on AND a chip is selected.
   const matchesActiveChip = (r: RoomDaySchedule): boolean => {
     if (!flags.roomStatsChips || !activeStatFilter) return true;
@@ -311,10 +316,10 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
       const s = statusOverrides[r.room.id] ?? r.room.status;
       return s === 'UNCLEANED' || s === 'DEEP_CLEAN';
     }
-    if (activeStatFilter === 'earlyCheckIn') return r.checkInTime !== null && r.hasCheckInToday;
-    if (activeStatFilter === 'lateCheckOut') return r.lateCheckout && r.hasCheckoutToday;
-    if (activeStatFilter === 'outOfOrder')   return r.room.isClosed;
-    if (activeStatFilter === 'issues')       return r.room.notes !== null;
+    if (activeStatFilter === 'deepClean')          return (statusOverrides[r.room.id] ?? r.room.status) === 'DEEP_CLEAN';
+    if (activeStatFilter === 'awaitingInspection') return (statusOverrides[r.room.id] ?? r.room.status) === 'AWAITING_INSPECTION';
+    if (activeStatFilter === 'hasNotes')           return roomHasNotes(r);
+    if (activeStatFilter === 'outOfOrder')         return r.room.isClosed;
     return true;
   };
   const singleRooms: RoomDaySchedule[] = applyFilters(
@@ -347,28 +352,32 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const statsRooms = selectedDay?.rooms ?? [];
   // Predicates that match each stat — used both for counting and for the chip
   // variant's tap-to-filter behavior.
-  type StatKey = 'dirty' | 'earlyCheckIn' | 'lateCheckOut' | 'outOfOrder' | 'issues';
+  type StatKey = 'dirty' | 'deepClean' | 'awaitingInspection' | 'hasNotes' | 'outOfOrder';
   const statPredicates: Record<StatKey, (r: RoomDaySchedule) => boolean> = {
-    dirty:        r => { const s = statusOverrides[r.room.id] ?? r.room.status; return s === 'UNCLEANED' || s === 'DEEP_CLEAN'; },
-    earlyCheckIn: r => r.checkInTime !== null && r.hasCheckInToday,
-    lateCheckOut: r => r.lateCheckout && r.hasCheckoutToday,
-    outOfOrder:   r => r.room.isClosed,
-    issues:       r => r.room.notes !== null,
+    dirty:              r => { const s = statusOverrides[r.room.id] ?? r.room.status; return s === 'UNCLEANED' || s === 'DEEP_CLEAN'; },
+    deepClean:          r => (statusOverrides[r.room.id] ?? r.room.status) === 'DEEP_CLEAN',
+    awaitingInspection: r => (statusOverrides[r.room.id] ?? r.room.status) === 'AWAITING_INSPECTION',
+    hasNotes:           roomHasNotes,
+    outOfOrder:         r => r.room.isClosed,
   };
   const dayStats = {
-    dirty:        statsRooms.filter(statPredicates.dirty).length,
-    earlyCheckIn: statsRooms.filter(statPredicates.earlyCheckIn).length,
-    lateCheckOut: statsRooms.filter(statPredicates.lateCheckOut).length,
-    outOfOrder:   statsRooms.filter(statPredicates.outOfOrder).length,
-    issues:       statsRooms.filter(statPredicates.issues).length,
+    dirty:              statsRooms.filter(statPredicates.dirty).length,
+    deepClean:          statsRooms.filter(statPredicates.deepClean).length,
+    awaitingInspection: statsRooms.filter(statPredicates.awaitingInspection).length,
+    hasNotes:           statsRooms.filter(statPredicates.hasNotes).length,
+    outOfOrder:         statsRooms.filter(statPredicates.outOfOrder).length,
   };
   const BG = '#f2f3f3'; // matches screen background
   const statItems = ([
-    { key: 'dirty',        value: dayStats.dirty,        label: 'Rooms dirty today'      },
-    { key: 'earlyCheckIn', value: dayStats.earlyCheckIn, label: 'Early check-in today'   },
-    { key: 'lateCheckOut', value: dayStats.lateCheckOut, label: 'Late check-out today'   },
-    { key: 'outOfOrder',   value: dayStats.outOfOrder,   label: 'Out of order today'     },
-    { key: 'issues',       value: dayStats.issues,       label: 'Issue reported today'   },
+    { key: 'dirty',              value: dayStats.dirty,              label: 'Dirty rooms today'        },
+    { key: 'deepClean',          value: dayStats.deepClean,          label: 'Deep cleans needed today' },
+    { key: 'awaitingInspection', value: dayStats.awaitingInspection, label: 'Awaiting inspection today' },
+    { key: 'hasNotes',           value: dayStats.hasNotes,           label: 'Has notes today'          },
+    // Out of order (room closures) is conditional — only shown when at least
+    // one room matches, and always pinned to the end of the row.
+    ...(dayStats.outOfOrder > 0
+      ? [{ key: 'outOfOrder', value: dayStats.outOfOrder, label: 'Out of order today' }]
+      : []),
   ] as { key: StatKey; value: number; label: string }[]);
 
   const statsStrip = flags.roomStatsChips ? (
@@ -390,7 +399,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
               activeOpacity={0.7}
             >
               <Text style={[styles.statChipText, isActive && styles.statChipTextActive]}>
-                {stat.value} {stat.label.replace(' today', '')}
+                {stat.value} {stat.label.replace(' today', '').toLowerCase()}
               </Text>
             </TouchableOpacity>
           );

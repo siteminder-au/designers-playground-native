@@ -140,8 +140,8 @@ export function FilterSheet({
               <Text style={styles.filterSectionLabel}>NOTES</Text>
               <View style={styles.filterChipRow}>
                 {([
-                  { key: 'includeStaffNotes',        label: 'Staff notes'        },
-                  { key: 'includeHousekeepingNotes', label: 'Room notes'          },
+                  { key: 'includeStaffNotes',        label: 'Reservation notes' },
+                  { key: 'includeHousekeepingNotes', label: 'Room notes'        },
                   { key: 'includeGuestComments',     label: 'Guest comments'     },
                   { key: 'includeExtras',            label: 'Extras'             },
                 ] as { key: 'includeStaffNotes' | 'includeHousekeepingNotes' | 'includeGuestComments' | 'includeExtras'; label: string }[]).map(opt => {

@@ -192,21 +192,17 @@ export function NotesSheet({
                   <View style={styles.notesSheetDivider} />
                 </>
               ) : null}
-              {/* Staff notes — read-only single string at si_reservations.data.staffNote.
-                  Written only by front desk per Si's 2026-05-18 contract. Shown here
-                  for context; mobile cannot edit. */}
-              {item?.reservationId && (
+              {/* Reservation notes — read-only single string at
+                  si_reservations.data.staffNote. Written only by front desk per
+                  Si's 2026-05-18 contract; mobile cannot edit. Hidden entirely
+                  when the reservation has no note. */}
+              {item?.staffNote ? (
                 <>
-                  <Text style={styles.notesSheetSectionLabel}>Staff notes</Text>
-                  <Text style={[
-                    styles.notesSheetBody,
-                    !item.staffNote && { color: COLORS.Black[600], fontStyle: 'italic' },
-                  ]}>
-                    {item.staffNote ?? '—'}
-                  </Text>
+                  <Text style={styles.notesSheetSectionLabel}>Reservation notes</Text>
+                  <Text style={styles.notesSheetBody}>{item.staffNote}</Text>
                   <View style={styles.notesSheetDivider} />
                 </>
-              )}
+              ) : null}
               <Text style={styles.notesSheetSectionLabel}>Room notes</Text>
               {sheetNotes.length === 0 && !notesSheetEditing && (
                 <Text style={[styles.notesSheetBody, { color: COLORS.Black[600], fontStyle: 'italic', marginBottom: 8 }]}>

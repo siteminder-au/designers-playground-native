@@ -191,7 +191,7 @@ export function RoomRow({
             )}
             {item.staffNote && (
               <Text numberOfLines={2} style={[styles.noteText, { flexShrink: 1 }]}>
-                <Text style={styles.staffNoteLabel}>Staff note: </Text>{item.staffNote}
+                <Text style={styles.staffNoteLabel}>Reservation note: </Text>{item.staffNote}
               </Text>
             )}
             {note ? (

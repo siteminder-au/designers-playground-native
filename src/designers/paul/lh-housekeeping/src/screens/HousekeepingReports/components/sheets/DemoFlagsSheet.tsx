@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal, Animated, PanResponder, ScrollView, Switch } from 'react-native';
 import FLAGS from '../../../../config/featureFlags';
+import type { ViewMode } from '../../../../context/HousekeepingStatus';
 import { ORANGE } from '../../constants';
 import styles from '../../styles';
 
@@ -14,8 +15,8 @@ export function DemoFlagsSheet({
   panResponder,
   flags,
   setFlags,
-  housekeeperMode,
-  setHousekeeperMode,
+  viewMode,
+  setViewMode,
   cleaningStatusAsLabel,
   setCleaningStatusAsLabel,
   reviewCaptureFabEnabled,
@@ -29,8 +30,8 @@ export function DemoFlagsSheet({
   panResponder: ReturnType<typeof PanResponder.create>;
   flags: FlagsState;
   setFlags: React.Dispatch<React.SetStateAction<FlagsState>>;
-  housekeeperMode: boolean;
-  setHousekeeperMode: React.Dispatch<React.SetStateAction<boolean>>;
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
   cleaningStatusAsLabel: boolean;
   setCleaningStatusAsLabel: (value: boolean) => void;
   reviewCaptureFabEnabled: boolean;
@@ -45,21 +46,33 @@ export function DemoFlagsSheet({
           <View style={styles.sheetHandleArea} {...panResponder.panHandlers}><View style={styles.sortSheetHandle} /></View>
           <View style={styles.sortSheetHeader}>
             <Text style={styles.sortSheetTitle}>Demo flags</Text>
-            <TouchableOpacity onPress={() => { setFlags({ ...FLAGS }); setHousekeeperMode(false); setCleaningStatusAsLabel(false); setReviewCaptureFabEnabled(false); }}>
+            <TouchableOpacity onPress={() => { setFlags({ ...FLAGS }); setViewMode('full'); setCleaningStatusAsLabel(false); setReviewCaptureFabEnabled(false); }}>
               <Text style={styles.sortResetText}>Reset</Text>
             </TouchableOpacity>
           </View>
 
           <ScrollView contentContainerStyle={{ paddingBottom: insetsBottom + 16 }}>
-            {/* View mode */}
-            <View style={styles.demoFlagRow}>
-              <Text style={styles.demoFlagLabel}>Housekeeper view</Text>
-              <Switch
-                value={housekeeperMode}
-                onValueChange={setHousekeeperMode}
-                trackColor={{ false: '#e5e7eb', true: ORANGE }}
-                thumbColor="#fff"
-              />
+            {/* View mode — segmented control (Browser view is a placeholder). */}
+            <View style={styles.demoVariantRow}>
+              <Text style={[styles.demoFlagLabel, { flex: 0, marginRight: 0 }]}>View</Text>
+              <View style={styles.segmentedControl}>
+                {([
+                  { value: 'full',    label: 'Full access' },
+                  { value: 'limited', label: 'Limited' },
+                  { value: 'browser', label: 'Browser view' },
+                ] as { value: ViewMode; label: string }[]).map(opt => {
+                  const isActive = viewMode === opt.value;
+                  return (
+                    <TouchableOpacity
+                      key={opt.value}
+                      style={[styles.segmentedBtn, isActive && styles.segmentedBtnActive]}
+                      onPress={() => setViewMode(opt.value)}
+                    >
+                      <Text style={[styles.segmentedBtnText, isActive && styles.segmentedBtnTextActive]} numberOfLines={1}>{opt.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
             <View style={styles.dropdownDivider} />
             <View style={[styles.dropdownDivider, { marginBottom: 8 }]} />

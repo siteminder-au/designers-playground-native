@@ -4,11 +4,20 @@ import { UPDATE_ROOM_STATUS } from '../apollo/queries';
 
 export type RoomStatus = 'CLEANED' | 'UNCLEANED' | 'DEEP_CLEAN' | 'SKIP_CLEANING' | 'AWAITING_INSPECTION';
 
+// Access level the prototype is presenting as:
+//  - 'full'    : full access (default; the complete manager view)
+//  - 'limited' : limited access (the housekeeper view)
+//  - 'browser' : browser view (placeholder — not built yet)
+export type ViewMode = 'full' | 'limited' | 'browser';
+
 interface HousekeepingStatusContextValue {
   statusOverrides: Record<string, RoomStatus>;
   setStatusOverride: (roomId: string, status: RoomStatus) => void;
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
+  /** Derived convenience: true in the limited (housekeeper) UI — i.e. for both
+   *  the 'limited' and 'browser' view modes. */
   housekeeperMode: boolean;
-  setHousekeeperMode: (value: boolean) => void;
   // Cross-screen demo flag: when true, cleaning status is shown as a coloured
   // text label (Calendar room column + Housekeeping status pills) instead of
   // the circular icon. Set from either screen's demo flags sheet.
@@ -23,8 +32,9 @@ interface HousekeepingStatusContextValue {
 const HousekeepingStatusContext = createContext<HousekeepingStatusContextValue>({
   statusOverrides: {},
   setStatusOverride: () => {},
+  viewMode: 'full',
+  setViewMode: () => {},
   housekeeperMode: false,
-  setHousekeeperMode: () => {},
   cleaningStatusAsLabel: false,
   setCleaningStatusAsLabel: () => {},
   reviewCaptureFabEnabled: false,
@@ -33,7 +43,10 @@ const HousekeepingStatusContext = createContext<HousekeepingStatusContextValue>(
 
 export function HousekeepingStatusProvider({ children }: { children: React.ReactNode }) {
   const [statusOverrides, setStatusOverrides] = useState<Record<string, RoomStatus>>({});
-  const [housekeeperMode, setHousekeeperMode] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('full');
+  // Browser view renders the same limited UI as 'limited' — it just sits inside
+  // a faux browser window — so both map to housekeeper (limited) mode.
+  const housekeeperMode = viewMode === 'limited' || viewMode === 'browser';
   const [cleaningStatusAsLabel, setCleaningStatusAsLabel] = useState(false);
   const [reviewCaptureFabEnabled, setReviewCaptureFabEnabled] = useState(false);
   const [updateRoomStatusMutation] = useMutation(UPDATE_ROOM_STATUS);
@@ -54,7 +67,7 @@ export function HousekeepingStatusProvider({ children }: { children: React.React
   }
 
   return (
-    <HousekeepingStatusContext.Provider value={{ statusOverrides, setStatusOverride, housekeeperMode, setHousekeeperMode, cleaningStatusAsLabel, setCleaningStatusAsLabel, reviewCaptureFabEnabled, setReviewCaptureFabEnabled }}>
+    <HousekeepingStatusContext.Provider value={{ statusOverrides, setStatusOverride, viewMode, setViewMode, housekeeperMode, cleaningStatusAsLabel, setCleaningStatusAsLabel, reviewCaptureFabEnabled, setReviewCaptureFabEnabled }}>
       {children}
     </HousekeepingStatusContext.Provider>
   );

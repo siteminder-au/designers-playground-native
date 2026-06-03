@@ -51,6 +51,7 @@ import { FilterSheet } from './components/sheets/FilterSheet';
 import { DemoFlagsSheet } from './components/sheets/DemoFlagsSheet';
 import { AutomationsSheet } from './components/sheets/AutomationsSheet';
 import { PrintPreviewModal } from './components/sheets/PrintPreviewModal';
+import { BrowserChrome } from './components/BrowserView';
 import { DateRangeSheet } from './components/sheets/DateRangeSheet';
 import { MonthSheet } from './components/sheets/MonthSheet';
 
@@ -89,7 +90,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const [pendingEnd, setPendingEnd] = useState<string | null>(null);
 
   // Status overrides (shared via context for cross-screen sync)
-  const { statusOverrides, setStatusOverride, housekeeperMode, setHousekeeperMode, cleaningStatusAsLabel, setCleaningStatusAsLabel, reviewCaptureFabEnabled, setReviewCaptureFabEnabled } = useHousekeepingStatus();
+  const { statusOverrides, setStatusOverride, viewMode, setViewMode, housekeeperMode, cleaningStatusAsLabel, setCleaningStatusAsLabel, reviewCaptureFabEnabled, setReviewCaptureFabEnabled } = useHousekeepingStatus();
   const [statusDropdown, setStatusDropdown] = useState<{
     roomId: string;
     currentStatus: RoomStatus;
@@ -560,8 +561,11 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     ? `${formatShort(dateRange.start)} → ${formatShort(dateRange.end)}`
     : formatLong(selectedDate);
 
-  return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+  // Browser view shows the same limited UI as 'limited' (housekeeperMode is
+  // true for both), just wrapped in faux browser chrome below. The browser
+  // chrome owns the top inset, so the screen drops its own top safe-area edge.
+  const screen = (
+    <SafeAreaView style={styles.safeArea} edges={viewMode === 'browser' ? [] : ['top']}>
     <View style={styles.container}>
       {/* ── Header ── */}
       <View style={styles.header}>
@@ -600,7 +604,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
               </TouchableOpacity>
             )}
 
-            {!dateRange && dateSelectorVariant === 'range' && (
+            {!dateRange && dateSelectorVariant === 'range' && viewMode !== 'browser' && (
               <TouchableOpacity style={{ padding: 4 }} onPress={openModal}>
                 <Ionicons name="calendar-outline" size={20} color="#333" />
               </TouchableOpacity>
@@ -913,8 +917,8 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         panResponder={demoPanResponder}
         flags={flags}
         setFlags={setFlags}
-        housekeeperMode={housekeeperMode}
-        setHousekeeperMode={setHousekeeperMode}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
         cleaningStatusAsLabel={cleaningStatusAsLabel}
         setCleaningStatusAsLabel={setCleaningStatusAsLabel}
         reviewCaptureFabEnabled={reviewCaptureFabEnabled}
@@ -996,5 +1000,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     </View>
     </SafeAreaView>
   );
+
+  return viewMode === 'browser' ? <BrowserChrome>{screen}</BrowserChrome> : screen;
 }
 

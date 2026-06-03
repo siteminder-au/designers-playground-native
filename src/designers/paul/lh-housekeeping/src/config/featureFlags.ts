@@ -19,7 +19,7 @@ const FLAGS = {
   showLateCheckout: true,
 
   /** 8-digit booking reference ID, pinned right in the guest info row */
-  showReservationId: true,
+  showReservationId: false,
 
   /** Icon on the cleaning status pill (brush, checkmark, etc.) */
   showStatusIcon: false,

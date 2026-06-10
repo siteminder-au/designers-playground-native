@@ -383,7 +383,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
   const statsStrip = flags.roomStatsChips ? (
     // Chip variant — tappable filters
-    <View style={{ position: 'relative' }}>
+    <View style={{ position: 'relative', backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#e5e8e8' }}>
       <ScrollView
         ref={statsScrollRef}
         horizontal
@@ -407,16 +407,16 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         })}
       </ScrollView>
       <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 40, flexDirection: 'row' }} pointerEvents="none">
-        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0)`    }} />
-        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0.3)`  }} />
-        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0.6)`  }} />
-        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0.85)` }} />
-        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,1)`    }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,0)`    }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,0.3)`  }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,0.6)`  }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,0.85)` }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,1)`    }} />
       </View>
     </View>
   ) : (
     // Default — static informational strip
-    <View style={{ position: 'relative' }}>
+    <View style={{ position: 'relative', backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#e5e8e8' }}>
       <ScrollView
         ref={statsScrollRef}
         horizontal
@@ -431,11 +431,11 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         ))}
       </ScrollView>
       <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 40, flexDirection: 'row' }} pointerEvents="none">
-        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0)`    }} />
-        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0.3)`  }} />
-        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0.6)`  }} />
-        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0.85)` }} />
-        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,1)`    }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,0)`    }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,0.3)`  }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,0.6)`  }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,0.85)` }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,1)`    }} />
       </View>
     </View>
   );
@@ -604,6 +604,16 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
               </TouchableOpacity>
             )}
 
+            {/* Filter icon — moved from sort toolbar; red dot badge when filters active */}
+            <TouchableOpacity style={{ padding: 4 }} onPress={() => setFilterSheetVisible(true)}>
+              <View>
+                <Ionicons name="options-outline" size={22} color="#333" />
+                {filterCount > 0 && (
+                  <View style={{ position: 'absolute', top: 0, right: 0, width: 8, height: 8, borderRadius: 4, backgroundColor: '#ef4444' }} />
+                )}
+              </View>
+            </TouchableOpacity>
+
             {!dateRange && dateSelectorVariant === 'range' && viewMode !== 'browser' && (
               <TouchableOpacity style={{ padding: 4 }} onPress={openModal}>
                 <Ionicons name="calendar-outline" size={20} color="#333" />
@@ -658,43 +668,39 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         );
       })()}
 
-      {/* ── Sort toolbar ── */}
-      <View style={styles.sortToolbar}>
-        <TouchableOpacity style={styles.sortBtn} onPress={() => setSortModalVisible(true)}>
-          <Text style={styles.sortBtnText}>
-            Sort: {SORT_OPTIONS.find(o => o.value === sort.field)?.label}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.sortDirToggle}
-          onPress={() => setSort(prev => ({ ...prev, direction: prev.direction === 'asc' ? 'desc' : 'asc' }))}
-        >
-          <Ionicons
-            name={sort.direction === 'asc' ? 'arrow-up' : 'arrow-down'}
-            size={16}
-            color={ORANGE}
-          />
-        </TouchableOpacity>
-        {flags.showPrint && <View style={styles.sortToolbarSep} />}
-        <TouchableOpacity
-          style={[styles.filterBtn, !flags.showPrint && { marginLeft: 'auto', marginRight: 16 }]}
-          onPress={() => setFilterSheetVisible(true)}
-        >
-          <Ionicons name="options-outline" size={15} color={ORANGE} />
-          <Text style={styles.filterBtnText}>Filter</Text>
-          {filterCount > 0 && (
-            <View style={styles.filterBadge}>
-              <Text style={styles.filterBadgeText}>{filterCount}</Text>
-            </View>
+      {/* ── Sort toolbar — only shown when sort demo flag is on ── */}
+      {(flags.showSort || flags.showPrint) && (
+        <View style={styles.sortToolbar}>
+          {flags.showSort && (
+            <>
+              <TouchableOpacity style={styles.sortBtn} onPress={() => setSortModalVisible(true)}>
+                <Text style={styles.sortBtnText}>
+                  Sort: {SORT_OPTIONS.find(o => o.value === sort.field)?.label}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.sortDirToggle}
+                onPress={() => setSort(prev => ({ ...prev, direction: prev.direction === 'asc' ? 'desc' : 'asc' }))}
+              >
+                <Ionicons
+                  name={sort.direction === 'asc' ? 'arrow-up' : 'arrow-down'}
+                  size={16}
+                  color={ORANGE}
+                />
+              </TouchableOpacity>
+            </>
           )}
-        </TouchableOpacity>
-        {flags.showPrint && (
-          <TouchableOpacity style={styles.sortToolbarPrint} onPress={() => setPrintPreviewVisible(true)}>
-            <Ionicons name="print-outline" size={15} color={ORANGE} />
-            <Text style={styles.sortToolbarPrintText}>Print</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+          {flags.showPrint && (
+            <TouchableOpacity style={[styles.sortToolbarPrint, { marginLeft: 'auto', marginRight: 16 }]} onPress={() => setPrintPreviewVisible(true)}>
+              <Ionicons name="print-outline" size={15} color={ORANGE} />
+              <Text style={styles.sortToolbarPrintText}>Print</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* ── Stats strip — fixed in layout (not inside scroll area) to avoid iOS top inset gap ── */}
+      {!loading && !error && statsStrip}
 
       {/* ── Content ── */}
       {loading ? (
@@ -705,7 +711,6 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         <SectionList
           sections={rangeSections}
           keyExtractor={(item, i) => `${item.room.id}-${i}`}
-          ListHeaderComponent={statsStrip}
           renderSectionHeader={({ section }) => (
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionHeaderText}>{section.title}</Text>
@@ -741,7 +746,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
           }
           stickySectionHeadersEnabled
           style={{ backgroundColor: '#f2f3f3' }}
-          contentContainerStyle={{ paddingTop: 0, paddingBottom: 32 }}
+          contentContainerStyle={{ paddingTop: 24, paddingBottom: 32 }}
         />
       ) : (
         <FlatList
@@ -750,7 +755,6 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
           scrollEventThrottle={16}
           data={singleRooms}
           keyExtractor={item => item.room.id}
-          ListHeaderComponent={statsStrip}
           renderItem={({ item }) => {
             const effectiveStatus = statusOverrides[item.room.id] ?? item.room.status;
             const bedConfig = item.bedConfiguration;
@@ -775,7 +779,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
           }}
           ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
           style={{ backgroundColor: '#f2f3f3' }}
-          contentContainerStyle={{ paddingTop: 8, paddingBottom: 32 }}
+          contentContainerStyle={{ paddingTop: 24, paddingBottom: 32 }}
           ListEmptyComponent={
             <Text style={styles.emptyText}>
               {filterCount > 0 ? 'No rooms match the current filters.' : 'No room data for this date.'}

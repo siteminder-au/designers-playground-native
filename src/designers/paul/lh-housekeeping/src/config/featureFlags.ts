@@ -43,6 +43,9 @@ const FLAGS = {
 
   /** Print button in the sort/filter toolbar (opens the print preview). */
   showPrint: false,
+
+  /** Sort control in the toolbar (field + direction toggle). Off by default. */
+  showSort: false,
 } as const;
 
 export default FLAGS;

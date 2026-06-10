@@ -31,8 +31,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
   },
   headerLabel: { fontSize: 16, color: '#333', fontWeight: '600', position: 'absolute', left: 0, right: 0, textAlign: 'center' },
   headerDate:  { fontSize: 22, fontFamily: 'ValueSerifTrial-Medium', color: '#111', marginTop: 2, lineHeight: 30 },

@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { timingSafeEqual } from 'crypto';
 import { ApolloServer } from '@apollo/server';
-import { expressMiddleware } from '@apollo/server/express4';
+import { expressMiddleware } from '@as-integrations/express5';
 import { typeDefs } from './src/graphql/paul/typeDefs.js';
 import { resolvers } from './src/graphql/paul/resolvers.js';
 

@@ -1,6 +1,6 @@
 {
   "name": "designers-playground-native",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "main": "index.ts",
   "type": "module",
   "scripts": {
@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@apollo/client": "^3.14.0",
-    "@apollo/server": "^4.11.0",
+    "@apollo/server": "^5.5.0",
+    "@as-integrations/express5": "^1.1.2",
     "@expo/metro-runtime": "~6.1.2",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",

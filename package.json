@@ -1,6 +1,6 @@
 {
   "name": "designers-playground-native",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "main": "index.ts",
   "type": "module",
   "scripts": {
@@ -42,6 +42,13 @@
     "@types/react": "~19.1.10",
     "react-native-svg-transformer": "^1.5.3",
     "typescript": "~5.9.2"
+  },
+  "overrides": {
+    "shell-quote": "^1.8.4",
+    "postcss": "^8.5.10",
+    "qs": "^6.15.2",
+    "minimatch@10.2.5": { "brace-expansion": "^5.0.6" },
+    "ws@8.20.0": "^8.20.1"
   },
   "private": true
 }

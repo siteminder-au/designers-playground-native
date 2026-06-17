@@ -72,9 +72,15 @@ This repository hosts multiple designers' React Native prototypes under `src/des
 - Do **not** run `npm run build` — the build runs automatically in GitHub Actions on every push to `main`
 - You **may** run `git add`, `git commit`, and `git push` for the designer, but only stage files within `src/designers/{their-name}/` — never stage files outside that folder
 - After committing and pushing to the designer's branch, always merge their branch into `main` and push so changes deploy automatically — use the `/commit` command
-- If something is needed outside the designer's folder (e.g. a new route or home page entry), tell the designer to ask the repository owner
+- If something is needed outside the designer's folder (e.g. a new screen registration, a home screen entry, a new GraphQL resolver or database table), **do not edit the shared file** — file a request with `/request-infra-change` so the repository owner can make the change (see *Requesting shared-infra changes* below)
 
 **Exception — repository owner (Pat Kennedy):** The above restrictions do not apply.
+
+**Requesting shared-infra changes (`infra-requests/`)**
+Designers can't edit shared infrastructure, but they can *request* changes through a lightweight in-repo pull-request workflow:
+- A designer's Claude runs `/request-infra-change`. It interviews the designer, writes a request file into `infra-requests/open/`, pushes it to `main`, and opens a GitHub issue (label `infra-request`) to notify Pat. The request **describes the behaviour/interface needed and why — never the implementation.**
+- Pat runs `/review-infra-requests` to list open requests, implement the chosen one in the real shared files, bump the version, ship it, move the request file to `infra-requests/closed/`, and close the issue. The designer is notified via the issue and pulls the change in with `/sync`.
+- `infra-requests/open/` is the **one** location a designer's Claude may commit outside `src/designers/{their-slug}/`, and only via `/request-infra-change` (staging just the single request file). All other shared-infra rules still apply.
 
 ############################################################################################################################
 # Navigation architecture

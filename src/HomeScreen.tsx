@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +14,15 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootParamList } from './navigation/AppNavigator';
 
 type Nav = NativeStackNavigationProp<RootParamList>;
+
+// App switcher — opens the other deployed playgrounds. `currentApp` marks this
+// one as active (rendered non-pressable).
+const currentApp = 'native';
+const apps = [
+  { key: 'vue', label: 'Vue', url: 'https://sm-vue-c9f4e18919d2.herokuapp.com/' },
+  { key: 'react', label: 'React', url: 'https://sm-react-0f29bcd17aa4.herokuapp.com/' },
+  { key: 'native', label: 'Native', url: 'https://sm-native-5c5b643660da.herokuapp.com/' },
+];
 
 const designers: {
   name: string;
@@ -38,6 +48,30 @@ export default function PlaygroundHomeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scroll}>
+        <View style={styles.switcher}>
+          {apps.map((app) =>
+            app.key === currentApp ? (
+              <View
+                key={app.key}
+                style={[styles.switcherBtn, styles.switcherBtnActive]}
+              >
+                <Text style={[styles.switcherText, styles.switcherTextActive]}>
+                  {app.label}
+                </Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                key={app.key}
+                style={styles.switcherBtn}
+                onPress={() => Linking.openURL(app.url)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.switcherText}>{app.label}</Text>
+              </TouchableOpacity>
+            ),
+          )}
+        </View>
+
         <View style={styles.header}>
           <Text style={styles.title}>Native Prototyping{'\n'}Environment</Text>
           <Text style={styles.subtitle}>Select a prototype to view</Text>
@@ -78,6 +112,33 @@ const styles = StyleSheet.create({
   scroll: {
     padding: 24,
     paddingTop: 40,
+  },
+  switcher: {
+    flexDirection: 'row',
+    alignSelf: 'center',
+    backgroundColor: '#eef2f9',
+    borderWidth: 1,
+    borderColor: '#dde3ee',
+    borderRadius: 999,
+    padding: 3,
+    gap: 2,
+    marginBottom: 24,
+  },
+  switcherBtn: {
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+  },
+  switcherBtnActive: {
+    backgroundColor: '#006add',
+  },
+  switcherText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#5a6472',
+  },
+  switcherTextActive: {
+    color: '#ffffff',
   },
   header: {
     marginBottom: 32,

@@ -6,9 +6,13 @@ of a lightweight in-repo pull-request workflow. It writes a request file to
 `infra-requests/open/`, pushes it to `main`, and opens a GitHub issue so Pat is notified.
 
 Use this whenever a designer needs something outside their own prototype folder: a new
-GraphQL resolver or database table, a new screen registration / nav entry, a shared
-dependency, a change to `App.tsx` / `src/navigation/AppNavigator.tsx` / `src/HomeScreen.tsx`,
-`server.js`, or `src/db/pool.js`, etc.
+GraphQL resolver or database table, a shared dependency, a change to `server.js`,
+`src/db/pool.js`, or the screen/home-screen discovery logic (`src/prototypes.ts`), etc.
+
+**Note — screens and home-screen cards are NOT infra changes anymore.** They are
+auto-discovered from each prototype's folder, so adding/removing a prototype (and its nav
+screen, deep-link path and card) is done with a `prototype.json` / `designer.json` inside the
+designer's own folder (see `/add-designer`). Do not file an infra request for those.
 
 **Describe-only:** the request states *what behaviour/interface* the designer needs and
 *why*. It must **not** contain the implementation — Pat's Claude writes the actual code.

@@ -31,23 +31,38 @@ Bring a designer's existing standalone React Native prototype into this multi-de
 
 6. Fix any broken imports in copied files (check relative paths, casing on Linux CI).
 
-7. Register the screen in `src/navigation/AppNavigator.tsx`:
-   - Add to `RootParamList`: `{ScreenName}: undefined`
-   - Import and add `<Stack.Screen>`
+7. Write the prototype metadata file `src/designers/{slug}/{proto-slug}/prototype.json`. The
+   screen, its deep-link path and the home-screen card are auto-discovered from this — **do not
+   edit `src/navigation/AppNavigator.tsx`, `App.tsx`, or `src/HomeScreen.tsx`.**
+   ```json
+   {
+     "label": "{description}",
+     "order": 0
+   }
+   ```
+   Add `"headerShown": false` if the prototype renders its own chrome and wants no native header.
 
-8. Add the linking entry in `App.tsx`.
+8. If this is a **new** designer, write `src/designers/{slug}/designer.json`:
+   ```json
+   {
+     "name": "{Full Name}",
+     "initials": "{INITIALS}"
+   }
+   ```
+   (If the designer already exists, skip — their `designer.json` is already present.)
 
-9. Add the designer card to `src/HomeScreen.tsx`.
-
-10. Run a build to check for errors:
+9. Run a build to check for errors:
     ```
     npx expo export --platform web
     ```
     Fix any errors.
 
-11. Commit and push:
+10. Commit and push. The prototype folder needs no shared-file edits; the only shared file that
+    may legitimately change here is `package.json` if new dependencies were added (step 4) — if
+    so, the repo owner should make/approve that part (the CI guard blocks non-owner shared-infra
+    edits).
     ```
-    git add src/designers/{slug}/ src/navigation/AppNavigator.tsx src/HomeScreen.tsx App.tsx package.json
+    git add src/designers/{slug}/
     git commit -m "Import {Full Name}'s {proto-slug} prototype"
     git push
     ```

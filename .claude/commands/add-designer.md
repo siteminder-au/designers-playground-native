@@ -12,7 +12,6 @@
    - **designer slug**: lowercase first name only (e.g. "jane")
    - **initials**: first letter of first name + first letter of last name, uppercase (e.g. "JS")
    - **proto slug**: derive from the description — lowercase, spaces to hyphens (e.g. "booking-flow"). If generic, use `proto-1`.
-   - **screen name**: `{FirstName}{ProtoSlugPascalCase}` (e.g. `JaneBookingFlow`)
 
 3. Create the prototype folder:
    ```
@@ -39,40 +38,44 @@
    });
    ```
 
-4. Register the screen in `src/navigation/AppNavigator.tsx`:
-   - Add `{ScreenName}: undefined` to the `RootParamList` type
-   - Import the component
-   - Add `<Stack.Screen name="{ScreenName}" component={...} options={{ title: '{description}', headerBackTitle: 'Playground', headerStyle: { backgroundColor: '#006add' }, headerTintColor: '#ffffff', headerTitleStyle: { fontWeight: '600' } }} />`
-
-5. Add the linking entry in `App.tsx`:
-   ```ts
-   {ScreenName}: '{slug}/{proto-slug}',
-   ```
-
-6. Add the designer card to `src/HomeScreen.tsx` in the `designers` array, **in alphabetical order by first name**:
-   ```ts
+4. Write the designer metadata file `src/designers/{slug}/designer.json`:
+   ```json
    {
-     name: '{Full Name}',
-     initials: '{INITIALS}',
-     prototypes: [{ screenName: '{ScreenName}', label: '{description}' }],
-   },
+     "name": "{Full Name}",
+     "initials": "{INITIALS}"
+   }
    ```
+   The home screen lists designers alphabetically by name automatically.
 
-7. Stage and commit on `main`:
+5. Write the prototype metadata file `src/designers/{slug}/{proto-slug}/prototype.json`:
+   ```json
+   {
+     "label": "{description}",
+     "order": 0
+   }
    ```
-   git add src/designers/{slug}/ src/navigation/AppNavigator.tsx src/HomeScreen.tsx App.tsx
+   The screen, its deep-link path (`{slug}/{proto-slug}`) and the home-screen card are
+   auto-discovered from the folder + this file. **Do not edit `src/navigation/AppNavigator.tsx`,
+   `App.tsx`, or `src/HomeScreen.tsx`** — they are shared infrastructure and adding a prototype
+   no longer touches them.
+   - By default the prototype shows the standard blue native header (title = `label`). If the
+     prototype renders its own chrome and you want no header, add `"headerShown": false`.
+
+6. Stage and commit the new files on `main`, then push:
+   ```
+   git add src/designers/{slug}/
    git commit -m "Add {Full Name} as designer"
    git push
    ```
 
-8. Create the designer's personal branch:
+7. Create the designer's personal branch:
    ```
    git checkout -b {slug}
    git push -u origin {slug}
    git checkout main
    ```
 
-9. Confirm to Pat:
+8. Confirm to Pat:
    - Playground URL: `https://sm-native-5c5b643660da.herokuapp.com/`
    - Designer's branch: `{slug}`
    - Files in `src/designers/{slug}/{proto-slug}/`

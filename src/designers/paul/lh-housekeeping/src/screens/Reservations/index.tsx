@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,13 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useQuery } from '@apollo/client';
 import { GET_TODAY_RESERVATIONS } from '../../apollo/queries';
 import CleaningServicesSvg from '../../../assets/CleaningServices.svg';
+import { useReviewContext } from '../../context/ReviewContext';
+import reservationsAnnotations from '../../annotations/Reservations.json';
 
 const ORANGE = '#ff6842';
 const GREEN = '#1b7b3e';
@@ -235,6 +238,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function ReservationsScreen({ navigation }: { navigation: any }) {
+  const { setAnnotations, setScrollY } = useReviewContext();
+  useFocusEffect(useCallback(() => {
+    setAnnotations(reservationsAnnotations as any);
+    setScrollY(0);
+    return () => setAnnotations(null);
+  }, []));
+
   const todayDate = new Date();
   const [selectedDate, setSelectedDate] = useState<Date>(todayDate);
   const [weekOffset, setWeekOffset] = useState(0);
@@ -385,7 +395,7 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
         ) : error ? (
           <Text style={styles.errorText}>Could not load reservations.</Text>
         ) : (
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} onScroll={e => setScrollY(e.nativeEvent.contentOffset.y)} scrollEventThrottle={16}>
 
             {showCheckIns && filteredCheckingIn.length > 0 && (
               <Section title="Check-ins">

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,10 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useReviewContext } from '../../context/ReviewContext';
+import distributionAnnotations from '../../annotations/Distribution.json';
 
 // ── Tokens ────────────────────────────────────────────────────────────────────
 
@@ -163,6 +166,13 @@ function FilterChip({
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function DistributionScreen() {
+  const { setAnnotations, setScrollY } = useReviewContext();
+  useFocusEffect(useCallback(() => {
+    setAnnotations(distributionAnnotations as any);
+    setScrollY(0);
+    return () => setAnnotations(null);
+  }, []));
+
   const today   = new Date();
   const days    = buildDays(today, 14);
   const [selectedIdx, setSelectedIdx] = useState(0);

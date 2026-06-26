@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,10 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useReviewContext } from '../../context/ReviewContext';
+import notificationsAnnotations from '../../annotations/Notifications.json';
 
 // ── Tokens ────────────────────────────────────────────────────────────────────
 
@@ -131,6 +134,13 @@ function NotificationRow({ item, isFirst }: { item: NotifItem; isFirst: boolean 
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function NotificationsScreen() {
+  const { setAnnotations, setScrollY } = useReviewContext();
+  useFocusEffect(useCallback(() => {
+    setAnnotations(notificationsAnnotations as any);
+    setScrollY(0);
+    return () => setAnnotations(null);
+  }, []));
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
 

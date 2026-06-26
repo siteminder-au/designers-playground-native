@@ -14,6 +14,8 @@ import DistributionScreen from './src/screens/Distribution';
 import NotificationsScreen from './src/screens/Notifications';
 import { ReviewCaptureFab } from './src/components/ReviewCaptureFab';
 import { ReviewToggleFab } from './src/components/ReviewToggleFab';
+import { ReviewOverlay } from './src/components/ReviewOverlay';
+import { ReviewProvider, useReviewContext } from './src/context/ReviewContext';
 
 // NavigationContainer is handled by the playground root (App.tsx).
 // This component renders Paul's prototype as a nested bottom-tab navigator.
@@ -178,7 +180,9 @@ export default function PaulLHHousekeepingApp() {
   const content = (
     <ApolloProvider client={client}>
       <HousekeepingStatusProvider>
-        <AppShell />
+        <ReviewProvider>
+          <AppShell />
+        </ReviewProvider>
       </HousekeepingStatusProvider>
     </ApolloProvider>
   );
@@ -187,12 +191,17 @@ export default function PaulLHHousekeepingApp() {
 }
 
 function AppShell() {
-  const { reviewCaptureFabEnabled } = useHousekeepingStatus();
+  const { reviewCaptureFabEnabled, reviewOverlayEnabled } = useHousekeepingStatus();
+  const { annotations, scrollY } = useReviewContext();
+  const hasMarkers = (annotations?.markers.length ?? 0) > 0;
   return (
     <View style={{ flex: 1 }}>
       <AppNavigator />
       {reviewCaptureFabEnabled && <ReviewCaptureFab />}
       <ReviewToggleFab />
+      {reviewOverlayEnabled && hasMarkers && (
+        <ReviewOverlay data={annotations!} scrollOffset={scrollY} />
+      )}
     </View>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,9 @@ import {
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useHousekeepingStatus } from '../../context/HousekeepingStatus';
-import { ReviewOverlay } from '../../components/ReviewOverlay';
+import { useReviewContext } from '../../context/ReviewContext';
 import homeAnnotations from '../../annotations/Home.json';
 
 // ── Tokens ────────────────────────────────────────────────────────────────────
@@ -176,8 +176,7 @@ function CardHeader({
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
-  const { reviewOverlayEnabled } = useHousekeepingStatus();
-  const [scrollOffset, setScrollOffset] = useState(0);
+  const { setAnnotations, setScrollY } = useReviewContext();
   const [perfTab, setPerfTab] = useState<'rooms' | 'revenue'>('rooms');
   const [activeCard, setActiveCard] = useState<0 | 1>(0);
   // 0 = card 0 is front, 1 = card 1 is front — spring-animated
@@ -203,6 +202,12 @@ export default function HomeScreen() {
     }).start();
   };
 
+  useFocusEffect(useCallback(() => {
+    setAnnotations(homeAnnotations as any);
+    setScrollY(0);
+    return () => setAnnotations(null);
+  }, []));
+
   // One-time entry nudge: back card briefly peeks up then settles, signalling interactivity
   useEffect(() => {
     const t = setTimeout(() => {
@@ -220,7 +225,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        onScroll={e => setScrollOffset(e.nativeEvent.contentOffset.y)}
+        onScroll={e => setScrollY(e.nativeEvent.contentOffset.y)}
         scrollEventThrottle={16}
       >
 
@@ -473,10 +478,6 @@ export default function HomeScreen() {
         </View>
 
       </ScrollView>
-
-      {reviewOverlayEnabled && (
-        <ReviewOverlay data={homeAnnotations as any} scrollOffset={scrollOffset} />
-      )}
     </SafeAreaView>
   );
 }

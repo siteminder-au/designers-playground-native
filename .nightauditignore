@@ -1,0 +1,4 @@
+# Excludes this repository from the knowledge plugin's night audit.
+# Nothing in this prototyping repo should be promoted to the shared hivemind.
+# Presence of this file marks the workspace as permanently excluded, even if
+# the knowledge plugin is (re-)enabled later.

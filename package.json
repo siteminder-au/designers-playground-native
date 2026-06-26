@@ -1,6 +1,6 @@
 {
   "name": "designers-playground-native",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "main": "index.ts",
   "type": "module",
   "scripts": {
@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@apollo/client": "^3.14.0",
-    "@apollo/server": "^4.11.0",
+    "@apollo/server": "^5.5.0",
+    "@as-integrations/express5": "^1.1.2",
     "@expo/metro-runtime": "~6.1.2",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -42,6 +43,15 @@
     "@types/react": "~19.1.10",
     "react-native-svg-transformer": "^1.5.3",
     "typescript": "~5.9.2"
+  },
+  "overrides": {
+    "shell-quote": "^1.8.4",
+    "postcss": "^8.5.10",
+    "qs": "^6.15.2",
+    "minimatch@10.2.5": {
+      "brace-expansion": "^5.0.6"
+    },
+    "ws@8.20.0": "^8.20.1"
   },
   "private": true
 }

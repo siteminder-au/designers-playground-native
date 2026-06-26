@@ -1,0 +1,87 @@
+name: Guard shared infrastructure
+
+# Fails the check when anyone other than the repo owner changes shared
+# infrastructure. Designers own only files under src/designers/{their-slug}/.
+# Adding a prototype no longer requires touching any shared file (screens, the
+# linking config and home-screen cards are auto-discovered), so a shared-file
+# change by a non-owner is a rule violation and is flagged here.
+#
+# Owner-merges are intentionally allowed: github.actor is the pusher / PR
+# author, so when the owner merges a branch into main that is the owner taking
+# responsibility for its contents.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    env:
+      # GitHub logins permitted to change shared infrastructure.
+      ALLOWED_LOGINS: "pat-siteminder"
+      # Commit-author emails permitted (secondary check).
+      ALLOWED_EMAILS: "patrick.kennedy@siteminder.com"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Determine actor and changed files
+        id: diff
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            ACTOR="${{ github.event.pull_request.user.login }}"
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+          else
+            ACTOR="${{ github.actor }}"
+            BASE="${{ github.event.before }}"
+            HEAD="${{ github.sha }}"
+          fi
+
+          # New branch / first push (all-zero base) -> diff against empty tree.
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            BASE=$(git hash-object -t tree /dev/null)
+          fi
+
+          echo "actor=$ACTOR" >> "$GITHUB_OUTPUT"
+          git diff --name-only "$BASE" "$HEAD" > /tmp/changed.txt || git diff --name-only "$HEAD" > /tmp/changed.txt
+          echo "Changed files:"; cat /tmp/changed.txt
+
+      - name: Enforce shared-infra ownership
+        run: |
+          set -euo pipefail
+          ACTOR="${{ steps.diff.outputs.actor }}"
+
+          # Owner check (login).
+          for login in $ALLOWED_LOGINS; do
+            if [ "$ACTOR" = "$login" ]; then
+              echo "Actor '$ACTOR' is an allowed owner. OK."
+              exit 0
+            fi
+          done
+
+          # Shared-infra path patterns (anchored at repo root).
+          PATTERN='^(App\.tsx$|index\.ts$|src/navigation/|src/HomeScreen\.tsx$|src/prototypes\.ts$|app\.json$|metro\.config\.cjs$|babel\.config\.|tsconfig\.json$|package\.json$|package-lock\.json$|server\.js$|\.github/|\.claude/commands/)'
+
+          VIOLATIONS=$(grep -E "$PATTERN" /tmp/changed.txt || true)
+
+          if [ -n "$VIOLATIONS" ]; then
+            echo "::error::Actor '$ACTOR' is not permitted to change shared infrastructure."
+            echo "The following changed files are shared-infra and require the repo owner:"
+            echo "$VIOLATIONS" | sed 's/^/  - /'
+            echo ""
+            echo "Adding a prototype does NOT require these files — screens, linking and home"
+            echo "cards are auto-discovered. Put metadata in your own folder's designer.json /"
+            echo "prototype.json, or file a request with /request-infra-change."
+            exit 1
+          fi
+
+          echo "No shared-infra files changed by '$ACTOR'. OK."

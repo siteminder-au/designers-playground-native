@@ -5,31 +5,25 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootParamList } from './navigation/AppNavigator';
+import { designers } from './prototypes';
+import pkg from '../package.json';
 
 type Nav = NativeStackNavigationProp<RootParamList>;
 
-const designers: {
-  name: string;
-  initials: string;
-  prototypes: { screenName: keyof RootParamList; label: string }[];
-}[] = [
-  {
-    name: 'Paul Fang',
-    initials: 'PF',
-    prototypes: [{ screenName: 'PaulLHHousekeeping', label: 'LH Housekeeping' }],
-  },
-  {
-    name: 'Radha Ranaware',
-    initials: 'RR',
-    prototypes: [{ screenName: 'RadhaSmMobile', label: 'SM Mobile' }],
-  },
-  // Add new designers here — maintain alphabetical order by first name
+// App switcher — opens the other deployed playgrounds. `currentApp` marks this
+// one as active (rendered non-pressable).
+const currentApp = 'native';
+const apps = [
+  { key: 'vue', label: 'Vue', url: 'https://sm-vue-c9f4e18919d2.herokuapp.com/' },
+  { key: 'react', label: 'React', url: 'https://sm-react-0f29bcd17aa4.herokuapp.com/' },
+  { key: 'native', label: 'Native', url: 'https://sm-native-5c5b643660da.herokuapp.com/' },
 ];
 
 export default function PlaygroundHomeScreen() {
@@ -38,8 +32,35 @@ export default function PlaygroundHomeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scroll}>
+        <View style={styles.switcher}>
+          {apps.map((app) =>
+            app.key === currentApp ? (
+              <View
+                key={app.key}
+                style={[styles.switcherBtn, styles.switcherBtnActive]}
+              >
+                <Text style={[styles.switcherText, styles.switcherTextActive]}>
+                  {app.label}
+                </Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                key={app.key}
+                style={styles.switcherBtn}
+                onPress={() => Linking.openURL(app.url)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.switcherText}>{app.label}</Text>
+              </TouchableOpacity>
+            ),
+          )}
+        </View>
+
         <View style={styles.header}>
-          <Text style={styles.title}>Native Prototyping{'\n'}Environment</Text>
+          <Text style={styles.title}>
+            Native Prototyping{'\n'}Environment{' '}
+            <Text style={styles.titleVersion}>v{pkg.version}</Text>
+          </Text>
           <Text style={styles.subtitle}>Select a prototype to view</Text>
         </View>
 
@@ -54,9 +75,9 @@ export default function PlaygroundHomeScreen() {
 
             {designer.prototypes.map((proto) => (
               <TouchableOpacity
-                key={proto.screenName}
+                key={proto.route}
                 style={styles.protoRow}
-                onPress={() => navigation.navigate(proto.screenName)}
+                onPress={() => navigation.navigate(proto.route)}
                 activeOpacity={0.7}
               >
                 <Text style={styles.protoLabel}>{proto.label}</Text>
@@ -79,6 +100,33 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingTop: 40,
   },
+  switcher: {
+    flexDirection: 'row',
+    alignSelf: 'center',
+    backgroundColor: '#eef2f9',
+    borderWidth: 1,
+    borderColor: '#dde3ee',
+    borderRadius: 999,
+    padding: 3,
+    gap: 2,
+    marginBottom: 24,
+  },
+  switcherBtn: {
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+  },
+  switcherBtnActive: {
+    backgroundColor: '#006add',
+  },
+  switcherText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#5a6472',
+  },
+  switcherTextActive: {
+    color: '#ffffff',
+  },
   header: {
     marginBottom: 32,
     alignItems: 'center',
@@ -89,6 +137,11 @@ const styles = StyleSheet.create({
     color: '#1a1a2e',
     textAlign: 'center',
     marginBottom: 8,
+  },
+  titleVersion: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#aaa',
   },
   subtitle: {
     fontSize: 15,

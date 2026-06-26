@@ -1,0 +1,45 @@
+{
+  "screen": "Home",
+  "generated": "2026-06-26",
+  "markers": [
+    {
+      "num": 1,
+      "rect": { "x": 14, "y": 195, "w": 362, "h": 36 },
+      "title": "Card bleed reads as layout bug",
+      "body": "Revenue data from card 2 is fully legible below card 1 — looks like clipped content, not a deliberate peek effect."
+    },
+    {
+      "num": 2,
+      "rect": { "x": 154, "y": 218, "w": 82, "h": 15 },
+      "title": "No persistent tap affordance",
+      "body": "Dots are 5×5 px, near-invisible. After the entry nudge plays once, nothing signals the card is tappable on return visits."
+    },
+    {
+      "num": 3,
+      "rect": { "x": 262, "y": 48, "w": 120, "h": 16 },
+      "title": "\"View reservations\" undersized",
+      "body": "Text-only link on the right edge — smallest, hardest-to-hit position one-handed. iOS HIG minimum is 44 dp tall."
+    },
+    {
+      "num": 4,
+      "rect": { "x": 247, "y": 109, "w": 129, "h": 34 },
+      "title": "Inconsistent number formatting",
+      "body": "'09' (zero-padded) in the top row vs bare '0' in the bottom row — looks like two different data systems."
+    },
+    {
+      "num": 5,
+      "rect": { "x": 16, "y": 267, "w": 236, "h": 14 },
+      "title": "Widget dates are stale",
+      "body": "Dynamic Pricing + Available Rooms show Apr 2026 dates. Will confuse users in testing — drive from today's date."
+    }
+  ],
+  "working_well": [
+    "Stat hierarchy is clear — label above large number reads fast at a glance.",
+    "Salmon hero zone cleanly separates today context from below-the-fold.",
+    "Demand colour coding in the pricing grid is instantly scannable."
+  ],
+  "worth_considering": [
+    "Add a '1 of 2' counter or chevron next to the dots for a persistent flip cue.",
+    "Clip the card container so card 2's content is masked until intentionally flipped."
+  ]
+}

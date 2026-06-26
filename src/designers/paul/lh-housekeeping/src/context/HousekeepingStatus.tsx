@@ -27,6 +27,9 @@ interface HousekeepingStatusContextValue {
   // true, a small FAB sits in the bottom-right of every screen.
   reviewCaptureFabEnabled: boolean;
   setReviewCaptureFabEnabled: (value: boolean) => void;
+  // Dev tool: in-prototype annotation overlay for the current screen.
+  reviewOverlayEnabled: boolean;
+  setReviewOverlayEnabled: (value: boolean) => void;
 }
 
 const HousekeepingStatusContext = createContext<HousekeepingStatusContextValue>({
@@ -39,6 +42,8 @@ const HousekeepingStatusContext = createContext<HousekeepingStatusContextValue>(
   setCleaningStatusAsLabel: () => {},
   reviewCaptureFabEnabled: false,
   setReviewCaptureFabEnabled: () => {},
+  reviewOverlayEnabled: false,
+  setReviewOverlayEnabled: () => {},
 });
 
 export function HousekeepingStatusProvider({ children }: { children: React.ReactNode }) {
@@ -49,6 +54,7 @@ export function HousekeepingStatusProvider({ children }: { children: React.React
   const housekeeperMode = viewMode === 'limited' || viewMode === 'browser';
   const [cleaningStatusAsLabel, setCleaningStatusAsLabel] = useState(false);
   const [reviewCaptureFabEnabled, setReviewCaptureFabEnabled] = useState(false);
+  const [reviewOverlayEnabled, setReviewOverlayEnabled] = useState(false);
   const [updateRoomStatusMutation] = useMutation(UPDATE_ROOM_STATUS);
 
   function setStatusOverride(roomId: string, status: RoomStatus) {
@@ -67,7 +73,7 @@ export function HousekeepingStatusProvider({ children }: { children: React.React
   }
 
   return (
-    <HousekeepingStatusContext.Provider value={{ statusOverrides, setStatusOverride, viewMode, setViewMode, housekeeperMode, cleaningStatusAsLabel, setCleaningStatusAsLabel, reviewCaptureFabEnabled, setReviewCaptureFabEnabled }}>
+    <HousekeepingStatusContext.Provider value={{ statusOverrides, setStatusOverride, viewMode, setViewMode, housekeeperMode, cleaningStatusAsLabel, setCleaningStatusAsLabel, reviewCaptureFabEnabled, setReviewCaptureFabEnabled, reviewOverlayEnabled, setReviewOverlayEnabled }}>
       {children}
     </HousekeepingStatusContext.Provider>
   );

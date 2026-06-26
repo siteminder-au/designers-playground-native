@@ -1,0 +1,47 @@
+{
+  "screen": "Housekeeping",
+  "generated": "2026-06-26",
+  "markers": [
+    {
+      "num": 1,
+      "rect": { "x": 328, "y": 120, "w": 62, "h": 36 },
+      "title": "Third summary chip clipped — no scroll signal",
+      "body": "'0 awai...' is cut off at the right edge with no gradient or indicator. Users will assume the list ends at the clip rather than discovering there are more filter chips. Apply a right-edge fade or ensure all chips are visible."
+    },
+    {
+      "num": 2,
+      "rect": { "x": 9, "y": 268, "w": 130, "h": 28 },
+      "title": "Third guest-info icon is ambiguous",
+      "body": "The row of icons (👤 guests, 🧳 bags, and a third symbol) doesn't have labels. The third icon—which may indicate eco-service, notes, or something else—is not identifiable without tapping. Add short labels or tooltips (e.g. '2 guests · 1 bag · eco')."
+    },
+    {
+      "num": 3,
+      "rect": { "x": 9, "y": 348, "w": 120, "h": 20 },
+      "title": "'+ Room notes' touch target too small",
+      "body": "The orange '+ Room notes' link is approximately 18 px tall — well below the iOS 44 dp minimum. It's also text-only with no visible tap area. Wrap it in a tappable row or increase padding to meet the minimum target size."
+    },
+    {
+      "num": 4,
+      "rect": { "x": 14, "y": 172, "w": 362, "h": 600 },
+      "title": "No sort / priority signal for card order",
+      "body": "With 22 dirty rooms and 12 needing deep clean, there is no visible indication of why cards appear in a given order (urgency? check-in time? room number?). A sort label ('Sorted by: Check-in time') or priority badge would help housekeeping staff triage work without guessing."
+    },
+    {
+      "num": 5,
+      "rect": { "x": 346, "y": 22, "w": 40, "h": 40 },
+      "title": "Beaker/lab icon — function not discoverable",
+      "body": "The beaker icon (top right, opens demo flags) is unlabelled. Even as a prototype-only control it creates confusion for stakeholders who are testing the screen. Either label it 'Dev' or tuck it behind a less prominent access point."
+    }
+  ],
+  "working_well": [
+    "Guest comments surfaced directly on the card is excellent — housekeepers have context before entering the room without opening a separate screen.",
+    "Status pill with chevron (Needs clean ▾, Needs deep clean ▾) signals changeability clearly — the dropdown pattern is right for a field-worker workflow.",
+    "'Checking in' / 'Stay-through' reservation type badges are concise and immediately scan-worthy.",
+    "Room type label ('FAMILY ROOM', 'BRIDGE ROOM') in small caps above the room name adds useful grouping context."
+  ],
+  "worth_considering": [
+    "Add a completion counter at the top ('4 of 22 cleaned') so housekeepers have a clear progress signal across their shift.",
+    "Allow swipe-right on a card to mark a room as cleaned — the most frequent action in a housekeeping workflow deserves a gesture shortcut.",
+    "Show estimated clean time per room type (Deep clean ~45 min, Standard ~20 min) so staff can plan their shift order."
+  ]
+}

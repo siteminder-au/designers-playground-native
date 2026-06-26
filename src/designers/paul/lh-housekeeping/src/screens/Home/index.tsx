@@ -9,6 +9,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useHousekeepingStatus } from '../../context/HousekeepingStatus';
+import { ReviewOverlay } from '../../components/ReviewOverlay';
+import homeAnnotations from '../../annotations/Home.json';
 
 // ── Tokens ────────────────────────────────────────────────────────────────────
 
@@ -173,6 +176,8 @@ function CardHeader({
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
+  const { reviewOverlayEnabled } = useHousekeepingStatus();
+  const [scrollOffset, setScrollOffset] = useState(0);
   const [perfTab, setPerfTab] = useState<'rooms' | 'revenue'>('rooms');
   const [activeCard, setActiveCard] = useState<0 | 1>(0);
   // 0 = card 0 is front, 1 = card 1 is front — spring-animated
@@ -213,7 +218,11 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        onScroll={e => setScrollOffset(e.nativeEvent.contentOffset.y)}
+        scrollEventThrottle={16}
+      >
 
         {/* ── Gradient top section ── */}
         <View style={styles.topSection}>
@@ -464,6 +473,10 @@ export default function HomeScreen() {
         </View>
 
       </ScrollView>
+
+      {reviewOverlayEnabled && (
+        <ReviewOverlay data={homeAnnotations as any} scrollOffset={scrollOffset} />
+      )}
     </SafeAreaView>
   );
 }

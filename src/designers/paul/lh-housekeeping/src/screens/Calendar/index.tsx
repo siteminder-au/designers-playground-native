@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -18,11 +18,14 @@ import { useHousekeepingStatus, RoomStatus } from '../../context/HousekeepingSta
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { STATUS_VARIANT, SYMBOL_CONTAINER } from '../../config/statusVariant';
 import { COLORS } from '../../config/colors';
+import { useFocusEffect } from '@react-navigation/native';
 import { useBottomSheet } from '../HousekeepingReports/hooks/useBottomSheet';
 import CleanSvg from '../../../assets/Clean.svg';
 import DirtySvg from '../../../assets/Dirty.svg';
 import InspectionSvg from '../../../assets/Inspection.svg';
 import SnoozeSvg from '../../../assets/Snooze.svg';
+import { useReviewContext } from '../../context/ReviewContext';
+import calendarAnnotations from '../../annotations/Calendar.json';
 
 const ROOM_COL_WIDTH = 90;
 const RIGHT_ARROW_WIDTH = 28;
@@ -150,6 +153,13 @@ function localTodayISO(): string {
 }
 
 export default function CalendarScreen() {
+  const { setAnnotations, setScrollY } = useReviewContext();
+  useFocusEffect(useCallback(() => {
+    setAnnotations(calendarAnnotations as any);
+    setScrollY(0);
+    return () => setAnnotations(null);
+  }, []));
+
   const today = localTodayISO();
   const insets = useSafeAreaInsets();
   const [selectedDate, setSelectedDate] = useState(today);

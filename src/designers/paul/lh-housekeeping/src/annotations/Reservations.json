@@ -1,0 +1,47 @@
+{
+  "screen": "Reservations",
+  "generated": "2026-06-26",
+  "markers": [
+    {
+      "num": 1,
+      "rect": { "x": 240, "y": 14, "w": 136, "h": 40 },
+      "title": "Icon-only top nav — functions undiscoverable",
+      "body": "Four icons (housekeeping, filters, calendar, add) sit beside the date with no labels. A front-desk user encountering this for the first time has no way to know what each does. Add labels or tooltips, or at minimum use universally recognised icons."
+    },
+    {
+      "num": 2,
+      "rect": { "x": 14, "y": 182, "w": 362, "h": 38 },
+      "title": "Unallocated reservation toggle — unclear intent",
+      "body": "The toggle on the 'unallocated reservation' banner has no label. It's unclear whether toggling it shows/hides the row, auto-assigns the room, or triggers a different workflow. Label the toggle action explicitly (e.g. 'Show only' or 'Assign')."
+    },
+    {
+      "num": 3,
+      "rect": { "x": 14, "y": 138, "w": 362, "h": 38 },
+      "title": "Filter tabs unequal widths — visual imbalance",
+      "body": "'Stay-throughs' is noticeably wider than 'Check-ins' and 'Check-outs', making the tab row feel unstructured. Use a segmented control with equal-width segments, or at minimum ensure consistent horizontal padding across all tabs."
+    },
+    {
+      "num": 4,
+      "rect": { "x": 186, "y": 394, "w": 170, "h": 44 },
+      "title": "'Check in' prioritised over blocked payment",
+      "body": "When 'Payment request expired' is shown, the green 'Check in' CTA still draws the eye as the primary action. A guest can be checked in before payment is resolved — intentional? If not, dim or remove 'Check in' until payment is resolved, and make 'Take payment' the primary button."
+    },
+    {
+      "num": 5,
+      "rect": { "x": 14, "y": 618, "w": 362, "h": 140 },
+      "title": "Inconsistent card layout within same section",
+      "body": "Cards 1 and 2 (Vince Abbott, Xena Chase) show dual buttons; card 3 (Alice Foster) shows a single full-width 'Check in · 7 nights' button. The inconsistency is jarring in the same 'Check-ins' section — apply a consistent pattern across all cards."
+    }
+  ],
+  "working_well": [
+    "Date + day-strip combo at top is clear — today (FRI 26) is highlighted with underline, past days visible but muted.",
+    "CONFIRMED status badge in green gives immediate booking state at a glance.",
+    "Date range + nights count ('26 Jun → 1 Jul · 5 nights') is a highly legible format — no ambiguity.",
+    "The 'Check-ins / Check-outs / Stay-throughs' filter trio is the right level of granularity for a front-desk workflow."
+  ],
+  "worth_considering": [
+    "Surface guest photo or avatar only when real images are available — identical placeholder photos across all cards reduces rather than aids scannability.",
+    "Show a count badge on each filter tab (e.g. 'Check-ins (3)') so staff can quickly see workload without switching tabs.",
+    "Group the top-right icons into a clear overflow menu or labelled icon bar to reduce cognitive load."
+  ]
+}

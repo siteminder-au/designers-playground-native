@@ -48,8 +48,8 @@ export function ReviewOverlay({ data, scrollOffset }: Props) {
 
   return (
     <>
-      {/* Transparent hit-passthrough layer */}
-      <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      {/* Screen-blocking layer — absorbs all touches; only badges + chip are interactive */}
+      <View style={[StyleSheet.absoluteFill, styles.screenBlock]}>
 
         {/* Markers — each badge + rect scrolls with content */}
         {data.markers.map(marker => {
@@ -190,6 +190,9 @@ export function ReviewOverlay({ data, scrollOffset }: Props) {
 }
 
 const styles = StyleSheet.create({
+  screenBlock: {
+    backgroundColor: 'rgba(0, 0, 0, 0.12)',
+  },
   markerRect: {
     position: 'absolute',
     borderWidth: 2,

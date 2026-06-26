@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -173,6 +174,42 @@ function CardHeader({
 
 export default function HomeScreen() {
   const [perfTab, setPerfTab] = useState<'rooms' | 'revenue'>('rooms');
+  const [activeCard, setActiveCard] = useState<0 | 1>(0);
+  // 0 = card 0 is front, 1 = card 1 is front — spring-animated
+  const stackProgress = useRef(new Animated.Value(0)).current;
+
+  // Card 0: front → back as progress goes 0 → 1
+  const card0Scale      = stackProgress.interpolate({ inputRange: [0, 1], outputRange: [1, 0.91] });
+  const card0TranslateY = stackProgress.interpolate({ inputRange: [0, 1], outputRange: [0, 20] });
+  const card0Opacity    = stackProgress.interpolate({ inputRange: [0, 1], outputRange: [1, 0.76] });
+  // Card 1: back → front as progress goes 0 → 1
+  const card1Scale      = stackProgress.interpolate({ inputRange: [0, 1], outputRange: [0.91, 1] });
+  const card1TranslateY = stackProgress.interpolate({ inputRange: [0, 1], outputRange: [20, 0] });
+  const card1Opacity    = stackProgress.interpolate({ inputRange: [0, 1], outputRange: [0.76, 1] });
+
+  const flipStack = () => {
+    const next = activeCard === 0 ? 1 : 0;
+    setActiveCard(next);
+    Animated.spring(stackProgress, {
+      toValue: next,
+      tension: 260,
+      friction: 22,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  // One-time entry nudge: back card briefly peeks up then settles, signalling interactivity
+  useEffect(() => {
+    const t = setTimeout(() => {
+      Animated.sequence([
+        Animated.spring(stackProgress, { toValue: 0.38, tension: 180, friction: 14, useNativeDriver: true }),
+        Animated.spring(stackProgress, { toValue: 0,    tension: 200, friction: 20, useNativeDriver: true }),
+        Animated.spring(stackProgress, { toValue: 0.38, tension: 180, friction: 14, useNativeDriver: true }),
+        Animated.spring(stackProgress, { toValue: 0,    tension: 200, friction: 20, useNativeDriver: true }),
+      ]).start();
+    }, 700);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -205,38 +242,95 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Today stats card */}
-          <View style={styles.todayCard}>
-            {/* Top row: Check Ins | Check Outs | Stay Throughs */}
-            <View style={styles.todayTopRow}>
-              <View style={styles.todayStat}>
-                <Text style={styles.todayStatLabel}>Check Ins</Text>
-                <Text style={styles.todayStatNum}>21</Text>
-              </View>
-              <View style={styles.todayStat}>
-                <Text style={styles.todayStatLabel}>Check Outs</Text>
-                <Text style={styles.todayStatNum}>14</Text>
-              </View>
-              <View style={styles.todayStat}>
-                <Text style={styles.todayStatLabel}>Stay Throughs</Text>
-                <Text style={styles.todayStatNum}>09</Text>
-              </View>
-            </View>
+          {/* Today stats — two cards, spring-animated stack swap */}
+          <View>
 
-            {/* Divider */}
-            <View style={styles.todayDivider} />
+            {/* Card 1 — back card initially (absolute, behind card 0 in z) */}
+            <Animated.View style={[
+              styles.todayCard,
+              {
+                position: 'absolute', top: 0, left: 0, right: 0,
+                zIndex: activeCard === 1 ? 2 : 1,
+                transform: [{ scale: card1Scale }, { translateY: card1TranslateY }],
+                opacity: card1Opacity,
+              },
+            ]}>
+              <View style={styles.todayTopRow}>
+                <View style={styles.todayStat}>
+                  <Text style={styles.todayStatLabel}>Occupancy</Text>
+                  <Text style={styles.todayStatNum}>78%</Text>
+                </View>
+                <View style={styles.todayStat}>
+                  <Text style={styles.todayStatLabel}>ADR</Text>
+                  <Text style={styles.todayStatNum}>$142</Text>
+                </View>
+                <View style={styles.todayStat}>
+                  <Text style={styles.todayStatLabel}>RevPAR</Text>
+                  <Text style={styles.todayStatNum}>$111</Text>
+                </View>
+              </View>
+              <View style={styles.todayDivider} />
+              <View style={styles.todayBottomRow}>
+                <View style={styles.todayBottomHalf}>
+                  <Text style={styles.todayBottomNum}>$2,698</Text>
+                  <Text style={styles.todayBottomLabel}>Revenue</Text>
+                </View>
+                <View style={styles.todayVertDivider} />
+                <View style={[styles.todayBottomHalf, { paddingLeft: 16 }]}>
+                  <Text style={[styles.todayBottomNum, { color: '#2e6e30' }]}>↑ 12%</Text>
+                  <Text style={styles.todayBottomLabel}>vs yesterday</Text>
+                </View>
+              </View>
+            </Animated.View>
 
-            {/* Bottom row: Cancellations | New Bookings */}
-            <View style={styles.todayBottomRow}>
-              <View style={styles.todayBottomHalf}>
-                <Text style={styles.todayBottomNum}>0</Text>
-                <Text style={styles.todayBottomLabel}>Cancellations</Text>
+            {/* Card 0 — front card initially (in flow, sets container height) */}
+            <Animated.View style={[
+              styles.todayCard,
+              {
+                zIndex: activeCard === 0 ? 2 : 1,
+                transform: [{ scale: card0Scale }, { translateY: card0TranslateY }],
+                opacity: card0Opacity,
+              },
+            ]}>
+              <View style={styles.todayTopRow}>
+                <View style={styles.todayStat}>
+                  <Text style={styles.todayStatLabel}>Check Ins</Text>
+                  <Text style={styles.todayStatNum}>21</Text>
+                </View>
+                <View style={styles.todayStat}>
+                  <Text style={styles.todayStatLabel}>Check Outs</Text>
+                  <Text style={styles.todayStatNum}>14</Text>
+                </View>
+                <View style={styles.todayStat}>
+                  <Text style={styles.todayStatLabel}>Stay Throughs</Text>
+                  <Text style={styles.todayStatNum}>09</Text>
+                </View>
               </View>
-              <View style={styles.todayVertDivider} />
-              <View style={[styles.todayBottomHalf, { paddingLeft: 16 }]}>
-                <Text style={styles.todayBottomNum}>4</Text>
-                <Text style={styles.todayBottomLabel}>New Bookings</Text>
+              <View style={styles.todayDivider} />
+              <View style={styles.todayBottomRow}>
+                <View style={styles.todayBottomHalf}>
+                  <Text style={styles.todayBottomNum}>0</Text>
+                  <Text style={styles.todayBottomLabel}>Cancellations</Text>
+                </View>
+                <View style={styles.todayVertDivider} />
+                <View style={[styles.todayBottomHalf, { paddingLeft: 16 }]}>
+                  <Text style={styles.todayBottomNum}>4</Text>
+                  <Text style={styles.todayBottomLabel}>New Bookings</Text>
+                </View>
               </View>
+            </Animated.View>
+
+            {/* Invisible tap overlay — sits above both cards, triggers the swap */}
+            <TouchableOpacity
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 26, zIndex: 3 }}
+              onPress={flipStack}
+              activeOpacity={1}
+            />
+
+            {/* Dot indicators */}
+            <View style={styles.cardDots}>
+              <View style={[styles.cardDot, activeCard === 0 && styles.cardDotActive]} />
+              <View style={[styles.cardDot, activeCard === 1 && styles.cardDotActive]} />
             </View>
           </View>
 
@@ -437,7 +531,7 @@ const styles = StyleSheet.create({
 
   // Today card
   todayCard: {
-    backgroundColor: 'rgba(140, 50, 0, 0.14)',
+    backgroundColor: '#fff',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingTop: 14,
@@ -462,7 +556,7 @@ const styles = StyleSheet.create({
   },
   todayDivider: {
     height: 1,
-    backgroundColor: 'rgba(140, 50, 0, 0.2)',
+    backgroundColor: '#e8e8e8',
     marginBottom: 12,
   },
   todayBottomRow: {
@@ -488,8 +582,25 @@ const styles = StyleSheet.create({
   todayVertDivider: {
     width: 1,
     height: 28,
-    backgroundColor: 'rgba(140, 50, 0, 0.2)',
+    backgroundColor: '#e8e8e8',
     marginRight: 16,
+  },
+
+  // Dot indicators
+  cardDots: {
+    flexDirection: 'row' as const,
+    gap: 5,
+    justifyContent: 'center' as const,
+    marginTop: 21,
+  },
+  cardDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: 'rgba(140, 50, 0, 0.2)',
+  },
+  cardDotActive: {
+    backgroundColor: 'rgba(140, 50, 0, 0.5)',
   },
 
   // Cards section

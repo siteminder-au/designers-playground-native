@@ -19,7 +19,7 @@ const FLAGS = {
   showLateCheckout: true,
 
   /** 8-digit booking reference ID, pinned right in the guest info row */
-  showReservationId: true,
+  showReservationId: false,
 
   /** Icon on the cleaning status pill (brush, checkmark, etc.) */
   showStatusIcon: false,
@@ -40,6 +40,12 @@ const FLAGS = {
    *  config from the room card (moves them into the Notes sheet) and re-anchors
    *  the check-in/out badge to the left side of the card. */
   compactCard: false,
+
+  /** Print button in the sort/filter toolbar (opens the print preview). */
+  showPrint: false,
+
+  /** Sort control in the toolbar (field + direction toggle). Off by default. */
+  showSort: false,
 } as const;
 
 export default FLAGS;

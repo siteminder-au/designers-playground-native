@@ -191,13 +191,13 @@ export function RoomRow({
             )}
             {item.staffNote && (
               <Text numberOfLines={2} style={[styles.noteText, { flexShrink: 1 }]}>
-                <Text style={styles.staffNoteLabel}>Staff note: </Text>{item.staffNote}
+                <Text style={styles.staffNoteLabel}>Reservation note: </Text>{item.staffNote}
               </Text>
             )}
             {note ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Text numberOfLines={2} style={[styles.noteText, { flexShrink: 1 }]}>
-                  <Text style={styles.staffNoteLabel}>Housekeeping note: </Text>{note}
+                  <Text style={styles.staffNoteLabel}>Room note: </Text>{note}
                 </Text>
                 {onEditNotePress && (
                   <TouchableOpacity onPress={onEditNotePress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -206,7 +206,7 @@ export function RoomRow({
                 )}
               </View>
             ) : (
-              <Text style={styles.addNoteText}>+ Housekeeping notes</Text>
+              <Text style={styles.addNoteText}>+ Room notes</Text>
             )}
           </View>
           {item.extraItems.length > 0 && (

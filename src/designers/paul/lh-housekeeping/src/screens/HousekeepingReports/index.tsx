@@ -15,12 +15,12 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useQuery, useMutation } from '@apollo/client';
-import { GET_HOUSEKEEPING_SCHEDULE, GET_STAFF_NOTES, ADD_STAFF_NOTE, UPDATE_STAFF_NOTE } from '../../apollo/queries';
+import { useQuery } from '@apollo/client';
+import { GET_HOUSEKEEPING_SCHEDULE } from '../../apollo/queries';
 import { useHousekeepingStatus, RoomStatus } from '../../context/HousekeepingStatus';
 import FLAGS from '../../config/featureFlags';
 import { COLORS } from '../../config/colors';
-import type { RoomDaySchedule, DaySchedule, StaffNote } from './types';
+import type { RoomDaySchedule, DaySchedule, LocalNote, NoteCategory } from './types';
 import {
   ORANGE, NUM_DAYS,
   STATUS_CONFIG,
@@ -43,6 +43,7 @@ import { type BadgeRect } from './components/CleaningControl';
 import { RoomRow } from './components/RoomRow';
 import { AnimatedRoomWrapper } from './components/AnimatedRoomWrapper';
 import { useBottomSheet } from './hooks/useBottomSheet';
+import { useLocalNotes } from './hooks/useLocalNotes';
 import { NotesSheet } from './components/sheets/NotesSheet';
 import { SortSheet } from './components/sheets/SortSheet';
 import { AssignSheet } from './components/sheets/AssignSheet';
@@ -50,6 +51,7 @@ import { FilterSheet } from './components/sheets/FilterSheet';
 import { DemoFlagsSheet } from './components/sheets/DemoFlagsSheet';
 import { AutomationsSheet } from './components/sheets/AutomationsSheet';
 import { PrintPreviewModal } from './components/sheets/PrintPreviewModal';
+import { BrowserChrome } from './components/BrowserView';
 import { DateRangeSheet } from './components/sheets/DateRangeSheet';
 import { MonthSheet } from './components/sheets/MonthSheet';
 
@@ -88,7 +90,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const [pendingEnd, setPendingEnd] = useState<string | null>(null);
 
   // Status overrides (shared via context for cross-screen sync)
-  const { statusOverrides, setStatusOverride, housekeeperMode, setHousekeeperMode, cleaningStatusAsLabel, setCleaningStatusAsLabel } = useHousekeepingStatus();
+  const { statusOverrides, setStatusOverride, viewMode, setViewMode, housekeeperMode, cleaningStatusAsLabel, setCleaningStatusAsLabel, reviewCaptureFabEnabled, setReviewCaptureFabEnabled } = useHousekeepingStatus();
   const [statusDropdown, setStatusDropdown] = useState<{
     roomId: string;
     currentStatus: RoomStatus;
@@ -152,7 +154,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
   // Active stat chip filter — only used when flags.roomStatsChips is on.
   // null = no chip selected (show everything).
-  const [activeStatFilter, setActiveStatFilter] = useState<null | 'dirty' | 'earlyCheckIn' | 'lateCheckOut' | 'outOfOrder' | 'issues'>(null);
+  const [activeStatFilter, setActiveStatFilter] = useState<null | 'dirty' | 'deepClean' | 'awaitingInspection' | 'hasNotes' | 'outOfOrder'>(null);
   // Clear the chip filter when switching away from the chips variant.
   useEffect(() => {
     if (!flags.roomStatsChips) setActiveStatFilter(null);
@@ -223,23 +225,18 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   }, [printPreviewVisible]);
 
   // Staff notes: fetched from si_staff_notes via GraphQL, polled every 15s like cleaning
-  const { data: staffNotesData } = useQuery(GET_STAFF_NOTES, { pollInterval: 15000 });
-  const allStaffNotes: StaffNote[] = staffNotesData?.staffNotes ?? [];
-  const [addStaffNoteMutation] = useMutation(ADD_STAFF_NOTE, { refetchQueries: [{ query: GET_STAFF_NOTES }] });
-  const [updateStaffNoteMutation] = useMutation(UPDATE_STAFF_NOTE, { refetchQueries: [{ query: GET_STAFF_NOTES }] });
+  // Room notes live entirely on-device (see useLocalNotes) — decoupled from the
+  // shared si_staff_notes table. They are tied to the room (keyed by roomId), so
+  // they persist across reservations rather than resetting on checkout.
+  const { notes: allRoomNotes, addNote, updateNote } = useLocalNotes();
 
-  // Per Si's 2026-05-18 contract: housekeeping notes are always scoped to a
-  // reservation, keyed by reservationId. When the active reservation changes
-  // (checkout → next guest), the thread resets to empty automatically.
-  // latestNoteIds tracks which note's text is currently displayed on the
-  // card, so the inline pencil can open the sheet pre-set to edit that note.
+  // notes/latestNoteIds drive the card's inline note line: the most recent note
+  // text per room, plus its id so the inline pencil can open straight into edit.
   const notes: Record<string, string> = {};
   const latestNoteIds: Record<string, string> = {};
-  for (const n of allStaffNotes) {
-    if (n.reservationId) {
-      notes[n.reservationId] = n.text;
-      latestNoteIds[n.reservationId] = n.id;
-    }
+  for (const n of allRoomNotes) {
+    notes[n.roomId] = n.text;
+    latestNoteIds[n.roomId] = n.id;
   }
 
   // Legacy modal kept around for backward compat; not currently triggered.
@@ -256,6 +253,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const [notesSheetEditing, setNotesSheetEditing] = useState(false);
   const [notesSheetDraft, setNotesSheetDraft] = useState('');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [noteCategory, setNoteCategory] = useState<NoteCategory>('Housekeeping');
 
   // Query: either the current week or the selected range
   const queryStart = dateRange?.start ?? weekStart;
@@ -307,6 +305,11 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
   // Single-day view
   const selectedDay = schedule.find(d => d.date === selectedDate);
+  // "Has notes" = any note or comment of any kind on the room: guest comment,
+  // reservation staff note, the room's issue note, or a local Room note.
+  const roomHasNotes = (r: RoomDaySchedule): boolean =>
+    !!r.guestComments || !!r.staffNote || !!r.room.notes || !!notes[r.room.id];
+
   // Chip-variant filter: only active when chip variant is on AND a chip is selected.
   const matchesActiveChip = (r: RoomDaySchedule): boolean => {
     if (!flags.roomStatsChips || !activeStatFilter) return true;
@@ -314,10 +317,10 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
       const s = statusOverrides[r.room.id] ?? r.room.status;
       return s === 'UNCLEANED' || s === 'DEEP_CLEAN';
     }
-    if (activeStatFilter === 'earlyCheckIn') return r.checkInTime !== null && r.hasCheckInToday;
-    if (activeStatFilter === 'lateCheckOut') return r.lateCheckout && r.hasCheckoutToday;
-    if (activeStatFilter === 'outOfOrder')   return r.room.isClosed;
-    if (activeStatFilter === 'issues')       return r.room.notes !== null;
+    if (activeStatFilter === 'deepClean')          return (statusOverrides[r.room.id] ?? r.room.status) === 'DEEP_CLEAN';
+    if (activeStatFilter === 'awaitingInspection') return (statusOverrides[r.room.id] ?? r.room.status) === 'AWAITING_INSPECTION';
+    if (activeStatFilter === 'hasNotes')           return roomHasNotes(r);
+    if (activeStatFilter === 'outOfOrder')         return r.room.isClosed;
     return true;
   };
   const singleRooms: RoomDaySchedule[] = applyFilters(
@@ -350,33 +353,37 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const statsRooms = selectedDay?.rooms ?? [];
   // Predicates that match each stat — used both for counting and for the chip
   // variant's tap-to-filter behavior.
-  type StatKey = 'dirty' | 'earlyCheckIn' | 'lateCheckOut' | 'outOfOrder' | 'issues';
+  type StatKey = 'dirty' | 'deepClean' | 'awaitingInspection' | 'hasNotes' | 'outOfOrder';
   const statPredicates: Record<StatKey, (r: RoomDaySchedule) => boolean> = {
-    dirty:        r => { const s = statusOverrides[r.room.id] ?? r.room.status; return s === 'UNCLEANED' || s === 'DEEP_CLEAN'; },
-    earlyCheckIn: r => r.checkInTime !== null && r.hasCheckInToday,
-    lateCheckOut: r => r.lateCheckout && r.hasCheckoutToday,
-    outOfOrder:   r => r.room.isClosed,
-    issues:       r => r.room.notes !== null,
+    dirty:              r => { const s = statusOverrides[r.room.id] ?? r.room.status; return s === 'UNCLEANED' || s === 'DEEP_CLEAN'; },
+    deepClean:          r => (statusOverrides[r.room.id] ?? r.room.status) === 'DEEP_CLEAN',
+    awaitingInspection: r => (statusOverrides[r.room.id] ?? r.room.status) === 'AWAITING_INSPECTION',
+    hasNotes:           roomHasNotes,
+    outOfOrder:         r => r.room.isClosed,
   };
   const dayStats = {
-    dirty:        statsRooms.filter(statPredicates.dirty).length,
-    earlyCheckIn: statsRooms.filter(statPredicates.earlyCheckIn).length,
-    lateCheckOut: statsRooms.filter(statPredicates.lateCheckOut).length,
-    outOfOrder:   statsRooms.filter(statPredicates.outOfOrder).length,
-    issues:       statsRooms.filter(statPredicates.issues).length,
+    dirty:              statsRooms.filter(statPredicates.dirty).length,
+    deepClean:          statsRooms.filter(statPredicates.deepClean).length,
+    awaitingInspection: statsRooms.filter(statPredicates.awaitingInspection).length,
+    hasNotes:           statsRooms.filter(statPredicates.hasNotes).length,
+    outOfOrder:         statsRooms.filter(statPredicates.outOfOrder).length,
   };
   const BG = '#f2f3f3'; // matches screen background
   const statItems = ([
-    { key: 'dirty',        value: dayStats.dirty,        label: 'Rooms dirty today'      },
-    { key: 'earlyCheckIn', value: dayStats.earlyCheckIn, label: 'Early check-in today'   },
-    { key: 'lateCheckOut', value: dayStats.lateCheckOut, label: 'Late check-out today'   },
-    { key: 'outOfOrder',   value: dayStats.outOfOrder,   label: 'Out of order today'     },
-    { key: 'issues',       value: dayStats.issues,       label: 'Issue reported today'   },
+    { key: 'dirty',              value: dayStats.dirty,              label: 'Dirty rooms today'        },
+    { key: 'deepClean',          value: dayStats.deepClean,          label: 'Deep cleans needed today' },
+    { key: 'awaitingInspection', value: dayStats.awaitingInspection, label: 'Awaiting inspection today' },
+    { key: 'hasNotes',           value: dayStats.hasNotes,           label: 'Has notes today'          },
+    // Out of order (room closures) is conditional — only shown when at least
+    // one room matches, and always pinned to the end of the row.
+    ...(dayStats.outOfOrder > 0
+      ? [{ key: 'outOfOrder', value: dayStats.outOfOrder, label: 'Out of order today' }]
+      : []),
   ] as { key: StatKey; value: number; label: string }[]);
 
   const statsStrip = flags.roomStatsChips ? (
     // Chip variant — tappable filters
-    <View style={{ position: 'relative' }}>
+    <View style={{ position: 'relative', backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#e5e8e8' }}>
       <ScrollView
         ref={statsScrollRef}
         horizontal
@@ -393,23 +400,23 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
               activeOpacity={0.7}
             >
               <Text style={[styles.statChipText, isActive && styles.statChipTextActive]}>
-                {stat.value} {stat.label.replace(' today', '')}
+                {stat.value} {stat.label.replace(' today', '').toLowerCase()}
               </Text>
             </TouchableOpacity>
           );
         })}
       </ScrollView>
       <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 40, flexDirection: 'row' }} pointerEvents="none">
-        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0)`    }} />
-        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0.3)`  }} />
-        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0.6)`  }} />
-        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0.85)` }} />
-        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,1)`    }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,0)`    }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,0.3)`  }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,0.6)`  }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,0.85)` }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,1)`    }} />
       </View>
     </View>
   ) : (
     // Default — static informational strip
-    <View style={{ position: 'relative' }}>
+    <View style={{ position: 'relative', backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#e5e8e8' }}>
       <ScrollView
         ref={statsScrollRef}
         horizontal
@@ -424,11 +431,11 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         ))}
       </ScrollView>
       <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 40, flexDirection: 'row' }} pointerEvents="none">
-        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0)`    }} />
-        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0.3)`  }} />
-        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0.6)`  }} />
-        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,0.85)` }} />
-        <View style={{ flex: 1, backgroundColor: `rgba(242,243,243,1)`    }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,0)`    }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,0.3)`  }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,0.6)`  }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,0.85)` }} />
+        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,1)`    }} />
       </View>
     </View>
   );
@@ -492,59 +499,49 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     // When opened with autoEditNoteId, jump straight into edit mode for that
     // note (used by the inline pencil on the card). Otherwise open in view mode.
     const noteToEdit = autoEditNoteId
-      ? allStaffNotes.find(n => n.id === autoEditNoteId)
+      ? allRoomNotes.find(n => n.id === autoEditNoteId)
       : null;
     if (noteToEdit) {
       setEditingNoteId(noteToEdit.id);
       setNotesSheetDraft(noteToEdit.text);
+      setNoteCategory(noteToEdit.category);
       setNotesSheetEditing(true);
     } else {
       setNotesSheetEditing(false);
       setNotesSheetDraft('');
       setEditingNoteId(null);
+      setNoteCategory('Housekeeping');
     }
     setNotesSheetVisible(true);
   }
 
   function saveSheetNote() {
     if (!notesSheetItem) return;
-    // Per Si's 2026-05-18 contract: writes require an active reservation.
-    // Vacant rooms open the sheet read-only; the UI shouldn't trigger a save,
-    // but guard here in case it does.
-    if (!notesSheetItem.reservationId) return;
     const trimmed = notesSheetDraft.trim();
     if (!trimmed) {
       setNotesSheetEditing(false);
       return;
     }
     if (editingNoteId) {
-      updateStaffNoteMutation({ variables: { id: editingNoteId, text: trimmed } })
-        .catch(err => console.warn('[paul] updateStaffNote failed', err));
+      updateNote(editingNoteId, { text: trimmed, category: noteCategory });
     } else {
-      const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      addStaffNoteMutation({
-        variables: {
-          id,
-          roomId: notesSheetItem.room.id,
-          author: 'You',
-          text: trimmed,
-          reservationId: notesSheetItem.reservationId,
-        },
-      }).catch(err => console.warn('[paul] addStaffNote failed', err));
+      addNote({
+        roomId: notesSheetItem.room.id,
+        author: 'You',
+        text: trimmed,
+        category: noteCategory,
+      });
     }
     setNotesSheetDraft('');
     setNotesSheetEditing(false);
     setEditingNoteId(null);
+    setNoteCategory('Housekeeping');
   }
 
-  // Per Si's 2026-05-18 contract: housekeeping notes are visible only when
-  // their reservation_id matches the active reservation in the room being
-  // viewed. Vacant rooms (no reservationId) show an empty thread.
-  const sheetNotes: StaffNote[] = (notesSheetItem && notesSheetItem.reservationId)
-    ? allStaffNotes.filter(n =>
-        n.roomId === notesSheetItem.room.id &&
-        n.reservationId === notesSheetItem.reservationId
-      )
+  // Room notes are tied to the room, so the thread is every local note for this
+  // room (independent of the current reservation).
+  const sheetNotes: LocalNote[] = notesSheetItem
+    ? allRoomNotes.filter(n => n.roomId === notesSheetItem.room.id)
     : [];
 
   function openNotesModal(noteKey: string) {
@@ -564,8 +561,11 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     ? `${formatShort(dateRange.start)} → ${formatShort(dateRange.end)}`
     : formatLong(selectedDate);
 
-  return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+  // Browser view shows the same limited UI as 'limited' (housekeeperMode is
+  // true for both), just wrapped in faux browser chrome below. The browser
+  // chrome owns the top inset, so the screen drops its own top safe-area edge.
+  const screen = (
+    <SafeAreaView style={styles.safeArea} edges={viewMode === 'browser' ? [] : ['top']}>
     <View style={styles.container}>
       {/* ── Header ── */}
       <View style={styles.header}>
@@ -604,7 +604,17 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
               </TouchableOpacity>
             )}
 
-            {!dateRange && dateSelectorVariant === 'range' && (
+            {/* Filter icon — moved from sort toolbar; red dot badge when filters active */}
+            <TouchableOpacity style={{ padding: 4 }} onPress={() => setFilterSheetVisible(true)}>
+              <View>
+                <Ionicons name="options-outline" size={22} color="#333" />
+                {filterCount > 0 && (
+                  <View style={{ position: 'absolute', top: 0, right: 0, width: 8, height: 8, borderRadius: 4, backgroundColor: '#ef4444' }} />
+                )}
+              </View>
+            </TouchableOpacity>
+
+            {!dateRange && dateSelectorVariant === 'range' && viewMode !== 'browser' && (
               <TouchableOpacity style={{ padding: 4 }} onPress={openModal}>
                 <Ionicons name="calendar-outline" size={20} color="#333" />
               </TouchableOpacity>
@@ -658,38 +668,39 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         );
       })()}
 
-      {/* ── Sort toolbar ── */}
-      <View style={styles.sortToolbar}>
-        <TouchableOpacity style={styles.sortBtn} onPress={() => setSortModalVisible(true)}>
-          <Text style={styles.sortBtnText}>
-            Sort: {SORT_OPTIONS.find(o => o.value === sort.field)?.label}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.sortDirToggle}
-          onPress={() => setSort(prev => ({ ...prev, direction: prev.direction === 'asc' ? 'desc' : 'asc' }))}
-        >
-          <Ionicons
-            name={sort.direction === 'asc' ? 'arrow-up' : 'arrow-down'}
-            size={16}
-            color={ORANGE}
-          />
-        </TouchableOpacity>
-        <View style={styles.sortToolbarSep} />
-        <TouchableOpacity style={styles.filterBtn} onPress={() => setFilterSheetVisible(true)}>
-          <Ionicons name="options-outline" size={15} color={ORANGE} />
-          <Text style={styles.filterBtnText}>Filter</Text>
-          {filterCount > 0 && (
-            <View style={styles.filterBadge}>
-              <Text style={styles.filterBadgeText}>{filterCount}</Text>
-            </View>
+      {/* ── Sort toolbar — only shown when sort demo flag is on ── */}
+      {(flags.showSort || flags.showPrint) && (
+        <View style={styles.sortToolbar}>
+          {flags.showSort && (
+            <>
+              <TouchableOpacity style={styles.sortBtn} onPress={() => setSortModalVisible(true)}>
+                <Text style={styles.sortBtnText}>
+                  Sort: {SORT_OPTIONS.find(o => o.value === sort.field)?.label}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.sortDirToggle}
+                onPress={() => setSort(prev => ({ ...prev, direction: prev.direction === 'asc' ? 'desc' : 'asc' }))}
+              >
+                <Ionicons
+                  name={sort.direction === 'asc' ? 'arrow-up' : 'arrow-down'}
+                  size={16}
+                  color={ORANGE}
+                />
+              </TouchableOpacity>
+            </>
           )}
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.sortToolbarPrint} onPress={() => setPrintPreviewVisible(true)}>
-          <Ionicons name="print-outline" size={15} color={ORANGE} />
-          <Text style={styles.sortToolbarPrintText}>Print</Text>
-        </TouchableOpacity>
-      </View>
+          {flags.showPrint && (
+            <TouchableOpacity style={[styles.sortToolbarPrint, { marginLeft: 'auto', marginRight: 16 }]} onPress={() => setPrintPreviewVisible(true)}>
+              <Ionicons name="print-outline" size={15} color={ORANGE} />
+              <Text style={styles.sortToolbarPrintText}>Print</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* ── Stats strip — fixed in layout (not inside scroll area) to avoid iOS top inset gap ── */}
+      {!loading && !error && statsStrip}
 
       {/* ── Content ── */}
       {loading ? (
@@ -700,7 +711,6 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         <SectionList
           sections={rangeSections}
           keyExtractor={(item, i) => `${item.room.id}-${i}`}
-          ListHeaderComponent={statsStrip}
           renderSectionHeader={({ section }) => (
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionHeaderText}>{section.title}</Text>
@@ -714,12 +724,12 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                 <RoomRow
                   item={item}
                   status={effectiveStatus}
-                  note={item.reservationId ? (notes[item.reservationId] ?? '') : ''}
+                  note={notes[item.room.id] ?? ''}
                   bedConfig={bedConfig}
                   flags={flags}
                   onNotePress={() => openNotesSheet(item)}
-                  onEditNotePress={item.reservationId && latestNoteIds[item.reservationId]
-                    ? () => openNotesSheet(item, latestNoteIds[item.reservationId])
+                  onEditNotePress={latestNoteIds[item.room.id]
+                    ? () => openNotesSheet(item, latestNoteIds[item.room.id])
                     : undefined}
                   onStatusPress={(rect) => openStatusDropdown(item.room.id, effectiveStatus, rect)}
                   assignedTo={assignments[item.room.id] ?? null}
@@ -736,7 +746,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
           }
           stickySectionHeadersEnabled
           style={{ backgroundColor: '#f2f3f3' }}
-          contentContainerStyle={{ paddingTop: 0, paddingBottom: 32 }}
+          contentContainerStyle={{ paddingTop: 24, paddingBottom: 32 }}
         />
       ) : (
         <FlatList
@@ -745,7 +755,6 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
           scrollEventThrottle={16}
           data={singleRooms}
           keyExtractor={item => item.room.id}
-          ListHeaderComponent={statsStrip}
           renderItem={({ item }) => {
             const effectiveStatus = statusOverrides[item.room.id] ?? item.room.status;
             const bedConfig = item.bedConfiguration;
@@ -754,12 +763,12 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                 <RoomRow
                   item={item}
                   status={effectiveStatus}
-                  note={item.reservationId ? (notes[item.reservationId] ?? '') : ''}
+                  note={notes[item.room.id] ?? ''}
                   bedConfig={bedConfig}
                   flags={flags}
                   onNotePress={() => openNotesSheet(item)}
-                  onEditNotePress={item.reservationId && latestNoteIds[item.reservationId]
-                    ? () => openNotesSheet(item, latestNoteIds[item.reservationId])
+                  onEditNotePress={latestNoteIds[item.room.id]
+                    ? () => openNotesSheet(item, latestNoteIds[item.room.id])
                     : undefined}
                   onStatusPress={(rect) => openStatusDropdown(item.room.id, effectiveStatus, rect)}
                   assignedTo={assignments[item.room.id] ?? null}
@@ -770,7 +779,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
           }}
           ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
           style={{ backgroundColor: '#f2f3f3' }}
-          contentContainerStyle={{ paddingTop: 8, paddingBottom: 32 }}
+          contentContainerStyle={{ paddingTop: 24, paddingBottom: 32 }}
           ListEmptyComponent={
             <Text style={styles.emptyText}>
               {filterCount > 0 ? 'No rooms match the current filters.' : 'No room data for this date.'}
@@ -863,6 +872,8 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         setNotesSheetEditing={setNotesSheetEditing}
         notesSheetDraft={notesSheetDraft}
         setNotesSheetDraft={setNotesSheetDraft}
+        noteCategory={noteCategory}
+        setNoteCategory={setNoteCategory}
         editingNoteId={editingNoteId}
         setEditingNoteId={setEditingNoteId}
         saveSheetNote={saveSheetNote}
@@ -910,10 +921,12 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         panResponder={demoPanResponder}
         flags={flags}
         setFlags={setFlags}
-        housekeeperMode={housekeeperMode}
-        setHousekeeperMode={setHousekeeperMode}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
         cleaningStatusAsLabel={cleaningStatusAsLabel}
         setCleaningStatusAsLabel={setCleaningStatusAsLabel}
+        reviewCaptureFabEnabled={reviewCaptureFabEnabled}
+        setReviewCaptureFabEnabled={setReviewCaptureFabEnabled}
         insetsBottom={insets.bottom}
       />
 
@@ -991,5 +1004,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     </View>
     </SafeAreaView>
   );
+
+  return viewMode === 'browser' ? <BrowserChrome>{screen}</BrowserChrome> : screen;
 }
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal, Animated, PanResponder, ScrollView, Switch } from 'react-native';
 import FLAGS from '../../../../config/featureFlags';
+import type { ViewMode } from '../../../../context/HousekeepingStatus';
 import { ORANGE } from '../../constants';
 import styles from '../../styles';
 
@@ -14,10 +15,12 @@ export function DemoFlagsSheet({
   panResponder,
   flags,
   setFlags,
-  housekeeperMode,
-  setHousekeeperMode,
+  viewMode,
+  setViewMode,
   cleaningStatusAsLabel,
   setCleaningStatusAsLabel,
+  reviewCaptureFabEnabled,
+  setReviewCaptureFabEnabled,
   insetsBottom,
 }: {
   visible: boolean;
@@ -27,10 +30,12 @@ export function DemoFlagsSheet({
   panResponder: ReturnType<typeof PanResponder.create>;
   flags: FlagsState;
   setFlags: React.Dispatch<React.SetStateAction<FlagsState>>;
-  housekeeperMode: boolean;
-  setHousekeeperMode: React.Dispatch<React.SetStateAction<boolean>>;
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
   cleaningStatusAsLabel: boolean;
   setCleaningStatusAsLabel: (value: boolean) => void;
+  reviewCaptureFabEnabled: boolean;
+  setReviewCaptureFabEnabled: (value: boolean) => void;
   insetsBottom: number;
 }) {
   return (
@@ -41,21 +46,33 @@ export function DemoFlagsSheet({
           <View style={styles.sheetHandleArea} {...panResponder.panHandlers}><View style={styles.sortSheetHandle} /></View>
           <View style={styles.sortSheetHeader}>
             <Text style={styles.sortSheetTitle}>Demo flags</Text>
-            <TouchableOpacity onPress={() => { setFlags({ ...FLAGS }); setHousekeeperMode(false); setCleaningStatusAsLabel(false); }}>
+            <TouchableOpacity onPress={() => { setFlags({ ...FLAGS }); setViewMode('full'); setCleaningStatusAsLabel(false); setReviewCaptureFabEnabled(false); }}>
               <Text style={styles.sortResetText}>Reset</Text>
             </TouchableOpacity>
           </View>
 
           <ScrollView contentContainerStyle={{ paddingBottom: insetsBottom + 16 }}>
-            {/* View mode */}
-            <View style={styles.demoFlagRow}>
-              <Text style={styles.demoFlagLabel}>Housekeeper view</Text>
-              <Switch
-                value={housekeeperMode}
-                onValueChange={setHousekeeperMode}
-                trackColor={{ false: '#e5e7eb', true: ORANGE }}
-                thumbColor="#fff"
-              />
+            {/* View mode — segmented control (Browser view is a placeholder). */}
+            <View style={styles.demoVariantRow}>
+              <Text style={[styles.demoFlagLabel, { flex: 0, marginRight: 0 }]}>View</Text>
+              <View style={styles.segmentedControl}>
+                {([
+                  { value: 'full',    label: 'Full access' },
+                  { value: 'limited', label: 'Limited' },
+                  { value: 'browser', label: 'Browser view' },
+                ] as { value: ViewMode; label: string }[]).map(opt => {
+                  const isActive = viewMode === opt.value;
+                  return (
+                    <TouchableOpacity
+                      key={opt.value}
+                      style={[styles.segmentedBtn, isActive && styles.segmentedBtnActive]}
+                      onPress={() => setViewMode(opt.value)}
+                    >
+                      <Text style={[styles.segmentedBtnText, isActive && styles.segmentedBtnTextActive]} numberOfLines={1}>{opt.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
             <View style={styles.dropdownDivider} />
             <View style={[styles.dropdownDivider, { marginBottom: 8 }]} />
@@ -93,7 +110,9 @@ export function DemoFlagsSheet({
               { key: 'showStatusIcon',       label: 'Cleaning status icon' },
               { key: 'roomStatsChips',       label: 'Room stats as tappable chips' },
               { key: 'compactCard',          label: 'Compact room card (details in notes sheet)' },
-            ] as { key: 'showGuestName' | 'showGuestPax' | 'showBedConfig' | 'showLateCheckout' | 'showReservationId' | 'showStatusIcon' | 'roomStatsChips' | 'compactCard'; label: string }[]).map((item, i) => (
+              { key: 'showPrint',            label: 'Print button' },
+              { key: 'showSort',             label: 'Sort control' },
+            ] as { key: 'showGuestName' | 'showGuestPax' | 'showBedConfig' | 'showLateCheckout' | 'showReservationId' | 'showStatusIcon' | 'roomStatsChips' | 'compactCard' | 'showPrint' | 'showSort'; label: string }[]).map((item, i) => (
               <React.Fragment key={item.key}>
                 {i > 0 && <View style={styles.dropdownDivider} />}
                 <View style={styles.demoFlagRow}>
@@ -113,6 +132,16 @@ export function DemoFlagsSheet({
               <Switch
                 value={cleaningStatusAsLabel}
                 onValueChange={setCleaningStatusAsLabel}
+                trackColor={{ false: '#e5e7eb', true: ORANGE }}
+                thumbColor="#fff"
+              />
+            </View>
+            <View style={styles.dropdownDivider} />
+            <View style={styles.demoFlagRow}>
+              <Text style={styles.demoFlagLabel}>Floating design-review button</Text>
+              <Switch
+                value={reviewCaptureFabEnabled}
+                onValueChange={setReviewCaptureFabEnabled}
                 trackColor={{ false: '#e5e7eb', true: ORANGE }}
                 thumbColor="#fff"
               />

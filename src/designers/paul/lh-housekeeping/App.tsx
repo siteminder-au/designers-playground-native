@@ -13,6 +13,7 @@ import HousekeepingReportsScreen from './src/screens/HousekeepingReports';
 import DistributionScreen from './src/screens/Distribution';
 import NotificationsScreen from './src/screens/Notifications';
 import { ReviewCaptureFab } from './src/components/ReviewCaptureFab';
+import { ReviewToggleFab } from './src/components/ReviewToggleFab';
 
 // NavigationContainer is handled by the playground root (App.tsx).
 // This component renders Paul's prototype as a nested bottom-tab navigator.
@@ -191,6 +192,7 @@ function AppShell() {
     <View style={{ flex: 1 }}>
       <AppNavigator />
       {reviewCaptureFabEnabled && <ReviewCaptureFab />}
+      <ReviewToggleFab />
     </View>
   );
 }

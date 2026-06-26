@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   },
   summaryChip: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 140,
     right: 16,
     backgroundColor: '#ff3b30',
     borderRadius: 16,

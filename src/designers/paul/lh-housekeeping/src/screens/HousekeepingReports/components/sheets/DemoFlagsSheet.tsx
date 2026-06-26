@@ -21,8 +21,6 @@ export function DemoFlagsSheet({
   setCleaningStatusAsLabel,
   reviewCaptureFabEnabled,
   setReviewCaptureFabEnabled,
-  reviewOverlayEnabled,
-  setReviewOverlayEnabled,
   insetsBottom,
 }: {
   visible: boolean;
@@ -38,8 +36,6 @@ export function DemoFlagsSheet({
   setCleaningStatusAsLabel: (value: boolean) => void;
   reviewCaptureFabEnabled: boolean;
   setReviewCaptureFabEnabled: (value: boolean) => void;
-  reviewOverlayEnabled: boolean;
-  setReviewOverlayEnabled: (value: boolean) => void;
   insetsBottom: number;
 }) {
   return (
@@ -50,7 +46,7 @@ export function DemoFlagsSheet({
           <View style={styles.sheetHandleArea} {...panResponder.panHandlers}><View style={styles.sortSheetHandle} /></View>
           <View style={styles.sortSheetHeader}>
             <Text style={styles.sortSheetTitle}>Demo flags</Text>
-            <TouchableOpacity onPress={() => { setFlags({ ...FLAGS }); setViewMode('full'); setCleaningStatusAsLabel(false); setReviewCaptureFabEnabled(false); setReviewOverlayEnabled(false); }}>
+            <TouchableOpacity onPress={() => { setFlags({ ...FLAGS }); setViewMode('full'); setCleaningStatusAsLabel(false); setReviewCaptureFabEnabled(false); }}>
               <Text style={styles.sortResetText}>Reset</Text>
             </TouchableOpacity>
           </View>
@@ -146,16 +142,6 @@ export function DemoFlagsSheet({
               <Switch
                 value={reviewCaptureFabEnabled}
                 onValueChange={setReviewCaptureFabEnabled}
-                trackColor={{ false: '#e5e7eb', true: ORANGE }}
-                thumbColor="#fff"
-              />
-            </View>
-            <View style={styles.dropdownDivider} />
-            <View style={styles.demoFlagRow}>
-              <Text style={styles.demoFlagLabel}>Annotation overlay (Home screen)</Text>
-              <Switch
-                value={reviewOverlayEnabled}
-                onValueChange={setReviewOverlayEnabled}
                 trackColor={{ false: '#e5e7eb', true: ORANGE }}
                 thumbColor="#fff"
               />

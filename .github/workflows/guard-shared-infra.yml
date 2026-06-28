@@ -52,7 +52,11 @@ jobs:
           fi
 
           echo "actor=$ACTOR" >> "$GITHUB_OUTPUT"
-          git diff --name-only "$BASE" "$HEAD" > /tmp/changed.txt || git diff --name-only "$HEAD" > /tmp/changed.txt
+          # Three-dot (merge-base..head) so we only inspect what this branch INTRODUCES.
+          # Two-dot would also surface files where main moved ahead of a stale branch,
+          # blaming the author for shared files they never touched (false positives).
+          # Falls back to two-dot for the empty-tree / new-branch case (no merge base).
+          git diff --name-only "$BASE...$HEAD" > /tmp/changed.txt 2>/dev/null || git diff --name-only "$BASE" "$HEAD" > /tmp/changed.txt
           echo "Changed files:"; cat /tmp/changed.txt
 
       - name: Enforce shared-infra ownership

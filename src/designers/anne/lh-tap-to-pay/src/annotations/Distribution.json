@@ -1,0 +1,47 @@
+{
+  "screen": "Distribution",
+  "generated": "2026-06-26",
+  "markers": [
+    {
+      "num": 1,
+      "rect": { "x": 14, "y": 162, "w": 102, "h": 46 },
+      "title": "'Channel' column header is semantically wrong",
+      "body": "The column labeled 'Channel' actually shows room type + rate plan names. Channels (Booking.com, Expedia, direct) are nowhere visible. Either relabel the column to 'Room / Rate' or restructure so channels appear as the row grouping."
+    },
+    {
+      "num": 2,
+      "rect": { "x": 116, "y": 228, "w": 260, "h": 30 },
+      "title": "Section-row numbers have no label — meaning is unclear",
+      "body": "The numbers in room-type header rows (e.g. 5, 5, 5, 5, 5 under 'Double Room') appear to be available unit counts, but there is no column header or label confirming this. A user could mistake them for prices. Add a 'Avail.' header above."
+    },
+    {
+      "num": 3,
+      "rect": { "x": 116, "y": 162, "w": 162, "h": 580 },
+      "title": "SAT/SUN columns highlighted with no legend",
+      "body": "The SAT 27 and SUN 28 columns have a coral/salmon background — but no legend explains why. Is it weekend demand? A selected date? High occupancy? A key next to the grid would make this self-explanatory."
+    },
+    {
+      "num": 4,
+      "rect": { "x": 116, "y": 268, "w": 260, "h": 380 },
+      "title": "All rates identical across every day — demo data issue",
+      "body": "Every rate plan shows the same value for all five days (e.g. 240 / 240 / 240 / 240 / 240). Distribution's core value proposition is dynamic pricing — flat identical rates make the screen read as a loading error and undercut the prototype's story. Seed at least one day with weekend or demand uplift."
+    },
+    {
+      "num": 5,
+      "rect": { "x": 14, "y": 14, "w": 190, "h": 40 },
+      "title": "Date format inconsistency — comma vs no comma",
+      "body": "Distribution shows '26 June, 2026' (with comma) while Calendar and Reservations show '26 June 2026' (no comma). Standardise the date format across all screens."
+    }
+  ],
+  "working_well": [
+    "Room type → rate plan hierarchy (section header + sub-rows) is a clean, scannable structure for a dense data grid.",
+    "'Bulk update' as a prominent CTA signals the primary action clearly.",
+    "Filter chips (Room types, Rate plans, Channels) are the right granularity for narrowing a large rate grid.",
+    "Today's column (FRI 26) is clearly highlighted with an orange underline."
+  ],
+  "worth_considering": [
+    "Show OTA channel logos (Booking.com, Expedia) as row groupings so the screen delivers on the 'Distribution' label — right now it reads more like a rate sheet.",
+    "Add a 'closed / stopped' state to individual cells (e.g. strikethrough or lock icon) to demonstrate stop-sell functionality.",
+    "Consider a mini sparkline or colour gradient in the rate cells to communicate demand-based pricing at a glance without opening each cell."
+  ]
+}

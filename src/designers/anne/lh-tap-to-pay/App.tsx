@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Platform, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { ApolloProvider } from '@apollo/client';
@@ -12,10 +12,12 @@ import HomeScreen from './src/screens/Home';
 import HousekeepingReportsScreen from './src/screens/HousekeepingReports';
 import DistributionScreen from './src/screens/Distribution';
 import NotificationsScreen from './src/screens/Notifications';
+import MoreScreen from './src/screens/More';
 import { ReviewCaptureFab } from './src/components/ReviewCaptureFab';
-import { ReviewToggleFab } from './src/components/ReviewToggleFab';
 import { ReviewOverlay } from './src/components/ReviewOverlay';
 import { ReviewProvider, useReviewContext } from './src/context/ReviewContext';
+import { PaymentFab } from './src/components/payments/PaymentFab';
+import { VirtualTerminalSheet } from './src/components/payments/VirtualTerminalSheet';
 
 // NavigationContainer is handled by the playground root (App.tsx).
 // This component renders Anne's prototype as a nested bottom-tab navigator.
@@ -90,6 +92,14 @@ function AppNavigator() {
           headerShown: false,
           tabBarItemStyle: { display: 'none' },
           tabBarStyle: { display: 'none' },
+        }}
+      />
+      <Tab.Screen
+        name="More"
+        component={MoreScreen}
+        options={{
+          title: 'More',
+          tabBarItemStyle: { display: 'none' },
         }}
       />
       <Tab.Screen
@@ -191,17 +201,28 @@ export default function AnneLHTapToPayApp() {
 }
 
 function AppShell() {
-  const { reviewCaptureFabEnabled, reviewOverlayEnabled } = useHousekeepingStatus();
+  const { reviewCaptureFabEnabled, reviewOverlayEnabled, housekeeperMode } = useHousekeepingStatus();
   const { annotations, scrollY } = useReviewContext();
   const hasMarkers = (annotations?.markers.length ?? 0) > 0;
+
+  const [showVirtualTerminal, setShowVirtualTerminal] = useState(false);
+  const [tapToPayTermsAccepted, setTapToPayTermsAccepted] = useState(false);
+
   return (
     <View style={{ flex: 1 }}>
       <AppNavigator />
+      {!housekeeperMode && <PaymentFab onPress={() => setShowVirtualTerminal(true)} />}
       {reviewCaptureFabEnabled && <ReviewCaptureFab />}
-      <ReviewToggleFab />
       {reviewOverlayEnabled && hasMarkers && (
         <ReviewOverlay data={annotations!} scrollOffset={scrollY} />
       )}
+      <VirtualTerminalSheet
+        visible={showVirtualTerminal}
+        termsAccepted={tapToPayTermsAccepted}
+        onClose={() => setShowVirtualTerminal(false)}
+        onAcceptTapToPayTerms={() => setTapToPayTermsAccepted(true)}
+        onPaymentComplete={() => setShowVirtualTerminal(false)}
+      />
     </View>
   );
 }

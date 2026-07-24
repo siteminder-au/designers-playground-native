@@ -8,7 +8,7 @@ import {
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useReviewContext } from '../../context/ReviewContext';
 import homeAnnotations from '../../annotations/Home.json';
@@ -176,6 +176,7 @@ function CardHeader({
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
+  const navigation = useNavigation<any>();
   const { setAnnotations, setScrollY } = useReviewContext();
   const [perfTab, setPerfTab] = useState<'rooms' | 'revenue'>('rooms');
   const [activeCard, setActiveCard] = useState<0 | 1>(0);
@@ -234,7 +235,7 @@ export default function HomeScreen() {
 
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity style={styles.headerIconBtn}>
+            <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('More')}>
               <Ionicons name="settings-outline" size={22} color="#484b4b" />
             </TouchableOpacity>
 

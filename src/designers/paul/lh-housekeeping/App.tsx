@@ -12,7 +12,6 @@ import HomeScreen from './src/screens/Home';
 import HousekeepingReportsScreen from './src/screens/HousekeepingReports';
 import DistributionScreen from './src/screens/Distribution';
 import NotificationsScreen from './src/screens/Notifications';
-import { ReviewCaptureFab } from './src/components/ReviewCaptureFab';
 import { ReviewToggleFab } from './src/components/ReviewToggleFab';
 import { ReviewOverlay } from './src/components/ReviewOverlay';
 import { ReviewProvider, useReviewContext } from './src/context/ReviewContext';
@@ -191,13 +190,12 @@ export default function PaulLHHousekeepingApp() {
 }
 
 function AppShell() {
-  const { reviewCaptureFabEnabled, reviewOverlayEnabled } = useHousekeepingStatus();
+  const { reviewOverlayEnabled } = useHousekeepingStatus();
   const { annotations, scrollY } = useReviewContext();
   const hasMarkers = (annotations?.markers.length ?? 0) > 0;
   return (
     <View style={{ flex: 1 }}>
       <AppNavigator />
-      {reviewCaptureFabEnabled && <ReviewCaptureFab />}
       <ReviewToggleFab />
       {reviewOverlayEnabled && hasMarkers && (
         <ReviewOverlay data={annotations!} scrollOffset={scrollY} />

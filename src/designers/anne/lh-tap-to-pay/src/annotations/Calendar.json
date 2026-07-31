@@ -1,0 +1,47 @@
+{
+  "screen": "Calendar",
+  "generated": "2026-06-26",
+  "markers": [
+    {
+      "num": 1,
+      "rect": { "x": 14, "y": 78, "w": 28, "h": 32 },
+      "title": "Week nav arrows below 44dp",
+      "body": "The < and > chevrons are roughly 28×32 px — well under iOS HIG's 44dp minimum. One-handed week navigation will miss frequently, especially on the right edge of the phone."
+    },
+    {
+      "num": 2,
+      "rect": { "x": 318, "y": 250, "w": 66, "h": 48 },
+      "title": "\"Xa...\" truncation loses guest identity",
+      "body": "Only 2 characters visible before the ellipsis. A guest name truncated this aggressively provides zero scan value — the card is indistinguishable from any other. Either widen the column or abbreviate to first initial + last name."
+    },
+    {
+      "num": 3,
+      "rect": { "x": 88, "y": 128, "w": 74, "h": 540 },
+      "title": "Empty Saturday column ambiguous",
+      "body": "A blank white column could read as a data-load failure rather than a genuinely empty day. A subtle 'No arrivals' label or a light fill would confirm it's intentional."
+    },
+    {
+      "num": 4,
+      "rect": { "x": 88, "y": 128, "w": 280, "h": 600 },
+      "title": "No visual booking lifecycle state",
+      "body": "All reservation bars use the same green fill regardless of whether the guest is arriving, mid-stay, or departing. A check-in indicator (e.g. left-border accent or badge) would let housekeeping scan status at a glance without opening each card."
+    },
+    {
+      "num": 5,
+      "rect": { "x": 212, "y": 28, "w": 30, "h": 30 },
+      "title": "Beaker icon has no label or tooltip",
+      "body": "The lab/beaker icon next to the date is unlabelled — its function (demo flags?) is not discoverable. Either label it or replace with a recognisable icon (e.g. sliders, gear)."
+    }
+  ],
+  "working_well": [
+    "Date headline ('26 June 2026' in serif) reads strongly at the top — clear temporal anchor.",
+    "Green booking bars span their exact day range, making multi-night stays immediately readable.",
+    "Section headers ('Bridge Room', 'Deluxe Suite') add useful room-type grouping without heavy visual weight.",
+    "'Today' + '+ Add' action pairing in the header is compact and stays out of the content area."
+  ],
+  "worth_considering": [
+    "Colour-code the booking bars by status (e.g. coral = arriving today, green = in-house, grey = departing) to match the cleaning workflow mental model.",
+    "Add a sticky day-column header so room labels stay visible when scrolling down through large room sets.",
+    "The right-edge truncated cards (Room 3, Room 7) suggest a peek affordance — making the week scrollable horizontally could surface more days without sacrificing the room list."
+  ]
+}

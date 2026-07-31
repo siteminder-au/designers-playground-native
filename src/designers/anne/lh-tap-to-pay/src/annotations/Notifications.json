@@ -1,0 +1,47 @@
+{
+  "screen": "Notifications",
+  "generated": "2026-06-26",
+  "markers": [
+    {
+      "num": 1,
+      "rect": { "x": 92, "y": 196, "w": 240, "h": 20 },
+      "title": "Unfilled template placeholder visible to stakeholders",
+      "body": "'dd/mm/yyyy' appears literally in the notification body — this is an unformatted date string, not a real date. Replace with a concrete demo date (e.g. '30 Jun 2026') before any stakeholder review."
+    },
+    {
+      "num": 2,
+      "rect": { "x": 14, "y": 136, "w": 362, "h": 376 },
+      "title": "Three identical notifications with same timestamp",
+      "body": "Three 'Demand Plus invoice reconciliation due' notifications appear back-to-back with identical body text and the same timestamp (10:14 am, The Ecofern Hotel). This reads as a data loop bug, not realistic volume. Use varied content and staggered timestamps to tell a credible notification story."
+    },
+    {
+      "num": 3,
+      "rect": { "x": 330, "y": 70, "w": 60, "h": 36 },
+      "title": "'Payment' filter chip clipped — no scroll signal",
+      "body": "The last filter chip ('Payment') is cut off at the right edge with no gradient or indicator that the row scrolls. Horizontal scroll with a fade at the edge is the expected pattern; without it users assume the list ends where it clips."
+    },
+    {
+      "num": 4,
+      "rect": { "x": 14, "y": 536, "w": 362, "h": 80 },
+      "title": "'Earlier' has a single item from 60 days ago",
+      "body": "The 90-day window shows only one historical notification dated 27 April — two months old. A single item under 'Earlier' suggests the notification history is sparse or broken. Seed 2–3 realistic older notifications to demonstrate the pattern meaningfully."
+    },
+    {
+      "num": 5,
+      "rect": { "x": 270, "y": 22, "w": 116, "h": 40 },
+      "title": "'Select' and '...' actions have no clear scope",
+      "body": "'Select' (coral) and '...' (ellipsis) sit in the header with no supporting label. It's unclear whether 'Select' starts multi-select mode, and what '...' contains (mark all read? Settings?). Label the ellipsis or expose its most common action inline."
+    }
+  ],
+  "working_well": [
+    "Red dot vs grey dot for unread vs read is an immediately recognisable convention.",
+    "Today / Earlier grouping gives the list a clear temporal structure without dates on every row.",
+    "'All properties' dropdown at the top is a logical scope control for multi-property accounts.",
+    "Notification rows are tall enough to tap comfortably and body text wraps predictably."
+  ],
+  "worth_considering": [
+    "Add a 'Mark all as read' shortcut — the most common notification action on a busy morning.",
+    "Show a count badge on each filter chip (e.g. 'Billing (2)') so staff can triage by category without switching tabs.",
+    "Consider a swipe-to-dismiss gesture on individual rows to mirror familiar iOS notification patterns."
+  ]
+}

@@ -1,46 +1,41 @@
 {
   "screen": "Reservations",
-  "generated": "2026-06-26",
+  "generated": "2026-07-31",
   "markers": [
     {
       "num": 1,
-      "rect": { "x": 16, "y": 182, "w": 16, "h": 18 },
-      "title": "Toggle tap target way too small",
-      "body": "The unallocated-reservations filter toggle is only ~16×18dp, far below the 44×44dp minimum. Expand the hit area (e.g. include the row's padding) even if the visual switch stays small."
+      "rect": { "x": 0, "y": 170, "w": 390, "h": 43 },
+      "title": "Unallocated-reservations toggle has no label",
+      "body": "The full-width alert row (\"1 unallocated reservation\") ends in a toggle switch with no adjacent text explaining what it turns on or off. Add an explicit label (e.g. \"Show only unallocated\") next to the switch."
     },
     {
       "num": 2,
-      "rect": { "x": 44, "y": 70, "w": 24, "h": 34 },
-      "title": "Day-selector cells too small to tap",
-      "body": "Each day column (e.g. \"TUE 28\") is only about 22×34dp, well under the 44×44dp guideline for the horizontal date strip. Increase the vertical hit area per day or add visible padding around each date."
+      "rect": { "x": 0, "y": 60, "w": 32, "h": 54 },
+      "title": "Day-nav arrows too narrow",
+      "body": "The '‹' and '›' controls flanking the day strip are 32dp wide — under the 44dp HIG minimum on the horizontal axis (height is fine at 54dp). Widen the tappable area."
     },
     {
       "num": 3,
-      "rect": { "x": 31, "y": 133, "w": 308, "h": 17 },
-      "title": "Segmented tabs have a 17dp-tall hit area",
-      "body": "Check-ins / Check-outs / Stay-throughs tab labels measure only 17dp tall. If the tappable region matches the text bounds it's well under the 44dp minimum — pad the tab buttons vertically."
+      "rect": { "x": 258, "y": 12, "w": 36, "h": 36 },
+      "title": "Header action icons under 44dp",
+      "body": "The cleaning-mode, filter, and calendar icons in the top-right cluster are each 36×36dp — 8dp short of the tap target minimum on both axes."
     },
     {
       "num": 4,
-      "rect": { "x": 60, "y": 385, "w": 245, "h": 176 },
-      "title": "Inconsistent card actions across reservations",
-      "body": "Alice Foster's card shows plain status text (\"Check in · 7 nights\") with no button, while Yasmin Ellis's and Fiona King's cards below show live \"Take payment\" / \"Check in\" buttons. Staff scanning the list can't predict which cards are actionable — use one consistent pattern (always show the buttons, disabling them when not applicable)."
-    },
-    {
-      "num": 5,
-      "rect": { "x": 23, "y": 14, "w": 344, "h": 25 },
-      "title": "Header icon buttons under 44dp",
-      "body": "The leading and trailing header icons are only about 22×25dp. Increase their padding/hit-slop to reach the 44×44dp touch target minimum, since they sit at the very top edge of the screen."
+      "rect": { "x": 26, "y": 281, "w": 94, "h": 82 },
+      "title": "Identical placeholder photo for every reservation",
+      "body": "Alice Foster, Yasmin Ellis, and Fiona King all show the exact same generic train-track thumbnail. If this is meant to represent the guest or room, it currently carries no real information and could mislead staff into thinking it's meaningful."
     }
   ],
   "working_well": [
     "Reservation cards use a clear, repeated layout (badge, name, dates, room) that makes scanning the list fast.",
-    "Status badges (CONFIRMED, CHECKED IN, CHECKED OUT, UNALLOCATED) pair colour with a text label, so state isn't colour-only.",
+    "Status badges (CONFIRMED, CHECKED IN, UNALLOCATED) pair colour with a text label, so state isn't colour-only.",
+    "Cards with a payment problem get both a red border and explicit \"Payment request expired\" text — a strong, non-colour-only warning pattern.",
     "The active day (FRI 31) is highlighted with both colour and an underline, giving a non-colour cue for the current selection."
   ],
   "worth_considering": [
     "Consider bumping the CONFIRMED/CHECKED IN badge text size slightly — at ~13dp it's on the small side for a key status indicator.",
-    "Long party names like \"The Rodriguez Family\" and \"The Bennett Family\" currently fit, but test even longer names to confirm graceful wrapping/truncation.",
+    "Long party names like \"The Rodriguez Family\" currently fit; worth testing longer names for graceful wrapping.",
     "Group section headers (Check-ins, Check-outs, Stay-throughs) could show live counts to help staff prioritise without opening each tab."
   ]
 }

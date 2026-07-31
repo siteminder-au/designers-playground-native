@@ -10,27 +10,27 @@
     },
     {
       "num": 2,
-      "rect": { "x": 50, "y": 159, "w": 308, "h": 343 },
+      "rect": { "x": 50, "y": 327, "w": 308, "h": 75 },
       "title": "Three identical notifications in a row",
       "body": "The same title, body, timestamp (10:14 am) and hotel (The Ecofern Hotel) repeats three times with no distinguishing detail, so the list reads as a data bug rather than three separate events. Add a unique identifier (invoice #, amount, staggered time) to each so they're scannable as distinct items."
     },
     {
       "num": 3,
-      "rect": { "x": 50, "y": 259, "w": 308, "h": 37 },
-      "title": "Expand chevron too small to tap",
-      "body": "The disclosure chevron on the \"4 New reservations created\" rows measures only ~16×18dp, well under the 44×44dp minimum touch target. Extend the tap area to the full row, which is what the chevron visually implies is tappable."
+      "rect": { "x": 342, "y": 272, "w": 16, "h": 18 },
+      "title": "Expand chevron too small to tap, and inconsistently applied",
+      "body": "The disclosure chevron on \"4 New reservations created\" measures only ~16×18dp, well under the 44dp minimum. It also only appears on this notification type — the three \"Demand Plus\" cards above have no chevron despite looking structurally identical, so it's unclear which notifications are expandable."
     },
     {
       "num": 4,
-      "rect": { "x": 336, "y": 62, "w": 62, "h": 17 },
-      "title": "'Payments' filter chip clipped at screen edge",
-      "body": "The last filter chip is cut off by the viewport edge with no fade/gradient or arrow hinting the row scrolls horizontally, so users may assume the filter list ends there."
+      "rect": { "x": 320, "y": 54, "w": 94, "h": 33 },
+      "title": "\"Payments\" filter tab clipped at screen edge",
+      "body": "The last tab is cut off by the 390dp viewport with no fade, arrow, or scroll indicator hinting the row scrolls horizontally — a user could easily miss that a fourth+ filter exists."
     },
     {
       "num": 5,
-      "rect": { "x": 342, "y": 723, "w": 20, "h": 23 },
-      "title": "Unlabeled eye icon for mark-all-read",
-      "body": "The floating circular button shows only an eye glyph with no text label. An eye conventionally means \"view/preview,\" not \"mark as read,\" so its purpose is ambiguous — add a label/tooltip and an accessible name for screen readers."
+      "rect": { "x": 342, "y": 12, "w": 32, "h": 32 },
+      "title": "\"•••\" overflow menu under 44dp",
+      "body": "The more-options button is 32×32dp, 12dp short on both axes of the iOS HIG minimum tap target. Increase its hit-slop without changing the visual glyph size."
     }
   ],
   "working_well": [

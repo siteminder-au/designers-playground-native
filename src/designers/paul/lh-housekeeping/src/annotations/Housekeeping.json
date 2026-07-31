@@ -1,47 +1,46 @@
 {
   "screen": "Housekeeping",
-  "generated": "2026-06-26",
+  "generated": "2026-07-31",
   "markers": [
     {
       "num": 1,
-      "rect": { "x": 328, "y": 120, "w": 62, "h": 36 },
-      "title": "Third summary chip clipped — no scroll signal",
-      "body": "'0 awai...' is cut off at the right edge with no gradient or indicator. Users will assume the list ends at the clip rather than discovering there are more filter chips. Apply a right-edge fade or ensure all chips are visible."
+      "rect": { "x": 217, "y": 201, "w": 127, "h": 16 },
+      "title": "Status pill/dropdown too small to tap",
+      "body": "Each room's status badge (e.g. \"Needs deep clean\" with a chevron) is the primary interactive control for changing cleaning status, but its text/icon bounding box is only ~16-30dp tall. Increase the pill's vertical padding to hit the ≥44dp touch-target minimum, since this is repeated on every row of the list."
     },
     {
       "num": 2,
-      "rect": { "x": 9, "y": 268, "w": 130, "h": 28 },
-      "title": "Third guest-info icon is ambiguous",
-      "body": "The row of icons (👤 guests, 🧳 bags, and a third symbol) doesn't have labels. The third icon—which may indicate eco-service, notes, or something else—is not identifiable without tapping. Add short labels or tooltips (e.g. '2 guests · 1 bag · eco')."
+      "rect": { "x": 29, "y": 115, "w": 430, "h": 15 },
+      "title": "Filter chips undersized for tapping",
+      "body": "The \"22 dirty rooms\", \"11 deep cleans needed\" and \"0 awaiting inspection\" filter chips render at roughly 15-34dp tall, well under the 44dp minimum for a tappable filter control. Add more vertical padding to each chip."
     },
     {
       "num": 3,
-      "rect": { "x": 9, "y": 348, "w": 120, "h": 20 },
-      "title": "'+ Room notes' touch target too small",
-      "body": "The orange '+ Room notes' link is approximately 18 px tall — well below the iOS 44 dp minimum. It's also text-only with no visible tap area. Wrap it in a tappable row or increase padding to meet the minimum target size."
+      "rect": { "x": 493, "y": 115, "w": 72, "h": 15 },
+      "title": "Fourth filter chip sits off-screen",
+      "body": "\"0 has notes\" is positioned at x=493 in a 390pt-wide viewport, so it's entirely off-canvas. There's no partial-chip peek or scroll indicator hinting the filter row scrolls horizontally, so this filter is effectively undiscoverable."
     },
     {
       "num": 4,
-      "rect": { "x": 14, "y": 172, "w": 362, "h": 600 },
-      "title": "No sort / priority signal for card order",
-      "body": "With 22 dirty rooms and 12 needing deep clean, there is no visible indication of why cards appear in a given order (urgency? check-in time? room number?). A sort label ('Sorted by: Check-in time') or priority badge would help housekeeping staff triage work without guessing."
+      "rect": { "x": 217, "y": 201, "w": 107, "h": 16 },
+      "title": "Clean vs deep-clean rely on colour shade alone",
+      "body": "\"Needs deep clean\" and \"Needs clean\" pills use the same red/pink palette differentiated only by a subtle shade/saturation change, with identical layout and no icon difference. This is hard to scan quickly and fails for colour-vision-deficient users; add a distinct icon or label weight to separate the two severities."
     },
     {
       "num": 5,
-      "rect": { "x": 346, "y": 22, "w": 40, "h": 40 },
-      "title": "Beaker/lab icon — function not discoverable",
-      "body": "The beaker icon (top right, opens demo flags) is unlabelled. Even as a prototype-only control it creates confusion for stakeholders who are testing the screen. Either label it 'Dev' or tuck it behind a less prominent access point."
+      "rect": { "x": 266, "y": 54, "w": 104, "h": 24 },
+      "title": "Header action icons under touch-target size",
+      "body": "The three header icon buttons next to the date (filter/calendar/settings) each measure roughly 20-22dp square — below the 44×44dp minimum — and sit close together, increasing mis-tap risk on a busy housekeeping screen."
     }
   ],
   "working_well": [
-    "Guest comments surfaced directly on the card is excellent — housekeepers have context before entering the room without opening a separate screen.",
-    "Status pill with chevron (Needs clean ▾, Needs deep clean ▾) signals changeability clearly — the dropdown pattern is right for a field-worker workflow.",
-    "'Checking in' / 'Stay-through' reservation type badges are concise and immediately scan-worthy.",
-    "Room type label ('FAMILY ROOM', 'BRIDGE ROOM') in small caps above the room name adds useful grouping context."
+    "Room rows keep a consistent 82px vertical rhythm from top to bottom, making the list easy to scan.",
+    "Status pills are right-aligned to a shared edge regardless of label length, giving the list a clean visual column.",
+    "Room name and room-type label are clearly stacked with a strong hierarchy (bold name, muted caption type)."
   ],
   "worth_considering": [
-    "Add a completion counter at the top ('4 of 22 cleaned') so housekeepers have a clear progress signal across their shift.",
-    "Allow swipe-right on a card to mark a room as cleaned — the most frequent action in a housekeeping workflow deserves a gesture shortcut.",
-    "Show estimated clean time per room type (Deep clean ~45 min, Standard ~20 min) so staff can plan their shift order."
+    "Consider a sticky/collapsible summary bar so the dirty/deep-clean counts stay visible while scrolling the long room list.",
+    "Grouping rows by room type (Family Room, Bridge Room, Deluxe Suite) with section headers could reduce scanning effort versus a single flat list.",
+    "A small trailing arrow/fade on the filter-chip row would hint that more chips are scrollable off-screen."
   ]
 }

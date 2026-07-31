@@ -29,15 +29,22 @@ const LAYOUT_EVAL_FN = `() => {
   const sy = window.scrollY || 0;
   document.querySelectorAll('body *').forEach(el => {
     if (el.children.length > 0) return;
-    // React Navigation keeps previously-active tabs mounted-but-hidden in the
-    // background. Skip anything not actually visible so hidden leftover tabs
-    // never pollute the layout data — a design review should only ever look
-    // at what the user can actually see or reach by scrolling.
-    if (el.checkVisibility ? !el.checkVisibility() : el.offsetParent === null) return;
-    const t = (el.textContent || '').replace(/\\s+/g, ' ').trim();
-    if (!t) return;
     const r = el.getBoundingClientRect();
     if (r.width <= 0 || r.height <= 0) return;
+    // React Navigation keeps EVERY previously-visited tab mounted in the
+    // background, stacked underneath the active one — not display:none or
+    // visibility:hidden, just covered up. checkVisibility() does NOT catch
+    // this (confirmed by testing — it let Reservations content leak into
+    // Home's layout data). The reliable check: is this element actually the
+    // topmost thing rendered at its own center point? If a hidden screen's
+    // element is fully covered by the active screen on top, elementFromPoint
+    // returns the active screen's element instead, and we skip it.
+    const cx = Math.min(Math.max(r.x + r.width / 2, 0), window.innerWidth - 1);
+    const cy = Math.min(Math.max(r.y + r.height / 2, 0), window.innerHeight - 1);
+    const top = document.elementFromPoint(cx, cy);
+    if (!top || !(top === el || top.contains(el) || el.contains(top))) return;
+    const t = (el.textContent || '').replace(/\\s+/g, ' ').trim();
+    if (!t) return;
     out.push({ text: t.slice(0, 80), x: Math.round(r.x + sx), y: Math.round(r.y + sy), w: Math.round(r.width), h: Math.round(r.height) });
   });
   return out;
@@ -162,6 +169,10 @@ rect.w / rect.h = width and height of the element.
 For EVERY marker, find the matching entry/entries in layout.json by matching
 visible text (substring match is fine — text may be truncated to 80 chars).
 Use their real x/y/w/h for rect — do NOT eyeball pixels from the screenshot.
+Note: layout.json's boxes are for the inner text/glyph, which is often
+smaller than a button's actual tappable wrapper. For a touch-target-size
+finding specifically, that inner box is the wrong evidence — the marker
+should reflect the real hit area, not the glyph.
 If a marker spans multiple text elements (e.g. a whole row or card), take the
 union: x = min(x), y = min(y), and extend w/h to cover max(x+w)/max(y+h) of all
 of them. Only fall back to a screenshot estimate if the issue genuinely has no

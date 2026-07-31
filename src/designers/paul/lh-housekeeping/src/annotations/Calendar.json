@@ -16,15 +16,15 @@
     },
     {
       "num": 3,
-      "rect": { "x": 239, "y": 30, "w": 64, "h": 32 },
+      "rect": { "x": 251, "y": 37, "w": 111, "h": 17 },
       "title": "\"Today\" / \"+ Add\" buttons under 44dp",
-      "body": "Both header buttons render at 32dp tall — 12dp short of the iOS HIG minimum tap target. Increase vertical padding rather than the font size."
+      "body": "Both header buttons render at 17dp tall — far short of the iOS HIG 44dp minimum. Increase vertical padding rather than the font size."
     },
     {
       "num": 4,
-      "rect": { "x": 362, "y": 75, "w": 28, "h": 53 },
-      "title": "Day-scroll chevron too narrow",
-      "body": "The '›' control is only 28dp wide (height is fine at 53dp). HIG wants ≥44dp on both axes — widen the hit area horizontally."
+      "rect": { "x": 371, "y": 88, "w": 9, "h": 26 },
+      "title": "Day-scroll chevron far too small",
+      "body": "The '›' control is only 9×26dp — well under the 44×44dp minimum on both axes. Widen the tappable hit area well beyond the visual glyph."
     }
   ],
   "working_well": [

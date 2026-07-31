@@ -19,8 +19,6 @@ export function DemoFlagsSheet({
   setViewMode,
   cleaningStatusAsLabel,
   setCleaningStatusAsLabel,
-  reviewCaptureFabEnabled,
-  setReviewCaptureFabEnabled,
   insetsBottom,
 }: {
   visible: boolean;
@@ -34,8 +32,6 @@ export function DemoFlagsSheet({
   setViewMode: (mode: ViewMode) => void;
   cleaningStatusAsLabel: boolean;
   setCleaningStatusAsLabel: (value: boolean) => void;
-  reviewCaptureFabEnabled: boolean;
-  setReviewCaptureFabEnabled: (value: boolean) => void;
   insetsBottom: number;
 }) {
   return (
@@ -46,7 +42,7 @@ export function DemoFlagsSheet({
           <View style={styles.sheetHandleArea} {...panResponder.panHandlers}><View style={styles.sortSheetHandle} /></View>
           <View style={styles.sortSheetHeader}>
             <Text style={styles.sortSheetTitle}>Demo flags</Text>
-            <TouchableOpacity onPress={() => { setFlags({ ...FLAGS }); setViewMode('full'); setCleaningStatusAsLabel(false); setReviewCaptureFabEnabled(false); }}>
+            <TouchableOpacity onPress={() => { setFlags({ ...FLAGS }); setViewMode('full'); setCleaningStatusAsLabel(false); }}>
               <Text style={styles.sortResetText}>Reset</Text>
             </TouchableOpacity>
           </View>
@@ -132,16 +128,6 @@ export function DemoFlagsSheet({
               <Switch
                 value={cleaningStatusAsLabel}
                 onValueChange={setCleaningStatusAsLabel}
-                trackColor={{ false: '#e5e7eb', true: ORANGE }}
-                thumbColor="#fff"
-              />
-            </View>
-            <View style={styles.dropdownDivider} />
-            <View style={styles.demoFlagRow}>
-              <Text style={styles.demoFlagLabel}>Floating design-review button</Text>
-              <Switch
-                value={reviewCaptureFabEnabled}
-                onValueChange={setReviewCaptureFabEnabled}
                 trackColor={{ false: '#e5e7eb', true: ORANGE }}
                 thumbColor="#fff"
               />

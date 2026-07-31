@@ -23,10 +23,6 @@ interface HousekeepingStatusContextValue {
   // the circular icon. Set from either screen's demo flags sheet.
   cleaningStatusAsLabel: boolean;
   setCleaningStatusAsLabel: (value: boolean) => void;
-  // Dev tool: floating "capture screenshot for design review" button. When
-  // true, a small FAB sits in the bottom-right of every screen.
-  reviewCaptureFabEnabled: boolean;
-  setReviewCaptureFabEnabled: (value: boolean) => void;
   // Dev tool: in-prototype annotation overlay for the current screen.
   reviewOverlayEnabled: boolean;
   setReviewOverlayEnabled: (value: boolean) => void;
@@ -40,8 +36,6 @@ const HousekeepingStatusContext = createContext<HousekeepingStatusContextValue>(
   housekeeperMode: false,
   cleaningStatusAsLabel: false,
   setCleaningStatusAsLabel: () => {},
-  reviewCaptureFabEnabled: false,
-  setReviewCaptureFabEnabled: () => {},
   reviewOverlayEnabled: false,
   setReviewOverlayEnabled: () => {},
 });
@@ -53,7 +47,6 @@ export function HousekeepingStatusProvider({ children }: { children: React.React
   // a faux browser window — so both map to housekeeper (limited) mode.
   const housekeeperMode = viewMode === 'limited' || viewMode === 'browser';
   const [cleaningStatusAsLabel, setCleaningStatusAsLabel] = useState(false);
-  const [reviewCaptureFabEnabled, setReviewCaptureFabEnabled] = useState(false);
   const [reviewOverlayEnabled, setReviewOverlayEnabled] = useState(false);
   const [updateRoomStatusMutation] = useMutation(UPDATE_ROOM_STATUS);
 
@@ -73,7 +66,7 @@ export function HousekeepingStatusProvider({ children }: { children: React.React
   }
 
   return (
-    <HousekeepingStatusContext.Provider value={{ statusOverrides, setStatusOverride, viewMode, setViewMode, housekeeperMode, cleaningStatusAsLabel, setCleaningStatusAsLabel, reviewCaptureFabEnabled, setReviewCaptureFabEnabled, reviewOverlayEnabled, setReviewOverlayEnabled }}>
+    <HousekeepingStatusContext.Provider value={{ statusOverrides, setStatusOverride, viewMode, setViewMode, housekeeperMode, cleaningStatusAsLabel, setCleaningStatusAsLabel, reviewOverlayEnabled, setReviewOverlayEnabled }}>
       {children}
     </HousekeepingStatusContext.Provider>
   );

@@ -2,17 +2,11 @@
 """
 Design Review pipeline runner.
 
-Bundles every side-effect-producing step of /design-review (clipboard read,
-sim screenshot, ImageMagick render, Preview launch) into a single executable
-so Claude Code needs only ONE allowlist entry to run the whole flow without
-permission prompts.
+Bundles every side-effect-producing step of /design-review (ImageMagick
+render, Preview launch) into a single executable so Claude Code needs only
+ONE allowlist entry to run the whole flow without permission prompts.
 
 Subcommands:
-  capture
-    Save a PNG from the best available source (clipboard, then iOS sim) into
-    <repo>/.design-review/<timestamp>-source.png. Print JSON:
-      {"source": "...", "width": N, "height": N, "from": "clipboard"|"sim"}
-
   sample [--source PATH] [--height H] Y [Y ...]
     Crop horizontal strips out of the source PNG at the given y values
     (default: most recent source, 80px strip height, full width). Used to
@@ -63,12 +57,6 @@ def repo_root() -> Path:
     return Path(p.stdout.strip()) if p.returncode == 0 else Path.cwd()
 
 
-def outdir() -> Path:
-    d = repo_root() / ".design-review"
-    d.mkdir(exist_ok=True)
-    return d
-
-
 def ts() -> str:
     return datetime.now().strftime("%Y%m%d-%H%M%S")
 
@@ -82,58 +70,6 @@ def magick_dim(path: Path):
     )
     w, h = p.stdout.strip().split()
     return int(w), int(h)
-
-
-def save_clipboard_png(out: Path) -> bool:
-    script = f"""
-    try
-      set d to (the clipboard as «class PNGf»)
-      set f to open for access POSIX file "{out}" with write permission
-      write d to f
-      close access f
-      return "OK"
-    on error e
-      return "ERR:" & e
-    end try
-    """
-    p = subprocess.run(
-        ["osascript", "-e", script], capture_output=True, text=True
-    )
-    return p.stdout.strip() == "OK" and out.exists()
-
-
-def sim_booted() -> bool:
-    p = subprocess.run(
-        ["xcrun", "simctl", "list", "devices", "booted"],
-        capture_output=True,
-        text=True,
-    )
-    return "Booted" in p.stdout
-
-
-def sim_screenshot(out: Path) -> bool:
-    p = subprocess.run(
-        ["xcrun", "simctl", "io", "booted", "screenshot", str(out)]
-    )
-    return p.returncode == 0 and out.exists()
-
-
-def cmd_capture(_args):
-    od = outdir()
-    src = od / f"{ts()}-source.png"
-    if save_clipboard_png(src):
-        w, h = magick_dim(src)
-        print(json.dumps({"source": str(src), "width": w, "height": h, "from": "clipboard"}))
-        return
-    if sim_booted() and sim_screenshot(src):
-        w, h = magick_dim(src)
-        print(json.dumps({"source": str(src), "width": w, "height": h, "from": "sim"}))
-        return
-    print(
-        json.dumps({"error": "No source — clipboard empty and no sim booted"}),
-        file=sys.stderr,
-    )
-    sys.exit(1)
 
 
 def latest_source() -> Path:
@@ -321,12 +257,10 @@ def cmd_annotate(args):
 
 def main():
     if len(sys.argv) < 2:
-        print("usage: dr-pipeline.py <capture|annotate> [args...]", file=sys.stderr)
+        print("usage: dr-pipeline.py <sample|annotate> [args...]", file=sys.stderr)
         sys.exit(2)
     sub = sys.argv[1]
-    if sub == "capture":
-        cmd_capture(sys.argv[2:])
-    elif sub == "sample":
+    if sub == "sample":
         cmd_sample(sys.argv[2:])
     elif sub == "annotate":
         cmd_annotate(sys.argv[2:])

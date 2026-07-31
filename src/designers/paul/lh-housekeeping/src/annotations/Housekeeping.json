@@ -4,43 +4,37 @@
   "markers": [
     {
       "num": 1,
-      "rect": { "x": 217, "y": 201, "w": 127, "h": 16 },
-      "title": "Status pill/dropdown too small to tap",
-      "body": "Each room's status badge (e.g. \"Needs deep clean\" with a chevron) is the primary interactive control for changing cleaning status, but its text/icon bounding box is only ~16-30dp tall. Increase the pill's vertical padding to hit the ≥44dp touch-target minimum, since this is repeated on every row of the list."
+      "rect": { "x": 315, "y": 107, "w": 157, "h": 31 },
+      "title": "Fourth filter chip sits off-screen",
+      "body": "\"0 awaiting inspection\" is already clipped at the viewport edge, and \"0 has notes\" after it sits entirely off-canvas (x≈480 in a 390pt-wide viewport). There's no fade or scroll indicator hinting the filter row scrolls horizontally, so the last chip is effectively undiscoverable."
     },
     {
       "num": 2,
-      "rect": { "x": 29, "y": 115, "w": 430, "h": 15 },
-      "title": "Filter chips undersized for tapping",
-      "body": "The \"22 dirty rooms\", \"11 deep cleans needed\" and \"0 awaiting inspection\" filter chips render at roughly 15-34dp tall, well under the 44dp minimum for a tappable filter control. Add more vertical padding to each chip."
+      "rect": { "x": 262, "y": 50, "w": 30, "h": 33 },
+      "title": "Header action icons under 44dp",
+      "body": "The filter, calendar, and settings icons next to the date each render at roughly 28-30dp square — below the iOS HIG 44×44dp minimum — and sit close together, increasing mis-tap risk."
     },
     {
       "num": 3,
-      "rect": { "x": 493, "y": 115, "w": 72, "h": 15 },
-      "title": "Fourth filter chip sits off-screen",
-      "body": "\"0 has notes\" is positioned at x=493 in a 390pt-wide viewport, so it's entirely off-canvas. There's no partial-chip peek or scroll indicator hinting the filter row scrolls horizontally, so this filter is effectively undiscoverable."
+      "rect": { "x": 29, "y": 192, "w": 171, "h": 19 },
+      "title": "Room-name column width depends on status text length",
+      "body": "The name/type block is 171dp wide next to a \"Needs deep clean\" pill but 204dp wide next to the shorter \"Needs clean\" pill — the column isn't a fixed width, it's whatever's left over after the pill. A longer room name paired with the longer status text risks wrapping or truncating unpredictably."
     },
     {
       "num": 4,
-      "rect": { "x": 217, "y": 201, "w": 107, "h": 16 },
-      "title": "Clean vs deep-clean rely on colour shade alone",
-      "body": "\"Needs deep clean\" and \"Needs clean\" pills use the same red/pink palette differentiated only by a subtle shade/saturation change, with identical layout and no icon difference. This is hard to scan quickly and fails for colour-vision-deficient users; add a distinct icon or label weight to separate the two severities."
-    },
-    {
-      "num": 5,
-      "rect": { "x": 266, "y": 54, "w": 104, "h": 24 },
-      "title": "Header action icons under touch-target size",
-      "body": "The three header icon buttons next to the date (filter/calendar/settings) each measure roughly 20-22dp square — below the 44×44dp minimum — and sit close together, increasing mis-tap risk on a busy housekeeping screen."
+      "rect": { "x": 348, "y": 14, "w": 26, "h": 28 },
+      "title": "Unlabeled flask icon in header",
+      "body": "The flask/lab icon next to the screen title has no visible label and no obvious effect. If it's a dev-only affordance it should be hidden in this context; if it's a real feature, add a label so its purpose is discoverable."
     }
   ],
   "working_well": [
     "Room rows keep a consistent 82px vertical rhythm from top to bottom, making the list easy to scan.",
-    "Status pills are right-aligned to a shared edge regardless of label length, giving the list a clean visual column.",
+    "Status pills share a consistent right edge regardless of label length, giving the list a clean visual column.",
     "Room name and room-type label are clearly stacked with a strong hierarchy (bold name, muted caption type)."
   ],
   "worth_considering": [
     "Consider a sticky/collapsible summary bar so the dirty/deep-clean counts stay visible while scrolling the long room list.",
     "Grouping rows by room type (Family Room, Bridge Room, Deluxe Suite) with section headers could reduce scanning effort versus a single flat list.",
-    "A small trailing arrow/fade on the filter-chip row would hint that more chips are scrollable off-screen."
+    "\"Needs deep clean\" and \"Needs clean\" pills use the same red/pink palette differentiated mainly by label text — an icon or shade difference would help scanning at a glance."
   ]
 }

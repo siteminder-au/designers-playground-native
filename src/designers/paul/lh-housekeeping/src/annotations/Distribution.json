@@ -4,31 +4,25 @@
   "markers": [
     {
       "num": 1,
-      "rect": { "x": 265, "y": 66, "w": 95, "h": 17 },
-      "title": "Bulk update button too short to tap",
-      "body": "The 'Bulk update' pill's text/icon box is only ~17dp tall, well under the 44dp minimum touch target. Increase vertical padding so the tappable area is at least 44dp, even if the visual pill stays compact."
+      "rect": { "x": 0, "y": 149, "w": 143, "h": 57 },
+      "title": "\"Channel\" column header mismatches its data",
+      "body": "The first column is labelled 'Channel' but every row underneath (Double Room, Standard Twin, Budget Studio…) is a room type or rate plan, not a distribution channel. Relabel the header to match whichever filter is active (e.g. 'Room type'), or update it dynamically when the filter changes."
     },
     {
       "num": 2,
-      "rect": { "x": 27, "y": 114, "w": 110, "h": 16 },
-      "title": "Filter chips (Room types, Rate plans, Channels) undersized",
-      "body": "Each filter chip's content is only ~16dp tall, far below the 44dp touch target minimum, and the three chips sit close together with little breathing room. Pad each chip to at least 44dp tall and add clearer gaps between them."
+      "rect": { "x": 251, "y": 58, "w": 123, "h": 32 },
+      "title": "Header controls under the 44dp tap minimum",
+      "body": "The 'Bulk update' button, and the Room types / Rate plans / Channels filter chips below it, all render at 32dp tall — 12dp short of the iOS HIG minimum. Increase vertical padding on all of them."
     },
     {
       "num": 3,
-      "rect": { "x": 39, "y": 167, "w": 65, "h": 20 },
-      "title": "'Channel' column header mismatches its data",
-      "body": "The first column is labelled 'Channel' but every row underneath (Double Room, Standard Twin, Budget Studio…) is a room type or rate plan, not a distribution channel. Relabel the header to match the currently selected filter (e.g. 'Room type') or update it dynamically when the filter changes."
+      "rect": { "x": 144, "y": 262, "w": 49, "h": 55 },
+      "title": "Rate/availability cells have no editable affordance",
+      "body": "This is a rates & availabilities management screen, but the number cells (e.g. '240', '5') look like static text — no border, icon, or tap state hints they're editable. Add a visible edit affordance (underline, pencil icon, or tap highlight) if they're meant to be tapped."
     },
     {
       "num": 4,
-      "rect": { "x": 164, "y": 225, "w": 646, "h": 17 },
-      "title": "Rate/inventory grid cells too small to tap precisely",
-      "body": "Each editable count/price cell (e.g. the '5' availability figures, '240'/'280' rates) is roughly 9–26dp wide and 17dp tall with no visible padding between adjacent cells. If these are meant to be tapped to edit, they're far under the 44×44dp guideline and risk mis-taps on a dense grid."
-    },
-    {
-      "num": 5,
-      "rect": { "x": 354, "y": 155, "w": 60, "h": 37 },
+      "rect": { "x": 340, "y": 149, "w": 49, "h": 43 },
       "title": "Wide rate table has no horizontal-scroll affordance",
       "body": "The date grid extends far beyond the 390dp viewport (14+ columns) but is abruptly cropped at the right edge with no fade, arrow, or scroll indicator hinting that more dates exist. Add a subtle edge fade or scroll hint so users know to swipe horizontally."
     }

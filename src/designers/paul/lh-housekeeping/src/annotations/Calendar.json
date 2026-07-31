@@ -4,51 +4,36 @@
   "markers": [
     {
       "num": 1,
-      "rect": { "x": 67, "y": 88, "w": 9, "h": 26 },
-      "title": "Day-nav arrows are too small to tap",
-      "body": "The ‹ and › date-scroll arrows are only ~9×26dp — far below the 44×44dp minimum touch target. Widen the tappable area (padding, not just glyph size) even if the visual chevron stays small."
+      "rect": { "x": 90, "y": 165, "w": 300, "h": 580 },
+      "title": "Grid shows no reservation bars",
+      "body": "Every room row (1–10) is completely empty across all 5 visible days, despite Home reporting 21 check-ins and 78% occupancy for today. Either the booking bars aren't rendering for this date range, or the grid needs an explicit empty state — right now it reads as broken, not empty."
     },
     {
       "num": 2,
-      "rect": { "x": 251, "y": 37, "w": 111, "h": 17 },
-      "title": "'Today' and '+ Add' buttons undersized",
-      "body": "Both header buttons render as ~40×17dp text labels with no extra hit-slop. Increase the button height to at least 44dp so front-desk staff can tap reliably while multitasking."
+      "rect": { "x": 257, "y": 138, "w": 121, "h": 17 },
+      "title": "\"Unallocated (10) ›\" link undersized",
+      "body": "17dp tall, well under the 44dp tap target minimum. Same undersized-link pattern repeats for every room-type section header (Deluxe Suite, Family Room, etc.) below."
     },
     {
       "num": 3,
-      "rect": { "x": 8, "y": 800, "w": 45, "h": 76 },
-      "title": "Inconsistent row heights break grid rhythm",
-      "body": "Suite 1 and Suite 2 rows are only 18dp tall while every other room row (including Suite 3-5) is 36dp. This misaligns the room-label column against the booking grid and creates uneven vertical rhythm — normalize all room rows to the same height."
+      "rect": { "x": 239, "y": 30, "w": 64, "h": 32 },
+      "title": "\"Today\" / \"+ Add\" buttons under 44dp",
+      "body": "Both header buttons render at 32dp tall — 12dp short of the iOS HIG minimum tap target. Increase vertical padding rather than the font size."
     },
     {
       "num": 4,
-      "rect": { "x": 8, "y": 1465, "w": 45, "h": 36 },
-      "title": "Room-label column too narrow for longer names",
-      "body": "The fixed 45dp-wide label column works for 'Room 1' but is cramped for names like 'Family Room 7'. Long labels risk wrapping awkwardly or truncating to unreadable fragments — widen the column or truncate with a full-name tooltip/press-and-hold."
-    },
-    {
-      "num": 5,
-      "rect": { "x": 12, "y": 138, "w": 366, "h": 17 },
-      "title": "'Unallocated (N) ›' row control has a short tap height",
-      "body": "The room-type header row (e.g. 'Bridge Room … Unallocated (10) ›') that likely expands the unallocated list is only ~17dp tall. Even though it spans the row's full width, its vertical hit area is too small — pad the whole header row to ≥44dp of tappable height."
-    },
-    {
-      "num": 6,
-      "rect": { "x": 100, "y": 175, "w": 275, "h": 558 },
-      "title": "Shaded date-range band has no legend",
-      "body": "A pink/salmon highlight covers a block of days and rooms with no caption, icon, or legend explaining what it represents (e.g. blocked, held, or booked dates). Add a label or key so the meaning isn't colour-only."
+      "rect": { "x": 362, "y": 75, "w": 28, "h": 53 },
+      "title": "Day-scroll chevron too narrow",
+      "body": "The '›' control is only 28dp wide (height is fine at 53dp). HIG wants ≥44dp on both axes — widen the hit area horizontally."
     }
   ],
   "working_well": [
-    "Day columns pair the weekday abbreviation with the date number, making the horizontal timeline easy to scan.",
-    "Grouping rooms under clear category headers (Bridge Room, Deluxe Suite, Family Room) gives the long room list a useful hierarchy.",
-    "Surfacing the 'Unallocated (N)' count directly in each room-type header helps staff spot unassigned bookings without digging into the grid.",
-    "Room numbering is sequential and consistent, so staff can quickly map rows to physical rooms."
+    "Sticky day-of-week header with the selected date bold + underlined makes the current position in the week unambiguous.",
+    "Room-type grouping (Bridge Room, Deluxe Suite, Family Room) with per-section unallocated counts gives a fast overview of inventory gaps.",
+    "Room icons are grouped consistently per row, keeping the left rail scannable even with 22 rooms listed."
   ],
   "worth_considering": [
-    "A sticky room-label column while scrolling horizontally through dates would help staff keep track of which row they're viewing.",
-    "A quick 'jump to date' control alongside the arrows would speed up navigating far-future or past dates.",
-    "Consider a compact legend chip for the shaded booking states so colour meaning is discoverable at a glance.",
-    "Grouping the 'Today' pill and '+ Add' action with a touch of extra spacing would reduce accidental mis-taps between them."
+    "If the grid is intentionally empty because bookings render as a separate overlay layer, confirm that layer is actually wired up for this environment — as shipped it's indistinguishable from a bug.",
+    "Add a subtle vertical divider or shading per day column so date boundaries are legible even without any booking bars present."
   ]
 }

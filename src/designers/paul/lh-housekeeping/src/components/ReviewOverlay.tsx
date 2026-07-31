@@ -164,6 +164,7 @@ export function ReviewOverlay({ data, scrollOffset }: Props) {
 
               {data.working_well.length > 0 && (
                 <>
+                  <View style={styles.reportDivider} />
                   <Text style={[styles.reportSection, styles.reportSectionGreen]}>Working well</Text>
                   {data.working_well.map((item, i) => (
                     <Text key={i} style={styles.reportBullet}>· {item}</Text>
@@ -173,6 +174,7 @@ export function ReviewOverlay({ data, scrollOffset }: Props) {
 
               {data.worth_considering.length > 0 && (
                 <>
+                  <View style={styles.reportDivider} />
                   <Text style={[styles.reportSection, styles.reportSectionAmber]}>Worth considering</Text>
                   {data.worth_considering.map((item, i) => (
                     <Text key={i} style={styles.reportBullet}>· {item}</Text>
@@ -336,6 +338,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#aaa',
     marginBottom: 2,
+  },
+  reportDivider: {
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    marginTop: 20,
   },
   reportSection: {
     fontSize: 12,

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -49,7 +49,7 @@ import { SortSheet } from './components/sheets/SortSheet';
 import { AssignSheet } from './components/sheets/AssignSheet';
 import { FilterSheet } from './components/sheets/FilterSheet';
 import { DemoFlagsSheet } from './components/sheets/DemoFlagsSheet';
-import { useFocusEffect } from '@react-navigation/native';
+import { useIsFocused } from '@react-navigation/native';
 import { useReviewContext } from '../../context/ReviewContext';
 import housekeepingAnnotations from '../../annotations/Housekeeping.json';
 import { AutomationsSheet } from './components/sheets/AutomationsSheet';
@@ -62,11 +62,13 @@ import { MonthSheet } from './components/sheets/MonthSheet';
 
 export default function HousekeepingScreen({ navigation }: { navigation: any }) {
   const { setAnnotations, setScrollY } = useReviewContext();
-  useFocusEffect(useCallback(() => {
+  const isFocused = useIsFocused();
+  useEffect(() => {
+    if (!isFocused) return;
     setAnnotations(housekeepingAnnotations as any);
     setScrollY(0);
     return () => setAnnotations(null);
-  }, []));
+  }, [isFocused]);
 
   const insets = useSafeAreaInsets();
   const today = localTodayISO();

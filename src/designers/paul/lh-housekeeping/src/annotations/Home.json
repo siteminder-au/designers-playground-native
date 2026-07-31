@@ -4,42 +4,43 @@
   "markers": [
     {
       "num": 1,
-      "rect": { "x": 14, "y": 195, "w": 362, "h": 36 },
-      "title": "Card bleed reads as layout bug",
-      "body": "Revenue data from card 2 is fully legible below card 1 — looks like clipped content, not a deliberate peek effect."
+      "rect": { "x": 23, "y": 14, "w": 22, "h": 25 },
+      "title": "Header icons too small to tap",
+      "body": "The settings gear and chat icons in the header are only ~22×25dp, well under the 44×44dp minimum tap target. Add invisible padding to expand the hit area to at least 44×44 without changing the visual icon size."
     },
     {
       "num": 2,
-      "rect": { "x": 154, "y": 218, "w": 82, "h": 15 },
-      "title": "No persistent tap affordance",
-      "body": "Dots are 5×5 px, near-invisible. After the entry nudge plays once, nothing signals the card is tappable on return visits."
+      "rect": { "x": 257, "y": 71, "w": 117, "h": 17 },
+      "title": "\"View reservations\" link is undersized",
+      "body": "The link text box is only 17dp tall, far below the 44dp tap target minimum, and the same pattern repeats for \"View calendar\" and \"View inventory\" lower on the screen. Wrap these in a button with adequate vertical padding so the tappable area matches the visual affordance."
     },
     {
       "num": 3,
-      "rect": { "x": 262, "y": 48, "w": 120, "h": 16 },
-      "title": "\"View reservations\" undersized",
-      "body": "Text-only link on the right edge — smallest, hardest-to-hit position one-handed. iOS HIG minimum is 44 dp tall."
+      "rect": { "x": 47, "y": 213, "w": 296, "h": 47 },
+      "title": "Revenue/trend row overflows the card",
+      "body": "The \"$2,698 Revenue\" and \"↑12% vs yesterday\" row sits partially below the visible bottom edge of the Today summary card, causing it to look clipped/faded in the screenshot. Increase the card height or reduce internal spacing so this row is fully contained."
     },
     {
       "num": 4,
-      "rect": { "x": 247, "y": 109, "w": 129, "h": 34 },
-      "title": "Inconsistent number formatting",
-      "body": "'09' (zero-padded) in the top row vs bare '0' in the bottom row — looks like two different data systems."
+      "rect": { "x": 47, "y": 431, "w": 15, "h": 12 },
+      "title": "Unlabeled icon+count badge on calendar dates",
+      "body": "The small icon-and-number badge (e.g. \"2\") shown under some dates in the pricing/availability strips has no visible label or accessible text explaining what it represents. Add a short label or an accessible tooltip so staff don't have to guess its meaning."
     },
     {
       "num": 5,
-      "rect": { "x": 16, "y": 267, "w": 236, "h": 14 },
-      "title": "Widget dates are stale",
-      "body": "Dynamic Pricing + Available Rooms show Apr 2026 dates. Will confuse users in testing — drive from today's date."
+      "rect": { "x": 78, "y": 735, "w": 223, "h": 15 },
+      "title": "Rooms Sold / Revenue tab labels are cramped",
+      "body": "The segmented control labels are only 15dp tall with no visible padding shown in the layout data, risking a tap target under 44dp. Confirm the surrounding pill has sufficient hit-area padding, or increase it if not."
     }
   ],
   "working_well": [
-    "Stat hierarchy is clear — label above large number reads fast at a glance.",
-    "Salmon hero zone cleanly separates today context from below-the-fold.",
-    "Demand colour coding in the pricing grid is instantly scannable."
+    "Card-based grouping (Today, Dynamic pricing, Available rooms, Performance) gives the page clear, scannable sections.",
+    "Large bold numerals for Check Ins / Check Outs / Stay Throughs create a strong, glanceable focal point for daily counts.",
+    "The selected date in the horizontal calendar strips is distinguished by both color and position, not color alone."
   ],
   "worth_considering": [
-    "Add a '1 of 2' counter or chevron next to the dots for a persistent flip cue.",
-    "Clip the card container so card 2's content is masked until intentionally flipped."
+    "Add a scroll affordance (gradient/arrow) on the horizontal date strips to hint that more days are available off-screen.",
+    "Increase contrast/weight on the \"AVERAGE\" label and chart axis values in the Performance section for quicker readability.",
+    "Consider consolidating the repeated \"View X\" link pattern into a consistent button component so sizing and spacing stay uniform across cards."
   ]
 }

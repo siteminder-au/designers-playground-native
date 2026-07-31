@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useIsFocused } from '@react-navigation/native';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useReviewContext } from '../../context/ReviewContext';
 import homeAnnotations from '../../annotations/Home.json';
@@ -177,6 +177,7 @@ function CardHeader({
 
 export default function HomeScreen() {
   const { setAnnotations, setScrollY } = useReviewContext();
+  const isFocused = useIsFocused();
   const [perfTab, setPerfTab] = useState<'rooms' | 'revenue'>('rooms');
   const [activeCard, setActiveCard] = useState<0 | 1>(0);
   // 0 = card 0 is front, 1 = card 1 is front — spring-animated
@@ -202,11 +203,12 @@ export default function HomeScreen() {
     }).start();
   };
 
-  useFocusEffect(useCallback(() => {
+  useEffect(() => {
+    if (!isFocused) return;
     setAnnotations(homeAnnotations as any);
     setScrollY(0);
     return () => setAnnotations(null);
-  }, []));
+  }, [isFocused]);
 
   // One-time entry nudge: back card briefly peeks up then settles, signalling interactivity
   useEffect(() => {

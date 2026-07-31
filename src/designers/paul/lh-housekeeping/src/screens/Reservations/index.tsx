@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useIsFocused } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useQuery } from '@apollo/client';
 import { GET_TODAY_RESERVATIONS } from '../../apollo/queries';
@@ -239,11 +239,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function ReservationsScreen({ navigation }: { navigation: any }) {
   const { setAnnotations, setScrollY } = useReviewContext();
-  useFocusEffect(useCallback(() => {
+  const isFocused = useIsFocused();
+  useEffect(() => {
+    if (!isFocused) return;
     setAnnotations(reservationsAnnotations as any);
     setScrollY(0);
     return () => setAnnotations(null);
-  }, []));
+  }, [isFocused]);
 
   const todayDate = new Date();
   const [selectedDate, setSelectedDate] = useState<Date>(todayDate);

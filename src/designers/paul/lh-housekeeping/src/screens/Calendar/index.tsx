@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,7 +18,7 @@ import { useHousekeepingStatus, RoomStatus } from '../../context/HousekeepingSta
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { STATUS_VARIANT, SYMBOL_CONTAINER } from '../../config/statusVariant';
 import { COLORS } from '../../config/colors';
-import { useFocusEffect } from '@react-navigation/native';
+import { useIsFocused } from '@react-navigation/native';
 import { useBottomSheet } from '../HousekeepingReports/hooks/useBottomSheet';
 import CleanSvg from '../../../assets/Clean.svg';
 import DirtySvg from '../../../assets/Dirty.svg';
@@ -154,11 +154,13 @@ function localTodayISO(): string {
 
 export default function CalendarScreen() {
   const { setAnnotations, setScrollY } = useReviewContext();
-  useFocusEffect(useCallback(() => {
+  const isFocused = useIsFocused();
+  useEffect(() => {
+    if (!isFocused) return;
     setAnnotations(calendarAnnotations as any);
     setScrollY(0);
     return () => setAnnotations(null);
-  }, []));
+  }, [isFocused]);
 
   const today = localTodayISO();
   const insets = useSafeAreaInsets();

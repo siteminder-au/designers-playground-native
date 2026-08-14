@@ -372,6 +372,23 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
           </ScrollView>
         </View>
 
+        {/* ── Unallocated alert banner ── */}
+        {unallocatedCount > 0 && (showCheckIns) && (
+          <TouchableOpacity
+            style={styles.alertBanner}
+            onPress={() => setShowUnallocatedOnly(v => !v)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="alert-circle-outline" size={16} color={RED} style={{ marginRight: 8 }} />
+            <Text style={styles.alertText}>
+              {unallocatedCount} unallocated reservation{unallocatedCount !== 1 ? 's' : ''}
+            </Text>
+            <View style={[styles.alertToggle, showUnallocatedOnly && styles.alertToggleOn]}>
+              <View style={[styles.alertToggleThumb, showUnallocatedOnly && styles.alertToggleThumbOn]} />
+            </View>
+          </TouchableOpacity>
+        )}
+
         {/* ── Tap to Pay entry point ── */}
         {showTapToPayBanner && (
           <View style={styles.tapToPayBanner}>
@@ -389,23 +406,6 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
               <Ionicons name="close" size={18} color="#666" />
             </TouchableOpacity>
           </View>
-        )}
-
-        {/* ── Unallocated alert banner ── */}
-        {unallocatedCount > 0 && (showCheckIns) && (
-          <TouchableOpacity
-            style={styles.alertBanner}
-            onPress={() => setShowUnallocatedOnly(v => !v)}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="alert-circle-outline" size={16} color={RED} style={{ marginRight: 8 }} />
-            <Text style={styles.alertText}>
-              {unallocatedCount} unallocated reservation{unallocatedCount !== 1 ? 's' : ''}
-            </Text>
-            <View style={[styles.alertToggle, showUnallocatedOnly && styles.alertToggleOn]}>
-              <View style={[styles.alertToggleThumb, showUnallocatedOnly && styles.alertToggleThumbOn]} />
-            </View>
-          </TouchableOpacity>
         )}
 
         {/* ── Content ── */}

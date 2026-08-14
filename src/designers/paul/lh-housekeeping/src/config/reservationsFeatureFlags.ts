@@ -13,8 +13,12 @@ const FLAGS = {
    *  - 'chip': persistent, non-dismissible row — always discoverable, doesn't
    *    rely on a promotional unit the user hasn't already closed (Apple 5.3.6 —
    *    a way to enable Tap to Pay outside of one-off communications).
+   *  - 'contextual': small tag on reservation cards with an outstanding
+   *    balance, right next to "Take payment" (Apple 5.3.7 — a trigger to
+   *    enable Tap to Pay within the checkout flow, at the point of relevance
+   *    rather than a generic top-of-page unit).
    */
-  tapToPayEntryVariant: 'banner' as 'banner' | 'hero' | 'chip',
+  tapToPayEntryVariant: 'banner' as 'banner' | 'hero' | 'chip' | 'contextual',
 } as const;
 
 export default FLAGS;

@@ -131,9 +131,11 @@ function StatusLabel({ status, isUnallocated }: { status: GuestStatus; isUnalloc
 interface CardProps {
   res: Reservation;
   variant: 'check-in' | 'check-out' | 'stay-through';
+  showTapToPayTag?: boolean;
+  onTapToPayPress?: () => void;
 }
 
-function ReservationCard({ res, variant }: CardProps) {
+function ReservationCard({ res, variant, showTapToPayTag, onTapToPayPress }: CardProps) {
   const hasProblem = !!(res.outstandingBalance || res.paymentExpired);
   const isUnallocated = !!res.isUnallocated;
   const borderColor = (hasProblem || isUnallocated) ? RED : '#e5e8e8';
@@ -200,14 +202,22 @@ function ReservationCard({ res, variant }: CardProps) {
               <Text style={styles.btnOutlinedText}>Assign room</Text>
             </TouchableOpacity>
           ) : hasProblem ? (
-            <>
-              <TouchableOpacity {...ctaProps} style={[styles.btn, styles.btnOutlined, { flex: 1, marginRight: 8 }, ctaProps.style]}>
-                <Text style={styles.btnOutlinedText}>Take payment</Text>
-              </TouchableOpacity>
-              <TouchableOpacity {...ctaProps} style={[styles.btn, styles.btnGreen, { flex: 1 }, ctaProps.style]}>
-                <Text style={styles.btnGreenText}>Check in</Text>
-              </TouchableOpacity>
-            </>
+            <View style={{ flex: 1 }}>
+              {showTapToPayTag && (
+                <TouchableOpacity style={styles.cardTapToPayTag} onPress={onTapToPayPress} activeOpacity={0.7}>
+                  <MaterialCommunityIcons name="contactless-payment-circle-outline" size={13} color={ORANGE} style={{ marginRight: 4 }} />
+                  <Text style={styles.cardTapToPayTagText}>Tap to Pay available — set up now</Text>
+                </TouchableOpacity>
+              )}
+              <View style={styles.btnRow}>
+                <TouchableOpacity {...ctaProps} style={[styles.btn, styles.btnOutlined, { flex: 1, marginRight: 8 }, ctaProps.style]}>
+                  <Text style={styles.btnOutlinedText}>Take payment</Text>
+                </TouchableOpacity>
+                <TouchableOpacity {...ctaProps} style={[styles.btn, styles.btnGreen, { flex: 1 }, ctaProps.style]}>
+                  <Text style={styles.btnGreenText}>Check in</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           ) : (
             <TouchableOpacity {...ctaProps} style={[styles.btn, styles.btnGreen, { flex: 1 }, ctaProps.style]}>
               <Text style={styles.btnGreenText}>Check in · {nights} night{nights !== 1 ? 's' : ''}</Text>
@@ -444,7 +454,13 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
             {showCheckIns && filteredCheckingIn.length > 0 && (
               <Section title="Check-ins">
                 {filteredCheckingIn.map(r => (
-                  <ReservationCard key={r.id} res={r} variant="check-in" />
+                  <ReservationCard
+                    key={r.id}
+                    res={r}
+                    variant="check-in"
+                    showTapToPayTag={flags.tapToPayEntryVariant === 'contextual'}
+                    onTapToPayPress={() => navigation.navigate('TapToPay')}
+                  />
                 ))}
               </Section>
             )}
@@ -729,6 +745,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#212323',
+  },
+  cardTapToPayTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff5ee',
+    borderRadius: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    marginBottom: 8,
+    alignSelf: 'flex-start',
+  },
+  cardTapToPayTagText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: ORANGE,
   },
 
   // Housekeeping FAB

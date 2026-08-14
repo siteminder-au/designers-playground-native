@@ -212,7 +212,10 @@ function ReservationCard({ res, variant, showTapToPayTag, onTapToPayPress, onTak
                 </TouchableOpacity>
               )}
               <View style={styles.btnRow}>
-                <TouchableOpacity {...ctaProps} onPress={onTakePayment} style={[styles.btn, styles.btnOutlined, { flex: 1, marginRight: 8 }, ctaProps.style]}>
+                {/* Take payment stays interactive even on mock cards — the modal
+                    it opens is self-contained local UI and never touches the
+                    reservation record, unlike Check in / Assign room. */}
+                <TouchableOpacity onPress={onTakePayment} style={[styles.btn, styles.btnOutlined, { flex: 1, marginRight: 8 }]}>
                   <Text style={styles.btnOutlinedText}>Take payment</Text>
                 </TouchableOpacity>
                 <TouchableOpacity {...ctaProps} style={[styles.btn, styles.btnGreen, { flex: 1 }, ctaProps.style]}>

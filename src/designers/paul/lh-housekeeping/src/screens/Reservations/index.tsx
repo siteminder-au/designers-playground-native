@@ -252,6 +252,7 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
   const [weekOffset, setWeekOffset] = useState(0);
   const [activeFilter, setActiveFilter] = useState<FilterKey>('ALL');
   const [showUnallocatedOnly, setShowUnallocatedOnly] = useState(false);
+  const [showTapToPayBanner, setShowTapToPayBanner] = useState(true);
 
   const today = toDateStr(todayDate);
   const queryDate = toDateStr(selectedDate);
@@ -302,9 +303,6 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
             </TouchableOpacity>
           </View>
           <View style={styles.headerRight}>
-            <TouchableOpacity style={[styles.headerIconBtn, styles.headerIconBtnOrange]} onPress={() => navigation.navigate('Housekeeping')}>
-              <CleaningServicesSvg width={32} height={32} />
-            </TouchableOpacity>
             <TouchableOpacity style={styles.headerIconBtn}>
               <Ionicons name="options-outline" size={20} color="#333" />
             </TouchableOpacity>
@@ -374,6 +372,25 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
           </ScrollView>
         </View>
 
+        {/* ── Tap to Pay entry point ── */}
+        {showTapToPayBanner && (
+          <View style={styles.tapToPayBanner}>
+            <View style={styles.tapToPayAccent} />
+            <MaterialCommunityIcons name="contactless-payment-circle-outline" size={20} color="#333" style={{ marginRight: 8 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.tapToPayTitle}>Tap to Pay on iPhone is here</Text>
+              <Text style={styles.tapToPayBody}>Accept contactless cards & Apple Pay with just your iPhone - no reader needed.</Text>
+              <TouchableOpacity style={styles.tapToPayCta} activeOpacity={0.7}>
+                <Text style={styles.tapToPayCtaText}>Set up Tap to Pay</Text>
+                <Ionicons name="arrow-forward" size={14} color={ORANGE} style={{ marginLeft: 4 }} />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity onPress={() => setShowTapToPayBanner(false)} style={styles.tapToPayClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close" size={18} color="#666" />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* ── Unallocated alert banner ── */}
         {unallocatedCount > 0 && (showCheckIns) && (
           <TouchableOpacity
@@ -432,6 +449,11 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
             <View style={{ height: 32 }} />
           </ScrollView>
         )}
+
+        {/* ── Housekeeping FAB ── */}
+        <TouchableOpacity style={styles.housekeepingFab} onPress={() => navigation.navigate('Housekeeping')} activeOpacity={0.85}>
+          <CleaningServicesSvg width={28} height={28} />
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -572,6 +594,72 @@ const styles = StyleSheet.create({
   chipTextActive: {
     color: ORANGE,
     fontWeight: '600',
+  },
+
+  // Tap to Pay banner
+  tapToPayBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#e6f0ff',
+    borderColor: '#b0d2f8',
+    borderWidth: 1,
+    marginHorizontal: 12,
+    marginTop: 8,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingRight: 8,
+    paddingLeft: 12,
+    overflow: 'hidden',
+  },
+  tapToPayAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+    backgroundColor: '#006add',
+  },
+  tapToPayTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  tapToPayBody: {
+    fontSize: 13,
+    color: '#333',
+    lineHeight: 18,
+    marginBottom: 6,
+  },
+  tapToPayCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tapToPayCtaText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: ORANGE,
+  },
+  tapToPayClose: {
+    padding: 2,
+  },
+
+  // Housekeeping FAB
+  housekeepingFab: {
+    position: 'absolute',
+    left: 16,
+    bottom: 16,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#fff5ee',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 5,
   },
 
   // Alert banner

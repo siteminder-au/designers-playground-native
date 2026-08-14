@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal, Animated, PanResponder, ScrollView, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import RES_FLAGS from '../../../config/reservationsFeatureFlags';
 
 const ORANGE = '#ff6842';
@@ -41,20 +42,25 @@ export function DemoFlagsSheet({
           <ScrollView contentContainerStyle={{ paddingBottom: insetsBottom + 16 }}>
             <View style={styles.variantRow}>
               <Text style={styles.flagLabel}>Tap to Pay entry point</Text>
-              <View style={styles.segmentedControl}>
+              <View style={styles.optionList}>
                 {([
-                  { value: 'banner', label: 'Inline banner' },
-                  { value: 'hero', label: 'Full-screen hero' },
-                  { value: 'chip', label: 'Persistent chip' },
-                ] as { value: FlagsState['tapToPayEntryVariant']; label: string }[]).map(opt => {
+                  { value: 'banner', label: 'Inline banner', hint: 'Dismissible, below the filter chips' },
+                  { value: 'hero', label: 'Full-screen hero', hint: 'One-time takeover on entry' },
+                  { value: 'chip', label: 'Persistent chip', hint: 'Thin, non-dismissible row' },
+                  { value: 'contextual', label: 'On payment cards', hint: 'Tag next to "Take payment"' },
+                ] as { value: FlagsState['tapToPayEntryVariant']; label: string; hint: string }[]).map((opt, i) => {
                   const isActive = flags.tapToPayEntryVariant === opt.value;
                   return (
                     <TouchableOpacity
                       key={opt.value}
-                      style={[styles.segmentedBtn, isActive && styles.segmentedBtnActive]}
+                      style={[styles.optionRow, i > 0 && styles.optionRowDivider]}
                       onPress={() => setFlags(prev => ({ ...prev, tapToPayEntryVariant: opt.value }))}
                     >
-                      <Text style={[styles.segmentedBtnText, isActive && styles.segmentedBtnTextActive]} numberOfLines={1}>{opt.label}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.optionLabel, isActive && styles.optionLabelActive]}>{opt.label}</Text>
+                        <Text style={styles.optionHint}>{opt.hint}</Text>
+                      </View>
+                      {isActive && <Ionicons name="checkmark-circle" size={20} color={ORANGE} />}
                     </TouchableOpacity>
                   );
                 })}
@@ -92,19 +98,21 @@ const styles = StyleSheet.create({
   resetText: { fontSize: 14, color: ORANGE, fontWeight: '600' },
   variantRow: { paddingHorizontal: 20, paddingTop: 8 },
   flagLabel: { fontSize: 13, color: '#484b4b', fontWeight: '600', marginBottom: 8 },
-  segmentedControl: {
-    flexDirection: 'row',
+  optionList: {
     backgroundColor: '#f2f3f3',
-    borderRadius: 8,
-    padding: 3,
+    borderRadius: 10,
   },
-  segmentedBtn: {
-    flex: 1,
-    paddingVertical: 8,
+  optionRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
   },
-  segmentedBtnActive: { backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
-  segmentedBtnText: { fontSize: 13, color: '#6d7272', fontWeight: '500' },
-  segmentedBtnTextActive: { color: '#212323', fontWeight: '700' },
+  optionRowDivider: {
+    borderTopWidth: 1,
+    borderTopColor: '#e5e8e8',
+  },
+  optionLabel: { fontSize: 14, color: '#333', fontWeight: '600', marginBottom: 2 },
+  optionLabelActive: { color: ORANGE },
+  optionHint: { fontSize: 12, color: '#6d7272' },
 });

@@ -421,6 +421,18 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
           </View>
         )}
 
+        {flags.tapToPayEntryVariant === 'chip' && (
+          <TouchableOpacity
+            style={styles.tapToPayChip}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('TapToPay')}
+          >
+            <MaterialCommunityIcons name="contactless-payment-circle-outline" size={18} color={ORANGE} style={{ marginRight: 8 }} />
+            <Text style={styles.tapToPayChipText}>Set up Tap to Pay</Text>
+            <Ionicons name="chevron-forward" size={16} color="#9ca3af" />
+          </TouchableOpacity>
+        )}
+
         {/* ── Content ── */}
         {loading ? (
           <ActivityIndicator style={{ marginTop: 40 }} color={ORANGE} />
@@ -701,6 +713,22 @@ const styles = StyleSheet.create({
   },
   tapToPayClose: {
     padding: 2,
+  },
+  tapToPayChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff5ee',
+    marginHorizontal: 12,
+    marginTop: 8,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  tapToPayChipText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#212323',
   },
 
   // Housekeeping FAB

@@ -45,6 +45,7 @@ export function DemoFlagsSheet({
                 {([
                   { value: 'banner', label: 'Inline banner' },
                   { value: 'hero', label: 'Full-screen hero' },
+                  { value: 'chip', label: 'Persistent chip' },
                 ] as { value: FlagsState['tapToPayEntryVariant']; label: string }[]).map(opt => {
                   const isActive = flags.tapToPayEntryVariant === opt.value;
                   return (

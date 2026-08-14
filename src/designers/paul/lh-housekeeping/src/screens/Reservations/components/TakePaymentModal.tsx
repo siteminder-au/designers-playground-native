@@ -15,6 +15,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useBottomSheet } from '../../HousekeepingReports/hooks/useBottomSheet';
 import { TakePaymentDemoFlagsSheet } from './TakePaymentDemoFlagsSheet';
+import { PaymentMethodModal, PaymentCard } from './PaymentMethodModal';
+import { CardBrandIcon } from './CardBrandIcon';
 import TP_FLAGS from '../../../config/takePaymentFeatureFlags';
 
 const ORANGE = '#ff6842';
@@ -51,6 +53,8 @@ export function TakePaymentModal({
     visible: demoSheetVisible, setVisible: setDemoSheetVisible, close: closeDemoSheet,
     sheetAnim: demoSheetAnim, translateY: demoTranslateY, panResponder: demoPanResponder,
   } = useBottomSheet(400);
+  const [cardModalVisible, setCardModalVisible] = useState(false);
+  const [selectedCardId, setSelectedCardId] = useState('guest');
 
   // Reset transient per-payment state whenever a new reservation opens —
   // amount defaults to the outstanding balance each time.
@@ -63,9 +67,20 @@ export function TakePaymentModal({
     setMarkAsDeposit(false);
     setApplySurcharge(false);
     setEmailInvoice(false);
+    setSelectedCardId('guest');
   }, [res?.id]);
 
   if (!res) return null;
+
+  // Cards saved to this reservation — the guest's own card plus any other
+  // payer's card added on file. Mock data; none of this is editable yet,
+  // matching the "cannot be edited" notice in the Payment details screen.
+  const cards: PaymentCard[] = [
+    { id: 'guest', brand: 'mastercard', name: res.guestName, last4: '4242' },
+    { id: 'card-2', brand: 'visa', name: 'Aspen Vaccaro', last4: '4242' },
+    { id: 'card-3', brand: 'amex', name: 'Tiana Donin', last4: '4242' },
+  ];
+  const selectedCard = cards.find(c => c.id === selectedCardId) ?? cards[0];
 
   const outstanding = res.outstandingBalance ?? 0;
   const amountNum = parseFloat(amount) || 0;
@@ -126,16 +141,14 @@ export function TakePaymentModal({
                 {/* Payment details */}
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Payment details</Text>
-                  <View style={styles.cardRow}>
-                    <View style={styles.cardBrandIcon}>
-                      <MaterialCommunityIcons name="credit-card-outline" size={18} color="#333" />
-                    </View>
+                  <TouchableOpacity style={styles.cardRow} activeOpacity={0.7} onPress={() => setCardModalVisible(true)}>
+                    <CardBrandIcon brand={selectedCard.brand} />
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.cardName}>{res.guestName}</Text>
-                      <Text style={styles.cardNumber}>•••• 4242</Text>
+                      <Text style={styles.cardName}>{selectedCard.name}</Text>
+                      <Text style={styles.cardNumber}>•••• {selectedCard.last4}</Text>
                     </View>
                     <Ionicons name="chevron-expand-outline" size={18} color="#9ca3af" />
-                  </View>
+                  </TouchableOpacity>
 
                   {flags.tapToPaySetupVariant === 'badge' && (
                     <TouchableOpacity style={styles.ttpBadge} activeOpacity={0.7} onPress={onSetUpTapToPay}>
@@ -275,6 +288,15 @@ export function TakePaymentModal({
         setFlags={setFlags}
         insetsBottom={insets.bottom}
       />
+
+      <PaymentMethodModal
+        visible={cardModalVisible}
+        cards={cards}
+        selectedCardId={selectedCardId}
+        onClose={() => setCardModalVisible(false)}
+        onSelectCard={card => setSelectedCardId(card.id)}
+        onSetUpTapToPay={onSetUpTapToPay}
+      />
     </Modal>
   );
 }
@@ -327,10 +349,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     padding: 12,
     gap: 8,
-  },
-  cardBrandIcon: {
-    width: 24, height: 24, borderRadius: 4, backgroundColor: '#f2f3f3',
-    alignItems: 'center', justifyContent: 'center',
   },
   cardName: { fontSize: 14, fontWeight: '700', color: '#333' },
   cardNumber: { fontSize: 12, color: '#333', marginTop: 2 },

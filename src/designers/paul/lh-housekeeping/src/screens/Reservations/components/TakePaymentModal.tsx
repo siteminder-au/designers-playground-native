@@ -11,7 +11,11 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useBottomSheet } from '../../HousekeepingReports/hooks/useBottomSheet';
+import { TakePaymentDemoFlagsSheet } from './TakePaymentDemoFlagsSheet';
+import TP_FLAGS from '../../../config/takePaymentFeatureFlags';
 
 const ORANGE = '#ff6842';
 
@@ -34,6 +38,7 @@ export function TakePaymentModal({
   onClose: () => void;
   onSetUpTapToPay: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>('process');
   const [amount, setAmount] = useState('');
   const [noteOpen, setNoteOpen] = useState(false);
@@ -41,6 +46,11 @@ export function TakePaymentModal({
   const [markAsDeposit, setMarkAsDeposit] = useState(false);
   const [applySurcharge, setApplySurcharge] = useState(false);
   const [emailInvoice, setEmailInvoice] = useState(false);
+  const [flags, setFlags] = useState(TP_FLAGS);
+  const {
+    visible: demoSheetVisible, setVisible: setDemoSheetVisible, close: closeDemoSheet,
+    sheetAnim: demoSheetAnim, translateY: demoTranslateY, panResponder: demoPanResponder,
+  } = useBottomSheet(400);
 
   // Reset transient per-payment state whenever a new reservation opens —
   // amount defaults to the outstanding balance each time.
@@ -73,7 +83,13 @@ export function TakePaymentModal({
               <Ionicons name="close" size={22} color="#111" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Take payment</Text>
-            <View style={styles.headerSide} />
+            <TouchableOpacity
+              onPress={() => setDemoSheetVisible(true)}
+              style={styles.headerSide}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="flask-outline" size={18} color="#9ca3af" />
+            </TouchableOpacity>
           </View>
 
           {/* Process / Record / Request */}
@@ -121,11 +137,40 @@ export function TakePaymentModal({
                     <Ionicons name="chevron-expand-outline" size={18} color="#9ca3af" />
                   </View>
 
-                  <TouchableOpacity style={styles.ttpRow} activeOpacity={0.7} onPress={onSetUpTapToPay}>
-                    <MaterialCommunityIcons name="contactless-payment-circle-outline" size={18} color={ORANGE} style={{ marginRight: 6 }} />
-                    <Text style={styles.ttpText}>Set up Tap to Pay</Text>
-                    <Ionicons name="arrow-forward" size={14} color={ORANGE} style={{ marginLeft: 4 }} />
-                  </TouchableOpacity>
+                  {flags.tapToPaySetupVariant === 'badge' && (
+                    <TouchableOpacity style={styles.ttpBadge} activeOpacity={0.7} onPress={onSetUpTapToPay}>
+                      <MaterialCommunityIcons name="contactless-payment-circle-outline" size={12} color={ORANGE} style={{ marginRight: 4 }} />
+                      <Text style={styles.ttpBadgeText}>Tap to Pay available</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {flags.tapToPaySetupVariant === 'row' && (
+                    <TouchableOpacity style={styles.ttpRow} activeOpacity={0.7} onPress={onSetUpTapToPay}>
+                      <MaterialCommunityIcons name="contactless-payment-circle-outline" size={18} color={ORANGE} style={{ marginRight: 6 }} />
+                      <Text style={styles.ttpText}>Set up Tap to Pay</Text>
+                      <Ionicons name="arrow-forward" size={14} color={ORANGE} style={{ marginLeft: 4 }} />
+                    </TouchableOpacity>
+                  )}
+
+                  {flags.tapToPaySetupVariant === 'button' && (
+                    <TouchableOpacity style={styles.ttpButton} activeOpacity={0.8} onPress={onSetUpTapToPay}>
+                      <MaterialCommunityIcons name="contactless-payment-circle-outline" size={18} color={ORANGE} style={{ marginRight: 8 }} />
+                      <Text style={styles.ttpButtonText}>Set up Tap to Pay</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {flags.tapToPaySetupVariant === 'banner' && (
+                    <View style={styles.ttpBanner}>
+                      <MaterialCommunityIcons name="contactless-payment-circle-outline" size={20} color={ORANGE} style={{ marginRight: 10 }} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.ttpBannerTitle}>Accept this with Tap to Pay</Text>
+                        <Text style={styles.ttpBannerBody}>Use your iPhone to take contactless payments — no reader needed.</Text>
+                        <TouchableOpacity onPress={onSetUpTapToPay} activeOpacity={0.7}>
+                          <Text style={styles.ttpBannerCta}>Set up now</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
                 </View>
 
                 <View style={styles.divider} />
@@ -219,6 +264,17 @@ export function TakePaymentModal({
           )}
         </KeyboardAvoidingView>
       </View>
+
+      <TakePaymentDemoFlagsSheet
+        visible={demoSheetVisible}
+        onClose={closeDemoSheet}
+        sheetAnim={demoSheetAnim}
+        translateY={demoTranslateY}
+        panResponder={demoPanResponder}
+        flags={flags}
+        setFlags={setFlags}
+        insetsBottom={insets.bottom}
+      />
     </Modal>
   );
 }
@@ -281,6 +337,39 @@ const styles = StyleSheet.create({
 
   ttpRow: { flexDirection: 'row', alignItems: 'center' },
   ttpText: { fontSize: 12, fontWeight: '700', color: ORANGE },
+
+  ttpButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: ORANGE,
+    borderRadius: 20,
+    paddingVertical: 12,
+  },
+  ttpButtonText: { fontSize: 14, fontWeight: '700', color: ORANGE },
+
+  ttpBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#fff4ef',
+    borderRadius: 10,
+    padding: 12,
+  },
+  ttpBannerTitle: { fontSize: 13, fontWeight: '700', color: '#333', marginBottom: 2 },
+  ttpBannerBody: { fontSize: 12, color: '#6d7272', lineHeight: 17, marginBottom: 6 },
+  ttpBannerCta: { fontSize: 12, fontWeight: '700', color: ORANGE },
+
+  ttpBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#fff4ef',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  ttpBadgeText: { fontSize: 11, fontWeight: '700', color: ORANGE },
 
   amountField: {
     flexDirection: 'row',

@@ -18,6 +18,7 @@ import { useReviewContext } from '../../context/ReviewContext';
 import reservationsAnnotations from '../../annotations/Reservations.json';
 import { useBottomSheet } from '../HousekeepingReports/hooks/useBottomSheet';
 import { DemoFlagsSheet } from './components/DemoFlagsSheet';
+import { TakePaymentModal } from './components/TakePaymentModal';
 import RES_FLAGS from '../../config/reservationsFeatureFlags';
 
 const ORANGE = '#ff6842';
@@ -133,9 +134,10 @@ interface CardProps {
   variant: 'check-in' | 'check-out' | 'stay-through';
   showTapToPayTag?: boolean;
   onTapToPayPress?: () => void;
+  onTakePayment?: () => void;
 }
 
-function ReservationCard({ res, variant, showTapToPayTag, onTapToPayPress }: CardProps) {
+function ReservationCard({ res, variant, showTapToPayTag, onTapToPayPress, onTakePayment }: CardProps) {
   const hasProblem = !!(res.outstandingBalance || res.paymentExpired);
   const isUnallocated = !!res.isUnallocated;
   const borderColor = (hasProblem || isUnallocated) ? RED : '#e5e8e8';
@@ -210,7 +212,7 @@ function ReservationCard({ res, variant, showTapToPayTag, onTapToPayPress }: Car
                 </TouchableOpacity>
               )}
               <View style={styles.btnRow}>
-                <TouchableOpacity {...ctaProps} style={[styles.btn, styles.btnOutlined, { flex: 1, marginRight: 8 }, ctaProps.style]}>
+                <TouchableOpacity {...ctaProps} onPress={onTakePayment} style={[styles.btn, styles.btnOutlined, { flex: 1, marginRight: 8 }, ctaProps.style]}>
                   <Text style={styles.btnOutlinedText}>Take payment</Text>
                 </TouchableOpacity>
                 <TouchableOpacity {...ctaProps} style={[styles.btn, styles.btnGreen, { flex: 1 }, ctaProps.style]}>
@@ -273,6 +275,7 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
   const [showUnallocatedOnly, setShowUnallocatedOnly] = useState(false);
   const [showTapToPayBanner, setShowTapToPayBanner] = useState(true);
   const [showTapToPayHero, setShowTapToPayHero] = useState(true);
+  const [paymentModalRes, setPaymentModalRes] = useState<Reservation | null>(null);
 
   const today = toDateStr(todayDate);
   const queryDate = toDateStr(selectedDate);
@@ -460,6 +463,7 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
                     variant="check-in"
                     showTapToPayTag={flags.tapToPayEntryVariant === 'contextual'}
                     onTapToPayPress={() => navigation.navigate('TapToPay')}
+                    onTakePayment={() => setPaymentModalRes(r)}
                   />
                 ))}
               </Section>
@@ -541,6 +545,13 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
         flags={flags}
         setFlags={setFlags}
         insetsBottom={insets.bottom}
+      />
+
+      <TakePaymentModal
+        visible={!!paymentModalRes}
+        res={paymentModalRes}
+        onClose={() => setPaymentModalRes(null)}
+        onSetUpTapToPay={() => { setPaymentModalRes(null); navigation.navigate('TapToPay'); }}
       />
     </SafeAreaView>
   );

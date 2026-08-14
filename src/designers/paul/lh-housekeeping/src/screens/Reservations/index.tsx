@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIsFocused } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useQuery } from '@apollo/client';
@@ -16,6 +16,9 @@ import { GET_TODAY_RESERVATIONS } from '../../apollo/queries';
 import CleaningServicesSvg from '../../../assets/CleaningServices.svg';
 import { useReviewContext } from '../../context/ReviewContext';
 import reservationsAnnotations from '../../annotations/Reservations.json';
+import { useBottomSheet } from '../HousekeepingReports/hooks/useBottomSheet';
+import { DemoFlagsSheet } from './components/DemoFlagsSheet';
+import RES_FLAGS from '../../config/reservationsFeatureFlags';
 
 const ORANGE = '#ff6842';
 const GREEN = '#1b7b3e';
@@ -240,6 +243,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default function ReservationsScreen({ navigation }: { navigation: any }) {
   const { setAnnotations, setScrollY } = useReviewContext();
   const isFocused = useIsFocused();
+  const insets = useSafeAreaInsets();
+  const [flags, setFlags] = useState(RES_FLAGS);
+  const {
+    visible: demoSheetVisible, setVisible: setDemoSheetVisible, close: closeDemoSheet,
+    sheetAnim: demoSheetAnim, translateY: demoTranslateY, panResponder: demoPanResponder,
+  } = useBottomSheet(400);
   useEffect(() => {
     if (!isFocused) return;
     setAnnotations(reservationsAnnotations as any);
@@ -303,6 +312,9 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
             </TouchableOpacity>
           </View>
           <View style={styles.headerRight}>
+            <TouchableOpacity style={{ padding: 4 }} onPress={() => setDemoSheetVisible(true)}>
+              <Ionicons name="flask-outline" size={18} color="#9ca3af" />
+            </TouchableOpacity>
             <TouchableOpacity style={styles.headerIconBtn}>
               <Ionicons name="options-outline" size={20} color="#333" />
             </TouchableOpacity>
@@ -390,7 +402,7 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
         )}
 
         {/* ── Tap to Pay entry point ── */}
-        {showTapToPayBanner && (
+        {flags.tapToPayEntryVariant === 'banner' && showTapToPayBanner && (
           <View style={styles.tapToPayBanner}>
             <View style={styles.tapToPayAccent} />
             <MaterialCommunityIcons name="contactless-payment-circle-outline" size={20} color="#333" style={{ marginRight: 8 }} />
@@ -455,6 +467,17 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
           <CleaningServicesSvg width={28} height={28} />
         </TouchableOpacity>
       </View>
+
+      <DemoFlagsSheet
+        visible={demoSheetVisible}
+        onClose={closeDemoSheet}
+        sheetAnim={demoSheetAnim}
+        translateY={demoTranslateY}
+        panResponder={demoPanResponder}
+        flags={flags}
+        setFlags={setFlags}
+        insetsBottom={insets.bottom}
+      />
     </SafeAreaView>
   );
 }

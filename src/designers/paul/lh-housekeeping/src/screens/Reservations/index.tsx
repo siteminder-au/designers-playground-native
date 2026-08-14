@@ -262,6 +262,7 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
   const [activeFilter, setActiveFilter] = useState<FilterKey>('ALL');
   const [showUnallocatedOnly, setShowUnallocatedOnly] = useState(false);
   const [showTapToPayBanner, setShowTapToPayBanner] = useState(true);
+  const [showTapToPayHero, setShowTapToPayHero] = useState(true);
 
   const today = toDateStr(todayDate);
   const queryDate = toDateStr(selectedDate);
@@ -466,6 +467,41 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
         <TouchableOpacity style={styles.housekeepingFab} onPress={() => navigation.navigate('Housekeeping')} activeOpacity={0.85}>
           <CleaningServicesSvg width={28} height={28} />
         </TouchableOpacity>
+
+        {/* ── Tap to Pay entry point: full-screen hero variant ── */}
+        {flags.tapToPayEntryVariant === 'hero' && showTapToPayHero && (
+          <View style={styles.heroOverlay}>
+            <TouchableOpacity
+              style={styles.heroClose}
+              onPress={() => setShowTapToPayHero(false)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close" size={22} color="#fff" />
+            </TouchableOpacity>
+
+            <View style={styles.heroIconCircle}>
+              <MaterialCommunityIcons name="contactless-payment" size={32} color={ORANGE} />
+            </View>
+            <Text style={styles.heroTitle}>Tap to Pay is here</Text>
+            <Text style={styles.heroBody}>
+              Accept contactless cards and Apple Pay right from this device — no reader
+              needed for your front desk team.
+            </Text>
+
+            <View style={{ flex: 1 }} />
+
+            <TouchableOpacity
+              style={styles.heroCta}
+              activeOpacity={0.85}
+              onPress={() => { setShowTapToPayHero(false); navigation.navigate('TapToPay'); }}
+            >
+              <Text style={styles.heroCtaText}>Enable Tap to Pay</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowTapToPayHero(false)} activeOpacity={0.7}>
+              <Text style={styles.heroNotNow}>Not now</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       <DemoFlagsSheet
@@ -684,6 +720,31 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 5,
   },
+
+  // Tap to Pay — full-screen hero variant
+  heroOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: '#111214',
+    paddingHorizontal: 24,
+    paddingTop: 56,
+    paddingBottom: 32,
+    zIndex: 50,
+  },
+  heroClose: { alignSelf: 'flex-end', marginBottom: 24 },
+  heroIconCircle: {
+    width: 64, height: 64, borderRadius: 32,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 20,
+  },
+  heroTitle: { fontSize: 30, fontWeight: '700', color: '#fff', marginBottom: 12 },
+  heroBody: { fontSize: 16, color: '#c7c9cc', lineHeight: 23 },
+  heroCta: {
+    backgroundColor: ORANGE, borderRadius: 24, paddingVertical: 16,
+    alignItems: 'center', marginBottom: 16,
+  },
+  heroCtaText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  heroNotNow: { color: '#9ca3af', fontSize: 14, fontWeight: '600', textAlign: 'center' },
 
   // Alert banner
   alertBanner: {

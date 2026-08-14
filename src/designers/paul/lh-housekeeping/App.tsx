@@ -10,6 +10,7 @@ import CalendarScreen from './src/screens/Calendar';
 import ReservationsScreen from './src/screens/Reservations';
 import HomeScreen from './src/screens/Home';
 import HousekeepingReportsScreen from './src/screens/HousekeepingReports';
+import TapToPayScreen from './src/screens/TapToPay';
 import DistributionScreen from './src/screens/Distribution';
 import NotificationsScreen from './src/screens/Notifications';
 import { ReviewToggleFab } from './src/components/ReviewToggleFab';
@@ -85,6 +86,15 @@ function AppNavigator() {
       <Tab.Screen
         name="Housekeeping"
         component={HousekeepingReportsScreen}
+        options={{
+          headerShown: false,
+          tabBarItemStyle: { display: 'none' },
+          tabBarStyle: { display: 'none' },
+        }}
+      />
+      <Tab.Screen
+        name="TapToPay"
+        component={TapToPayScreen}
         options={{
           headerShown: false,
           tabBarItemStyle: { display: 'none' },

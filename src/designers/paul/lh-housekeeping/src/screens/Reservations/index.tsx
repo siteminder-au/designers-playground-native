@@ -380,7 +380,7 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
             <View style={{ flex: 1 }}>
               <Text style={styles.tapToPayTitle}>Tap to Pay on iPhone is here</Text>
               <Text style={styles.tapToPayBody}>Accept contactless cards & Apple Pay with just your iPhone - no reader needed.</Text>
-              <TouchableOpacity style={styles.tapToPayCta} activeOpacity={0.7}>
+              <TouchableOpacity style={styles.tapToPayCta} activeOpacity={0.7} onPress={() => navigation.navigate('TapToPay')}>
                 <Text style={styles.tapToPayCtaText}>Set up Tap to Pay</Text>
                 <Ionicons name="arrow-forward" size={14} color={ORANGE} style={{ marginLeft: 4 }} />
               </TouchableOpacity>

@@ -44,6 +44,7 @@ export function DemoFlagsSheet({
               <View style={styles.segmentedControl}>
                 {([
                   { value: 'banner', label: 'Inline banner' },
+                  { value: 'hero', label: 'Full-screen hero' },
                 ] as { value: FlagsState['tapToPayEntryVariant']; label: string }[]).map(opt => {
                   const isActive = flags.tapToPayEntryVariant === opt.value;
                   return (

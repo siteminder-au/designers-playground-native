@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
   // Status-grouped Housekeeping list (Figma node 737:28827) — section headers
   // and the simplified Room Card used there.
   statusSectionHeader:     { paddingHorizontal: 16, paddingBottom: 8 },
-  statusSectionHeaderText: { fontSize: 16, fontWeight: '700', color: '#333333' },
+  statusSectionHeaderText: { fontSize: 16, lineHeight: 21, fontWeight: '700', color: '#333333' },
 
   roomCard:          { backgroundColor: '#fff', marginHorizontal: 16, borderRadius: 8, paddingTop: 16, paddingBottom: 12, gap: 12 },
   roomCardTopRow:    { flexDirection: 'row', gap: 8, alignItems: 'flex-start', paddingHorizontal: 12 },

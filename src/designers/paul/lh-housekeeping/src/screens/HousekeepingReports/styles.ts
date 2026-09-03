@@ -62,10 +62,24 @@ const styles = StyleSheet.create({
   filterBadge:    { minWidth: 16, height: 16, borderRadius: 8, backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   filterBadgeText: { fontSize: 10, color: '#fff', fontWeight: '700' },
 
-  // Filter sheet
-  filterSection:      { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20 },
-  filterSectionLabel: { fontSize: 11, fontWeight: '700', color: '#9ca3af', letterSpacing: 0.8, marginBottom: 16 },
+  // Filter sheet (Figma node 742:65449)
+  filterSectionsContainer: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16, gap: 16 },
+  filterSectionCard:       { backgroundColor: '#f2f2f7', borderRadius: 6, padding: 16, gap: 16 },
+  filterSectionHeaderText: { fontSize: 17, lineHeight: 21, fontWeight: '400', color: '#333333' },
   filterChipRow:      { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+
+  filterFooterRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingTop: 24,
+    borderTopWidth: 1, borderTopColor: '#e5e8e8', backgroundColor: '#fff',
+  },
+  filterClearBtn:     { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  filterClearBtnText: { fontSize: 15, fontWeight: '700', color: ORANGE },
+  filterSaveBtn: {
+    backgroundColor: '#212323', borderRadius: 20, height: 40, minWidth: 120,
+    paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center',
+  },
+  filterSaveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 
   filterChip:         { borderWidth: 1, borderRadius: 4, paddingHorizontal: 16, height: 34, minWidth: 48, alignItems: 'center', justifyContent: 'center' },
   filterChipActive:   { borderColor: '#ff6842', backgroundColor: '#fff5ee' },
@@ -685,7 +699,6 @@ const styles = StyleSheet.create({
   autoCheckDesc:     { fontSize: 13, color: '#6b7280', lineHeight: 18 },
   autoFooter:        { paddingHorizontal: 20, paddingTop: 8 },
 
-  filterSaveFooter:  { backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f3f4f6' },
   autoDoneBtn: {
     backgroundColor: '#e8722a', borderRadius: 8, height: 44,
     alignItems: 'center', justifyContent: 'center',

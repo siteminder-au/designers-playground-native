@@ -1,12 +1,34 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal, Animated, PanResponder, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import {
   type FilterState,
-  ROOM_TYPE_OPTIONS, ROOM_STATUS_OPTIONS, CLEANING_STATUS_OPTIONS,
+  ROOM_TYPE_OPTIONS, ROOM_STATUS_OPTIONS, GUEST_DETAIL_OPTIONS,
   DEFAULT_FILTERS,
 } from '../../utils/filters';
-import { WINDOW_HEIGHT } from '../../constants';
+import { WINDOW_HEIGHT, ORANGE } from '../../constants';
 import styles from '../../styles';
+
+function FilterChip({ label, isActive, onPress }: { label: string; isActive: boolean; onPress: () => void }) {
+  return (
+    <TouchableOpacity
+      activeOpacity={0.75}
+      style={[styles.filterChip, isActive ? styles.filterChipActive : styles.filterChipInactive]}
+      onPress={onPress}
+    >
+      <Text style={[styles.filterChipText, { color: isActive ? ORANGE : '#333', fontWeight: isActive ? '600' : '400' }]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function FilterSectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <View style={styles.filterSectionCard}>
+      <Text style={styles.filterSectionHeaderText}>{title}</Text>
+      <View style={styles.filterChipRow}>{children}</View>
+    </View>
+  );
+}
 
 export function FilterSheet({
   visible,
@@ -27,6 +49,13 @@ export function FilterSheet({
   setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
   insetsBottom: number;
 }) {
+  function toggleArrayFilter(key: 'roomStatuses' | 'roomTypes' | 'guestDetails', value: string) {
+    setFilters(prev => ({
+      ...prev,
+      [key]: prev[key].includes(value) ? prev[key].filter(v => v !== value) : [...prev[key], value],
+    }));
+  }
+
   return (
     <Modal visible={visible} animationType="none" transparent onRequestClose={onClose}>
       <Animated.View style={[styles.sortSheetOverlay, { opacity: sheetAnim }]}>
@@ -36,135 +65,63 @@ export function FilterSheet({
             <View style={styles.sortSheetHandle} />
           </View>
           <View style={styles.sortSheetHeader}>
-            <Text style={styles.sortSheetTitle}>Filter</Text>
-            <TouchableOpacity onPress={() => setFilters(DEFAULT_FILTERS)}>
-              <Text style={styles.sortResetText}>Reset</Text>
+            <Text style={styles.sortSheetTitle}>Filters</Text>
+            <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close" size={22} color="#333" />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
-            {/* Room type — multi-select chips */}
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionLabel}>ROOM TYPE</Text>
-              <View style={styles.filterChipRow}>
-                {ROOM_TYPE_OPTIONS.map(type => {
-                  const isActive = filters.roomTypes.includes(type);
-                  return (
-                    <TouchableOpacity
-                      key={type}
-                      activeOpacity={0.75}
-                      style={[styles.filterChip, { borderColor: isActive ? '#ff6842' : '#d1d5db', backgroundColor: isActive ? '#fff5ee' : '#fff' }]}
-                      onPress={() => setFilters(prev => ({
-                        ...prev,
-                        roomTypes: isActive ? prev.roomTypes.filter(x => x !== type) : [...prev.roomTypes, type],
-                      }))}
-                    >
-                      <Text style={[styles.filterChipText, { color: isActive ? '#ff6842' : '#333', fontWeight: isActive ? '600' : '400' }]}>{type}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={styles.filterSectionsContainer}>
+            <FilterSectionCard title="Reservation Status">
+              {ROOM_STATUS_OPTIONS.map(status => (
+                <FilterChip
+                  key={status}
+                  label={status}
+                  isActive={filters.roomStatuses.includes(status)}
+                  onPress={() => toggleArrayFilter('roomStatuses', status)}
+                />
+              ))}
+            </FilterSectionCard>
 
-            {/* Room status — multi-select chips */}
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionLabel}>ROOM STATUS</Text>
-              <View style={styles.filterChipRow}>
-                {ROOM_STATUS_OPTIONS.map(status => {
-                  const isActive = filters.roomStatuses.includes(status);
-                  return (
-                    <TouchableOpacity
-                      key={status}
-                      activeOpacity={0.75}
-                      style={[styles.filterChip, { borderColor: isActive ? '#ff6842' : '#d1d5db', backgroundColor: isActive ? '#fff5ee' : '#fff' }]}
-                      onPress={() => setFilters(prev => ({
-                        ...prev,
-                        roomStatuses: isActive ? prev.roomStatuses.filter(x => x !== status) : [...prev.roomStatuses, status],
-                      }))}
-                    >
-                      <Text style={[styles.filterChipText, { color: isActive ? '#ff6842' : '#333', fontWeight: isActive ? '600' : '400' }]}>{status}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
+            <FilterSectionCard title="Additional details">
+              <FilterChip
+                label="Room notes"
+                isActive={filters.hasRoomNotes}
+                onPress={() => setFilters(prev => ({ ...prev, hasRoomNotes: !prev.hasRoomNotes }))}
+              />
+            </FilterSectionCard>
 
-            {/* Cleaning status — multi-select chips */}
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionLabel}>CLEANING STATUS</Text>
-              <View style={styles.filterChipRow}>
-                {CLEANING_STATUS_OPTIONS.map(s => {
-                  const isActive = filters.cleaningStatuses.includes(s);
-                  return (
-                    <TouchableOpacity
-                      key={s}
-                      activeOpacity={0.75}
-                      style={[styles.filterChip, { borderColor: isActive ? '#ff6842' : '#d1d5db', backgroundColor: isActive ? '#fff5ee' : '#fff' }]}
-                      onPress={() => setFilters(prev => ({
-                        ...prev,
-                        cleaningStatuses: isActive ? prev.cleaningStatuses.filter(x => x !== s) : [...prev.cleaningStatuses, s],
-                      }))}
-                    >
-                      <Text style={[styles.filterChipText, { color: isActive ? '#ff6842' : '#333', fontWeight: isActive ? '600' : '400' }]}>{s}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
+            <FilterSectionCard title="Room type">
+              {ROOM_TYPE_OPTIONS.map(type => (
+                <FilterChip
+                  key={type}
+                  label={type}
+                  isActive={filters.roomTypes.includes(type)}
+                  onPress={() => toggleArrayFilter('roomTypes', type)}
+                />
+              ))}
+            </FilterSectionCard>
 
-            {/* Checkouts — chips */}
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionLabel}>CHECKOUTS</Text>
-              <View style={styles.filterChipRow}>
-                {([
-                  { key: 'lateCheckout',  label: 'Late'  },
-                  { key: 'earlyCheckout', label: 'Early' },
-                ] as { key: 'lateCheckout' | 'earlyCheckout'; label: string }[]).map(item => {
-                  const isActive = filters[item.key];
-                  return (
-                    <TouchableOpacity
-                      key={item.key}
-                      activeOpacity={0.75}
-                      style={[styles.filterChip, isActive ? styles.filterChipActive : styles.filterChipInactive]}
-                      onPress={() => setFilters(prev => ({ ...prev, [item.key]: !prev[item.key] }))}
-                    >
-                      <Text style={[styles.filterChipText, { color: isActive ? '#ff6842' : '#333', fontWeight: isActive ? '600' : '400' }]}>{item.label}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            {/* Notes — chips */}
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionLabel}>NOTES</Text>
-              <View style={styles.filterChipRow}>
-                {([
-                  { key: 'includeStaffNotes',        label: 'Reservation notes' },
-                  { key: 'includeHousekeepingNotes', label: 'Room notes'        },
-                  { key: 'includeGuestComments',     label: 'Guest comments'     },
-                  { key: 'includeExtras',            label: 'Extras'             },
-                ] as { key: 'includeStaffNotes' | 'includeHousekeepingNotes' | 'includeGuestComments' | 'includeExtras'; label: string }[]).map(opt => {
-                  const isActive = filters[opt.key];
-                  return (
-                    <TouchableOpacity
-                      key={opt.key}
-                      activeOpacity={0.75}
-                      style={[styles.filterChip, isActive ? styles.filterChipActive : styles.filterChipInactive]}
-                      onPress={() => setFilters(prev => ({ ...prev, [opt.key]: !prev[opt.key] }))}
-                    >
-                      <Text style={[styles.filterChipText, { color: isActive ? '#ff6842' : '#333', fontWeight: isActive ? '600' : '400' }]}>{opt.label}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
+            <FilterSectionCard title="Guest details">
+              {GUEST_DETAIL_OPTIONS.map(detail => (
+                <FilterChip
+                  key={detail}
+                  label={detail}
+                  isActive={filters.guestDetails.includes(detail)}
+                  onPress={() => toggleArrayFilter('guestDetails', detail)}
+                />
+              ))}
+            </FilterSectionCard>
           </ScrollView>
 
-          {/* Save — pinned footer */}
-          <View style={[styles.autoFooter, styles.filterSaveFooter, { paddingBottom: insetsBottom + 16 }]}>
-            <TouchableOpacity style={styles.autoDoneBtn} onPress={onClose}>
-              <Text style={styles.autoDoneBtnText}>Save</Text>
+          {/* Clear filters + Save — pinned footer */}
+          <View style={[styles.filterFooterRow, { paddingBottom: insetsBottom + 24 }]}>
+            <TouchableOpacity style={styles.filterClearBtn} onPress={() => setFilters(DEFAULT_FILTERS)} activeOpacity={0.7}>
+              <Ionicons name="refresh-outline" size={18} color={ORANGE} />
+              <Text style={styles.filterClearBtnText}>Clear filters</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.filterSaveBtn} onPress={onClose} activeOpacity={0.85}>
+              <Text style={styles.filterSaveBtnText}>Save</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>

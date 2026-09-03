@@ -339,7 +339,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
   const singleRooms: RoomDaySchedule[] = applyFilters(
     sortRooms(activeRooms, sort, effectiveStatusOverrides, notes, selectedDate),
-    filters, notes, effectiveStatusOverrides, selectedDate,
+    filters, notes, selectedDate,
   ).filter(matchesActiveStatusFilter);
 
   // Single-day rooms grouped into sections by cleaning status (Figma node
@@ -425,7 +425,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const rangeSections = schedule
     .map(day => ({
       title: formatSectionHeader(day.date, today),
-      data: applyFilters(sortRooms(day.rooms, sort, statusOverrides, notes, day.date), filters, notes, statusOverrides, day.date),
+      data: applyFilters(sortRooms(day.rooms, sort, statusOverrides, notes, day.date), filters, notes, day.date),
     }))
     .filter(s => s.data.length > 0);
 

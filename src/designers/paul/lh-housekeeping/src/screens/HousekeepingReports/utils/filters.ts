@@ -1,90 +1,59 @@
-import type { RoomStatus } from '../../../context/HousekeepingStatus';
 import type { RoomDaySchedule } from '../types';
 
+// Matches the Filters bottom sheet (LH Mobile Housekeeping Enhancements
+// Initiative, Figma node 742:65449) — four sections: Reservation Status,
+// Additional details, Room type, Guest details. Cleaning status is filtered
+// separately via the tappable quick-filter chips above the room list.
 export interface FilterState {
-  statuses: RoomStatus[];
-  roomTypes: string[];
   roomStatuses: string[];
-  cleaningStatuses: string[];
-  // Staff note = single read-only string from si_reservations.data.staffNote.
-  // Housekeeping notes = thread in si_staff_notes scoped to active reservation.
-  includeStaffNotes: boolean;
-  includeHousekeepingNotes: boolean;
-  includeGuestComments: boolean;
-  includeExtras: boolean;
-  lateCheckout: boolean;
-  earlyCheckout: boolean;
+  hasRoomNotes: boolean;
+  roomTypes: string[];
+  guestDetails: string[];
 }
 
+export const ROOM_STATUS_OPTIONS = ['Check-in', 'Check-out', 'Check-out/in', 'Stay through', 'Vacant'];
 export const ROOM_TYPE_OPTIONS = ['Bridge Room', 'Deluxe Suite', 'Family Room'];
-export const ROOM_STATUS_OPTIONS = ['Occupied', 'Unoccupied', 'Check-in only', 'Check-out only', 'Check-out/in', 'Closed'];
-export const CLEANING_STATUS_OPTIONS = ['Clean', 'Need cleaning', 'Need deep cleaning', 'Skip cleaning', 'Awaiting inspection'];
+export const GUEST_DETAIL_OPTIONS = ['With children', 'With infant'];
 
-const CLEANING_STATUS_MAP: Record<string, RoomStatus | null> = {
-  'Clean':               'CLEANED',
-  'Need cleaning':       'UNCLEANED',
-  'Need deep cleaning':  'DEEP_CLEAN',
-  'Skip cleaning':       'SKIP_CLEANING',
-  'Awaiting inspection': 'AWAITING_INSPECTION',
-};
-
-export const DEFAULT_FILTERS: FilterState = { statuses: [], roomTypes: [], roomStatuses: [], cleaningStatuses: [], includeStaffNotes: false, includeHousekeepingNotes: false, includeGuestComments: false, includeExtras: false, lateCheckout: false, earlyCheckout: false };
+export const DEFAULT_FILTERS: FilterState = { roomStatuses: [], hasRoomNotes: false, roomTypes: [], guestDetails: [] };
 
 export function getRoomStatusCategory(item: RoomDaySchedule, date: string): string {
-  if (item.room.isClosed)       return 'Closed';
-  const isCheckIn     = item.checkIn === date;
-  const hasCheckout   = item.hasCheckoutToday;
+  const isCheckIn   = item.checkIn === date;
+  const hasCheckout = item.hasCheckoutToday;
   if (isCheckIn && hasCheckout) return 'Check-out/in';
-  if (isCheckIn)                return 'Check-in only';
-  if (hasCheckout)              return 'Check-out only';
-  if (!item.isOccupied)         return 'Unoccupied';
-  return 'Occupied';
+  if (isCheckIn)                return 'Check-in';
+  if (hasCheckout)              return 'Check-out';
+  if (!item.isOccupied)         return 'Vacant';
+  return 'Stay through';
 }
 
 export function applyFilters(
   rooms: RoomDaySchedule[],
   filters: FilterState,
   notes: Record<string, string>,
-  overrides: Record<string, RoomStatus>,
   date: string,
 ): RoomDaySchedule[] {
-  const { statuses, roomTypes, roomStatuses, cleaningStatuses, includeStaffNotes, includeHousekeepingNotes, includeGuestComments, includeExtras, lateCheckout, earlyCheckout } = filters;
-  if (!statuses.length && !roomTypes.length && !roomStatuses.length && !cleaningStatuses.length && !includeStaffNotes && !includeHousekeepingNotes && !includeGuestComments && !includeExtras && !lateCheckout && !earlyCheckout) return rooms;
+  const { roomStatuses, hasRoomNotes, roomTypes, guestDetails } = filters;
+  if (!roomStatuses.length && !hasRoomNotes && !roomTypes.length && !guestDetails.length) return rooms;
   return rooms.filter(item => {
-    const effectiveStatus = overrides[item.room.id] ?? item.room.status;
-    if (statuses.length > 0 && !statuses.includes(effectiveStatus)) return false;
-    if (roomTypes.length > 0 && !roomTypes.includes(item.room.type)) return false;
     if (roomStatuses.length > 0 && !roomStatuses.includes(getRoomStatusCategory(item, date))) return false;
-    if (cleaningStatuses.length > 0) {
-      const mapped = cleaningStatuses.map(s => CLEANING_STATUS_MAP[s]).filter(Boolean) as RoomStatus[];
-      if (!mapped.includes(effectiveStatus)) return false;
+    if (roomTypes.length > 0 && !roomTypes.includes(item.room.type)) return false;
+    if (hasRoomNotes && !notes[item.room.id]) return false;
+    if (guestDetails.length > 0) {
+      const matches =
+        (guestDetails.includes('With children') && item.children > 0) ||
+        (guestDetails.includes('With infant')   && item.infants > 0);
+      if (!matches) return false;
     }
-    if (includeStaffNotes || includeHousekeepingNotes || includeGuestComments || includeExtras) {
-      const hasStaffNote          = !!item.staffNote;
-      const hasHousekeepingNote   = !!(item.reservationId && notes[item.reservationId]);
-      const hasGuestComment       = !!item.guestComments;
-      const hasExtras             = item.extraItems.length > 0;
-      const passes =
-        (includeStaffNotes        && hasStaffNote)        ||
-        (includeHousekeepingNotes && hasHousekeepingNote) ||
-        (includeGuestComments     && hasGuestComment)     ||
-        (includeExtras            && hasExtras);
-      if (!passes) return false;
-    }
-    if (lateCheckout && !item.lateCheckout) return false;
-    if (earlyCheckout && !item.earlyCheckout) return false;
     return true;
   });
 }
 
 export function activeFilterCount(filters: FilterState): number {
   let n = 0;
-  if (filters.statuses.length > 0) n++;
-  if (filters.includeStaffNotes) n++;
-  if (filters.includeHousekeepingNotes) n++;
-  if (filters.includeGuestComments) n++;
-  if (filters.includeExtras) n++;
-  if (filters.lateCheckout) n++;
-  if (filters.earlyCheckout) n++;
+  if (filters.roomStatuses.length > 0) n++;
+  if (filters.hasRoomNotes) n++;
+  if (filters.roomTypes.length > 0) n++;
+  if (filters.guestDetails.length > 0) n++;
   return n;
 }

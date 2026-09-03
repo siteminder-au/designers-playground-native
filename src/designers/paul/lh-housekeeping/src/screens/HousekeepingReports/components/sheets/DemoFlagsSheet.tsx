@@ -104,11 +104,10 @@ export function DemoFlagsSheet({
               { key: 'showLateCheckout',      label: 'Early check-in & late check-out badge' },
               { key: 'showReservationId',    label: 'Reservation ID' },
               { key: 'showStatusIcon',       label: 'Cleaning status icon' },
-              { key: 'roomStatsChips',       label: 'Room stats as tappable chips' },
               { key: 'compactCard',          label: 'Compact room card (details in notes sheet)' },
               { key: 'showPrint',            label: 'Print button' },
               { key: 'showSort',             label: 'Sort control' },
-            ] as { key: 'showGuestName' | 'showGuestPax' | 'showBedConfig' | 'showLateCheckout' | 'showReservationId' | 'showStatusIcon' | 'roomStatsChips' | 'compactCard' | 'showPrint' | 'showSort'; label: string }[]).map((item, i) => (
+            ] as { key: 'showGuestName' | 'showGuestPax' | 'showBedConfig' | 'showLateCheckout' | 'showReservationId' | 'showStatusIcon' | 'compactCard' | 'showPrint' | 'showSort'; label: string }[]).map((item, i) => (
               <React.Fragment key={item.key}>
                 {i > 0 && <View style={styles.dropdownDivider} />}
                 <View style={styles.demoFlagRow}>

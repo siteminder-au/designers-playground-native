@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
     gap: 8,
     height: 34,
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 2,
     paddingHorizontal: 16,
     overflow: 'hidden',
   },
@@ -337,6 +337,28 @@ const styles = StyleSheet.create({
   emptyText:       { textAlign: 'center', color: '#9ca3af', marginTop: 40 },
   sectionHeader:   { backgroundColor: '#f2f3f3', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10 },
   sectionHeaderText: { fontSize: 11, fontWeight: '700', color: '#6b7280', letterSpacing: 0.8 },
+
+  // Status-grouped Housekeeping list (Figma node 737:28827) — section headers
+  // and the simplified Room Card used there.
+  statusSectionHeader:     { paddingHorizontal: 16, paddingBottom: 8 },
+  statusSectionHeaderText: { fontSize: 16, fontWeight: '700', color: '#333333' },
+
+  roomCard:          { backgroundColor: '#fff', marginHorizontal: 16, borderRadius: 8, paddingTop: 16, paddingBottom: 12, gap: 12 },
+  roomCardTopRow:    { flexDirection: 'row', gap: 8, alignItems: 'flex-start', paddingHorizontal: 12 },
+  roomCardMiddleRow: { paddingHorizontal: 12, gap: 12 },
+  roomCardGuestRow:  { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  roomCardGuestName: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4, minWidth: 0 },
+  roomCardGuestNameText: { fontSize: 12, color: '#333333', flexShrink: 1 },
+  roomCardPaxRow:    { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  roomCardDivider:   { height: 1, backgroundColor: 'rgba(176,178,182,0.25)' },
+  roomCardNoteFooter:    { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, minHeight: 24 },
+  roomCardNoteLabel:     { fontSize: 12, fontWeight: '600', color: '#6d7272' },
+  roomCardNoteText:      { flex: 1, fontSize: 12, color: '#484b4b' },
+  roomCardNoteEmptyText: { fontSize: 12, fontWeight: '700', color: ORANGE },
+  roomCardViewNoteText:  { fontSize: 12, fontWeight: '700', color: ORANGE },
+
+  roomStatusBadge:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8, borderRadius: 8, height: 24 },
+  roomStatusBadgeText: { fontSize: 12, color: '#333333' },
 
   // Modal
   modalContainer: { flex: 1, backgroundColor: '#fff' },

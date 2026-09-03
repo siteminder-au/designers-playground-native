@@ -15,11 +15,25 @@ export const WINDOW_HEIGHT = Dimensions.get('window').height;
 export const HOUSEKEEPERS = ['Maria S.', 'James T.', 'Jacqueline W.'];
 
 export const STATUS_CONFIG: Record<RoomStatus, { label: string; bg: string; border: string; text: string; icon: React.ComponentProps<typeof MaterialIcons>['name'] }> = {
-  CLEANED:              { label: 'Clean',              bg: '#9AE0BD',               border: '#258548',               text: '#258548',               icon: 'auto-awesome'    },
-  UNCLEANED:            { label: 'Needs clean',        bg: '#f1bfbf',               border: '#b81919',               text: '#b81919',               icon: 'auto-awesome'    },
-  DEEP_CLEAN:           { label: 'Needs deep clean',   bg: '#f1bfbf',               border: '#b81919',               text: '#b81919',               icon: 'auto-awesome'    },
-  SKIP_CLEANING:        { label: 'Skip clean',         bg: '#fef9c3',               border: '#d97706',               text: '#a16207',               icon: 'do-not-disturb'  },
-  AWAITING_INSPECTION:  { label: 'Awaiting inspection',bg: COLORS.Blue[600],        border: COLORS.Blue[200],        text: COLORS.Blue[200],        icon: 'auto-fix-high'   },
+  CLEANED:              { label: 'Clean',              bg: '#e2f4eb',               border: '#258548',               text: '#258548',               icon: 'auto-awesome'    },
+  UNCLEANED:            { label: 'Dirty (standard)',   bg: '#f1bfbf',               border: '#b81919',               text: '#b81919',               icon: 'auto-awesome'    },
+  DEEP_CLEAN:           { label: 'Dirty (deep)',       bg: '#f1bfbf',               border: '#b81919',               text: '#b81919',               icon: 'auto-awesome'    },
+  SKIP_CLEANING:        { label: 'Skip clean',         bg: '#fff6c0',               border: '#b27700',               text: '#b27700',               icon: 'do-not-disturb'  },
+  AWAITING_INSPECTION:  { label: 'Inspection needed',  bg: COLORS.Blue[600],        border: COLORS.Blue[200],        text: COLORS.Blue[200],        icon: 'auto-fix-high'   },
+};
+
+// Section order + heading copy for the status-grouped Housekeeping list
+// (Figma: LH Mobile Housekeeping Enhancements Initiative, node 737:28827).
+// Section headings differ slightly from the pill labels above (e.g. "Cleaned"
+// vs "Clean") to match the Figma copy exactly.
+export const STATUS_SECTION_ORDER: RoomStatus[] = ['DEEP_CLEAN', 'UNCLEANED', 'SKIP_CLEANING', 'AWAITING_INSPECTION', 'CLEANED'];
+
+export const STATUS_SECTION_TITLE: Record<RoomStatus, string> = {
+  DEEP_CLEAN:          'Dirty (deep)',
+  UNCLEANED:           'Dirty (standard)',
+  SKIP_CLEANING:       'Skip clean',
+  AWAITING_INSPECTION: 'Inspection needed',
+  CLEANED:             'Cleaned',
 };
 
 export const STATUS_SVG_ICON: Partial<Record<RoomStatus, React.FC<{ width?: number; height?: number }>>> = {

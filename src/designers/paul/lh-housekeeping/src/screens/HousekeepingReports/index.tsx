@@ -2,7 +2,6 @@ import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
-  FlatList,
   SectionList,
   TouchableOpacity,
   Modal,
@@ -23,7 +22,7 @@ import { COLORS } from '../../config/colors';
 import type { RoomDaySchedule, DaySchedule, LocalNote, NoteCategory } from './types';
 import {
   ORANGE, NUM_DAYS,
-  STATUS_CONFIG,
+  STATUS_CONFIG, STATUS_SECTION_ORDER, STATUS_SECTION_TITLE,
 } from './constants';
 import {
   addDays, formatLong, formatShort, formatDayStrip, formatSectionHeader,
@@ -41,6 +40,7 @@ import { shouldShowBedConfig } from './utils/bedConfig';
 import styles from './styles';
 import { type BadgeRect } from './components/CleaningControl';
 import { RoomRow } from './components/RoomRow';
+import { RoomCard } from './components/RoomCard';
 import { AnimatedRoomWrapper } from './components/AnimatedRoomWrapper';
 import { useBottomSheet } from './hooks/useBottomSheet';
 import { useLocalNotes } from './hooks/useLocalNotes';
@@ -78,12 +78,6 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   // Tracks previous sort order so we only animate on actual reorders, not on
   // every re-render (e.g. opening dropdowns, polling refetches).
   const previousOrderRef = useRef<string[]>([]);
-  // Refs for explicit scroll preservation across status changes
-  const flatListRef = useRef<FlatList<RoomDaySchedule>>(null);
-  const scrollYRef = useRef(0);
-  const handleListScroll = (e: any) => {
-    scrollYRef.current = e.nativeEvent.contentOffset.y;
-  };
 
   // Strip state
   const [selectedDate, setSelectedDate] = useState(today);
@@ -164,13 +158,9 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const singleDateSelector = dateSelectorVariant === 'strip';
   const monthSheetVariant = dateSelectorVariant === 'monthSheet';
 
-  // Active stat chip filter — only used when flags.roomStatsChips is on.
-  // null = no chip selected (show everything).
-  const [activeStatFilter, setActiveStatFilter] = useState<null | 'dirty' | 'deepClean' | 'awaitingInspection' | 'hasNotes' | 'outOfOrder'>(null);
-  // Clear the chip filter when switching away from the chips variant.
-  useEffect(() => {
-    if (!flags.roomStatsChips) setActiveStatFilter(null);
-  }, [flags.roomStatsChips]);
+  // Active status quick-filter — selecting a chip in the status bar narrows
+  // the grouped list down to just that cleaning status. Tap again to clear.
+  const [activeStatusFilter, setActiveStatusFilter] = useState<RoomStatus | null>(null);
 
   // Month sheet (variant C) state
   const {
@@ -317,28 +307,34 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
   // Single-day view
   const selectedDay = schedule.find(d => d.date === selectedDate);
-  // "Has notes" = any note or comment of any kind on the room: guest comment,
-  // reservation staff note, the room's issue note, or a local Room note.
-  const roomHasNotes = (r: RoomDaySchedule): boolean =>
-    !!r.guestComments || !!r.staffNote || !!r.room.notes || !!notes[r.room.id];
 
-  // Chip-variant filter: only active when chip variant is on AND a chip is selected.
-  const matchesActiveChip = (r: RoomDaySchedule): boolean => {
-    if (!flags.roomStatsChips || !activeStatFilter) return true;
-    if (activeStatFilter === 'dirty') {
-      const s = statusOverrides[r.room.id] ?? r.room.status;
-      return s === 'UNCLEANED' || s === 'DEEP_CLEAN';
-    }
-    if (activeStatFilter === 'deepClean')          return (statusOverrides[r.room.id] ?? r.room.status) === 'DEEP_CLEAN';
-    if (activeStatFilter === 'awaitingInspection') return (statusOverrides[r.room.id] ?? r.room.status) === 'AWAITING_INSPECTION';
-    if (activeStatFilter === 'hasNotes')           return roomHasNotes(r);
-    if (activeStatFilter === 'outOfOrder')         return r.room.isClosed;
-    return true;
-  };
+  const matchesActiveStatusFilter = (r: RoomDaySchedule): boolean =>
+    !activeStatusFilter || (statusOverrides[r.room.id] ?? r.room.status) === activeStatusFilter;
+
   const singleRooms: RoomDaySchedule[] = applyFilters(
     sortRooms(selectedDay?.rooms ?? [], sort, statusOverrides, notes, selectedDate),
     filters, notes, statusOverrides, selectedDate,
-  ).filter(matchesActiveChip);
+  ).filter(matchesActiveStatusFilter);
+
+  // Single-day rooms grouped into sections by cleaning status (Figma node
+  // 737:28827) — same underlying live schedule/status data as `singleRooms`,
+  // just bucketed for the grouped list. Empty sections are hidden.
+  const statusSections = STATUS_SECTION_ORDER
+    .map(status => ({
+      status,
+      title: STATUS_SECTION_TITLE[status],
+      data: singleRooms.filter(r => (statusOverrides[r.room.id] ?? r.room.status) === status),
+    }))
+    .filter(s => s.data.length > 0);
+
+  // Quick-filter chip counts — computed from the unfiltered day (like the
+  // advanced FilterSheet, these ignore the active status chip itself so counts
+  // don't collapse to zero once a chip is selected).
+  const statsRooms = selectedDay?.rooms ?? [];
+  const statusCounts = STATUS_SECTION_ORDER.reduce((acc, status) => {
+    acc[status] = statsRooms.filter(r => (statusOverrides[r.room.id] ?? r.room.status) === status).length;
+    return acc;
+  }, {} as Record<RoomStatus, number>);
 
   // Detect if the sort order of the single-day list changed since the previous
   // render. Only triggers the FLIP slide animation on real reorders.
@@ -361,40 +357,10 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const printTotalRows = (dateRange ? schedule.flatMap(d => d.rooms) : singleRooms).length;
   const printPageCount = Math.max(1, Math.ceil(printTotalRows / 22));
 
-  // Stats strip — always computed from the selected/start date, unfiltered
-  const statsRooms = selectedDay?.rooms ?? [];
-  // Predicates that match each stat — used both for counting and for the chip
-  // variant's tap-to-filter behavior.
-  type StatKey = 'dirty' | 'deepClean' | 'awaitingInspection' | 'hasNotes' | 'outOfOrder';
-  const statPredicates: Record<StatKey, (r: RoomDaySchedule) => boolean> = {
-    dirty:              r => { const s = statusOverrides[r.room.id] ?? r.room.status; return s === 'UNCLEANED' || s === 'DEEP_CLEAN'; },
-    deepClean:          r => (statusOverrides[r.room.id] ?? r.room.status) === 'DEEP_CLEAN',
-    awaitingInspection: r => (statusOverrides[r.room.id] ?? r.room.status) === 'AWAITING_INSPECTION',
-    hasNotes:           roomHasNotes,
-    outOfOrder:         r => r.room.isClosed,
-  };
-  const dayStats = {
-    dirty:              statsRooms.filter(statPredicates.dirty).length,
-    deepClean:          statsRooms.filter(statPredicates.deepClean).length,
-    awaitingInspection: statsRooms.filter(statPredicates.awaitingInspection).length,
-    hasNotes:           statsRooms.filter(statPredicates.hasNotes).length,
-    outOfOrder:         statsRooms.filter(statPredicates.outOfOrder).length,
-  };
-  const BG = '#f2f3f3'; // matches screen background
-  const statItems = ([
-    { key: 'dirty',              value: dayStats.dirty,              label: 'Dirty rooms today'        },
-    { key: 'deepClean',          value: dayStats.deepClean,          label: 'Deep cleans needed today' },
-    { key: 'awaitingInspection', value: dayStats.awaitingInspection, label: 'Awaiting inspection today' },
-    { key: 'hasNotes',           value: dayStats.hasNotes,           label: 'Has notes today'          },
-    // Out of order (room closures) is conditional — only shown when at least
-    // one room matches, and always pinned to the end of the row.
-    ...(dayStats.outOfOrder > 0
-      ? [{ key: 'outOfOrder', value: dayStats.outOfOrder, label: 'Out of order today' }]
-      : []),
-  ] as { key: StatKey; value: number; label: string }[]);
-
-  const statsStrip = flags.roomStatsChips ? (
-    // Chip variant — tappable filters
+  // Quick Filters bar (Figma node 737:28837) — tappable chips, one per
+  // cleaning status, showing a live count for the selected day. Selecting a
+  // chip narrows the grouped list below to just that status.
+  const quickFiltersBar = (
     <View style={{ position: 'relative', backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#e5e8e8' }}>
       <ScrollView
         ref={statsScrollRef}
@@ -402,45 +368,21 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, gap: 8 }}
       >
-        {statItems.map(stat => {
-          const isActive = activeStatFilter === stat.key;
+        {STATUS_SECTION_ORDER.filter(status => statusCounts[status] > 0).map(status => {
+          const isActive = activeStatusFilter === status;
           return (
             <TouchableOpacity
-              key={stat.key}
+              key={status}
               style={[styles.statChip, isActive && styles.statChipActive]}
-              onPress={() => setActiveStatFilter(isActive ? null : stat.key)}
+              onPress={() => setActiveStatusFilter(isActive ? null : status)}
               activeOpacity={0.7}
             >
               <Text style={[styles.statChipText, isActive && styles.statChipTextActive]}>
-                {stat.value} {stat.label.replace(' today', '').toLowerCase()}
+                {statusCounts[status]} {STATUS_SECTION_TITLE[status]}
               </Text>
             </TouchableOpacity>
           );
         })}
-      </ScrollView>
-      <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 40, flexDirection: 'row' }} pointerEvents="none">
-        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,0)`    }} />
-        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,0.3)`  }} />
-        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,0.6)`  }} />
-        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,0.85)` }} />
-        <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,1)`    }} />
-      </View>
-    </View>
-  ) : (
-    // Default — static informational strip
-    <View style={{ position: 'relative', backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#e5e8e8' }}>
-      <ScrollView
-        ref={statsScrollRef}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, gap: 24 }}
-      >
-        {statItems.map(stat => (
-          <View key={stat.key} style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
-            <Text style={styles.statValue}>{stat.value}</Text>
-            <Text style={styles.statLabel}>{stat.label}</Text>
-          </View>
-        ))}
       </ScrollView>
       <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 40, flexDirection: 'row' }} pointerEvents="none">
         <View style={{ flex: 1, backgroundColor: `rgba(255,255,255,0)`    }} />
@@ -491,14 +433,11 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
   function applyStatusChange(newStatus: RoomStatus) {
     if (!statusDropdown) return;
-    // Snapshot scroll position so we can pin it back after the re-render —
-    // prevents the FlatList from auto-shifting to follow the moved card.
-    const snapshotScroll = scrollYRef.current;
+    // Note: changing status moves the card into a different status section
+    // in the grouped list below, so (unlike a flat list) there's no scroll
+    // offset that keeps the card in view — the list reflows around it.
     setStatusOverride(statusDropdown.roomId, newStatus);
     setStatusDropdown(null);
-    requestAnimationFrame(() => {
-      flatListRef.current?.scrollToOffset({ offset: snapshotScroll, animated: false });
-    });
   }
 
 
@@ -711,8 +650,8 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         </View>
       )}
 
-      {/* ── Stats strip — fixed in layout (not inside scroll area) to avoid iOS top inset gap ── */}
-      {!loading && !error && statsStrip}
+      {/* ── Quick Filters — fixed in layout (not inside scroll area) to avoid iOS top inset gap ── */}
+      {!loading && !error && quickFiltersBar}
 
       {/* ── Content ── */}
       {loading ? (
@@ -761,40 +700,38 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
           contentContainerStyle={{ paddingTop: 24, paddingBottom: 32 }}
         />
       ) : (
-        <FlatList
-          ref={flatListRef}
-          onScroll={handleListScroll}
-          scrollEventThrottle={16}
-          data={singleRooms}
+        // Status-grouped list (Figma node 737:28827) — sections ordered
+        // Dirty (deep) → Dirty (standard) → Skip clean → Inspection needed →
+        // Cleaned, each holding the live-synced rooms for that status.
+        <SectionList
+          sections={statusSections}
           keyExtractor={item => item.room.id}
+          renderSectionHeader={({ section }) => (
+            <View style={styles.statusSectionHeader}>
+              <Text style={styles.statusSectionHeaderText}>{section.title}</Text>
+            </View>
+          )}
+          renderSectionFooter={() => <View style={{ height: 24 }} />}
           renderItem={({ item }) => {
             const effectiveStatus = statusOverrides[item.room.id] ?? item.room.status;
-            const bedConfig = item.bedConfiguration;
             return (
               <AnimatedRoomWrapper id={item.room.id} positionsRef={roomPositionsRef} shouldAnimate={orderChanged}>
-                <RoomRow
+                <RoomCard
                   item={item}
                   status={effectiveStatus}
                   note={notes[item.room.id] ?? ''}
-                  bedConfig={bedConfig}
-                  flags={flags}
                   onNotePress={() => openNotesSheet(item)}
-                  onEditNotePress={latestNoteIds[item.room.id]
-                    ? () => openNotesSheet(item, latestNoteIds[item.room.id])
-                    : undefined}
                   onStatusPress={(rect) => openStatusDropdown(item.room.id, effectiveStatus, rect)}
-                  assignedTo={assignments[item.room.id] ?? null}
-                  onAssignPress={() => openAssignModal(item.room.id)}
                 />
               </AnimatedRoomWrapper>
             );
           }}
-          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           style={{ backgroundColor: '#f2f3f3' }}
           contentContainerStyle={{ paddingTop: 24, paddingBottom: 32 }}
           ListEmptyComponent={
             <Text style={styles.emptyText}>
-              {filterCount > 0 ? 'No rooms match the current filters.' : 'No room data for this date.'}
+              {filterCount > 0 || activeStatusFilter ? 'No rooms match the current filters.' : 'No room data for this date.'}
             </Text>
           }
         />

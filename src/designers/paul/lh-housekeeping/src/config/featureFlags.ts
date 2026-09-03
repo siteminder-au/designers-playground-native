@@ -8,7 +8,7 @@ const FLAGS = {
    *  DB to be kept populated). When off, the screen shows a fixed set of mock
    *  rooms/statuses matching the Figma design exactly, identical every day,
    *  with no shared-database dependency. */
-  liveData: true,
+  liveData: false,
 
   /** Guest name + ID card icon in the guest info row */
   showGuestName: true,

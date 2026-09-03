@@ -14,6 +14,7 @@ import TapToPayScreen from './src/screens/TapToPay';
 import DistributionScreen from './src/screens/Distribution';
 import NotificationsScreen from './src/screens/Notifications';
 import { ReviewToggleFab } from './src/components/ReviewToggleFab';
+import { FakeStatusBar } from './src/components/FakeStatusBar';
 import { ReviewOverlay } from './src/components/ReviewOverlay';
 import { ReviewProvider, useReviewContext } from './src/context/ReviewContext';
 
@@ -205,6 +206,7 @@ function AppShell() {
   const hasMarkers = (annotations?.markers.length ?? 0) > 0;
   return (
     <View style={{ flex: 1 }}>
+      <FakeStatusBar />
       <AppNavigator />
       <ReviewToggleFab />
       {reviewOverlayEnabled && hasMarkers && (

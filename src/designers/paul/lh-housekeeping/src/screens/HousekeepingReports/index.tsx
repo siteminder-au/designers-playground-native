@@ -386,7 +386,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         ref={statsScrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, gap: 8 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, gap: 8 }}
       >
         {STATUS_SECTION_ORDER.filter(status => statusCounts[status] > 0).map(status => {
           const isActive = activeStatusFilter === status;

@@ -27,7 +27,7 @@ const MOCK_ROOM_INPUTS: MockRoomInput[] = [
   { id: 'mock-suite-2', number: 'Suite 2', type: 'Deluxe Suite', status: 'DEEP_CLEAN',
     guestName: 'Giannis Antetekoumnpo', adults: 2, children: 1, infants: 0, hasCheckInToday: true, hasCheckoutToday: false },
   { id: 'mock-suite-4', number: 'Suite 4', type: 'Deluxe Suite', status: 'DEEP_CLEAN',
-    guestName: 'Emma Chen', adults: 2, children: 0, infants: 0, hasCheckInToday: true, hasCheckoutToday: true },
+    guestName: 'Mary Greensfield', adults: 2, children: 0, infants: 0, hasCheckInToday: true, hasCheckoutToday: true },
   { id: 'mock-room-7', number: '7', type: 'Bridge Room', status: 'DEEP_CLEAN',
     guestName: "Liam O'Connor", adults: 1, children: 0, infants: 0, hasCheckInToday: false, hasCheckoutToday: false },
 

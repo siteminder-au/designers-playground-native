@@ -167,9 +167,15 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const singleDateSelector = dateSelectorVariant === 'strip';
   const monthSheetVariant = dateSelectorVariant === 'monthSheet';
 
-  // Active status quick-filter — selecting a chip in the status bar narrows
-  // the grouped list down to just that cleaning status. Tap again to clear.
-  const [activeStatusFilter, setActiveStatusFilter] = useState<RoomStatus | null>(null);
+  // Active status quick-filters — multi-select: selecting chips in the status
+  // bar narrows the grouped list down to just those cleaning statuses. Tap a
+  // selected chip again to deselect it.
+  const [activeStatusFilters, setActiveStatusFilters] = useState<RoomStatus[]>([]);
+  function toggleStatusFilter(status: RoomStatus) {
+    setActiveStatusFilters(prev =>
+      prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]
+    );
+  }
 
   // Month sheet (variant C) state
   const {
@@ -329,7 +335,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const activeRooms: RoomDaySchedule[] = flags.liveData ? (selectedDay?.rooms ?? []) : mockRooms;
 
   const matchesActiveStatusFilter = (r: RoomDaySchedule): boolean =>
-    !activeStatusFilter || (effectiveStatusOverrides[r.room.id] ?? r.room.status) === activeStatusFilter;
+    !activeStatusFilters.length || activeStatusFilters.includes(effectiveStatusOverrides[r.room.id] ?? r.room.status);
 
   const singleRooms: RoomDaySchedule[] = applyFilters(
     sortRooms(activeRooms, sort, effectiveStatusOverrides, notes, selectedDate),
@@ -377,9 +383,10 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const printTotalRows = (dateRange ? schedule.flatMap(d => d.rooms) : singleRooms).length;
   const printPageCount = Math.max(1, Math.ceil(printTotalRows / 22));
 
-  // Quick Filters bar (Figma node 737:28837) — tappable chips, one per
-  // cleaning status, showing a live count for the selected day. Selecting a
-  // chip narrows the grouped list below to just that status.
+  // Quick Filters bar (Figma node 737:28837) — tappable, multi-select chips,
+  // one per cleaning status, showing a live count for the selected day.
+  // Selecting one or more chips narrows the grouped list below to just those
+  // statuses; deselecting all shows every section again.
   const quickFiltersBar = (
     <View style={{ position: 'relative', backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#e5e8e8' }}>
       <ScrollView
@@ -389,12 +396,12 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, gap: 8 }}
       >
         {STATUS_SECTION_ORDER.filter(status => statusCounts[status] > 0).map(status => {
-          const isActive = activeStatusFilter === status;
+          const isActive = activeStatusFilters.includes(status);
           return (
             <TouchableOpacity
               key={status}
               style={[styles.statChip, isActive && styles.statChipActive]}
-              onPress={() => setActiveStatusFilter(isActive ? null : status)}
+              onPress={() => toggleStatusFilter(status)}
               activeOpacity={0.7}
             >
               <Text style={[styles.statChipText, isActive && styles.statChipTextActive]}>
@@ -746,7 +753,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
           contentContainerStyle={{ paddingTop: 24, paddingBottom: 32 }}
           ListEmptyComponent={
             <Text style={styles.emptyText}>
-              {filterCount > 0 || activeStatusFilter ? 'No rooms match the current filters.' : 'No room data for this date.'}
+              {filterCount > 0 || activeStatusFilters.length > 0 ? 'No rooms match the current filters.' : 'No room data for this date.'}
             </Text>
           }
         />

@@ -97,6 +97,20 @@ export function DemoFlagsSheet({
             </View>
             <View style={styles.dropdownDivider} />
 
+            {/* Live data — ON reads the shared si_reservations/si_room_cleaning
+                tables; OFF shows a fixed set of mock rooms matching the Figma
+                design exactly, the same every day, with no DB dependency. */}
+            <View style={styles.demoFlagRow}>
+              <Text style={styles.demoFlagLabel}>Live data (shared database)</Text>
+              <Switch
+                value={flags.liveData}
+                onValueChange={val => setFlags(prev => ({ ...prev, liveData: val } as typeof prev))}
+                trackColor={{ false: '#e5e7eb', true: ORANGE }}
+                thumbColor="#fff"
+              />
+            </View>
+            <View style={styles.dropdownDivider} />
+
             {([
               { key: 'showGuestName',         label: 'Guest name' },
               { key: 'showGuestPax',          label: 'Pax counts' },

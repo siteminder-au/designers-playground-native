@@ -37,6 +37,7 @@ import {
   DEFAULT_FILTERS, applyFilters, activeFilterCount,
 } from './utils/filters';
 import { shouldShowBedConfig } from './utils/bedConfig';
+import { buildMockRooms, MOCK_ROOM_NOTES } from './mockSchedule';
 import styles from './styles';
 import { type BadgeRect } from './components/CleaningControl';
 import { RoomRow } from './components/RoomRow';
@@ -102,6 +103,10 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     currentStatus: RoomStatus;
     x: number; y: number; width: number; height: number;
   } | null>(null);
+  // Local-only status overrides for mock data (flags.liveData off) — kept
+  // separate from the shared context's statusOverrides so tapping a status
+  // pill never fires the UPDATE_ROOM_STATUS mutation against fake room ids.
+  const [mockStatusOverrides, setMockStatusOverrides] = useState<Record<string, RoomStatus>>({});
 
   // Stats strip scroll ref + pulse hint on first load
   const statsScrollRef = useRef<ScrollView>(null);
@@ -131,6 +136,10 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
   // Feature flags (runtime toggles for demo)
   const [flags, setFlags] = useState({ ...FLAGS });
+  // Whichever override map is live for the current data source — the shared
+  // context's (DB-synced) overrides when flags.liveData is on, or the local
+  // mock-only overrides when it's off.
+  const effectiveStatusOverrides = flags.liveData ? statusOverrides : mockStatusOverrides;
   const {
     visible: demoSheetVisible, setVisible: setDemoSheetVisible, close: closeDemoSheet,
     sheetAnim: demoSheetAnim, translateY: demoTranslateY, panResponder: demoPanResponder,
@@ -236,6 +245,9 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   // text per room, plus its id so the inline pencil can open straight into edit.
   const notes: Record<string, string> = {};
   const latestNoteIds: Record<string, string> = {};
+  // Mock rooms start pre-seeded with the note text from the Figma design;
+  // any note a demoer actually saves (below) still takes precedence.
+  if (!flags.liveData) Object.assign(notes, MOCK_ROOM_NOTES);
   for (const n of allRoomNotes) {
     notes[n.roomId] = n.text;
     latestNoteIds[n.roomId] = n.id;
@@ -264,10 +276,15 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const { data, loading, error } = useQuery(GET_HOUSEKEEPING_SCHEDULE, {
     variables: { startDate: queryStart, endDate: queryEnd },
     pollInterval: 15000,
+    skip: !flags.liveData,
   });
 
   const schedule: DaySchedule[] = data?.housekeepingSchedule ?? [];
   const visibleDates = Array.from({ length: NUM_DAYS }, (_, i) => addDays(weekStart, i));
+
+  // Mock rooms (flags.liveData off) — a fixed dataset matching the Figma
+  // design exactly, identical every day and independent of `schedule`/`today`.
+  const mockRooms = React.useMemo(() => buildMockRooms(today), [today]);
 
   // Automation: nightly reset — set all today's occupied rooms to Need Cleaning once per toggle-on
   const nightlyResetApplied = useRef(false);
@@ -307,13 +324,16 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
   // Single-day view
   const selectedDay = schedule.find(d => d.date === selectedDate);
+  // The rooms actually rendered — live schedule for the selected day, or the
+  // fixed mock dataset when flags.liveData is off (same rooms every day).
+  const activeRooms: RoomDaySchedule[] = flags.liveData ? (selectedDay?.rooms ?? []) : mockRooms;
 
   const matchesActiveStatusFilter = (r: RoomDaySchedule): boolean =>
-    !activeStatusFilter || (statusOverrides[r.room.id] ?? r.room.status) === activeStatusFilter;
+    !activeStatusFilter || (effectiveStatusOverrides[r.room.id] ?? r.room.status) === activeStatusFilter;
 
   const singleRooms: RoomDaySchedule[] = applyFilters(
-    sortRooms(selectedDay?.rooms ?? [], sort, statusOverrides, notes, selectedDate),
-    filters, notes, statusOverrides, selectedDate,
+    sortRooms(activeRooms, sort, effectiveStatusOverrides, notes, selectedDate),
+    filters, notes, effectiveStatusOverrides, selectedDate,
   ).filter(matchesActiveStatusFilter);
 
   // Single-day rooms grouped into sections by cleaning status (Figma node
@@ -323,16 +343,16 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     .map(status => ({
       status,
       title: STATUS_SECTION_TITLE[status],
-      data: singleRooms.filter(r => (statusOverrides[r.room.id] ?? r.room.status) === status),
+      data: singleRooms.filter(r => (effectiveStatusOverrides[r.room.id] ?? r.room.status) === status),
     }))
     .filter(s => s.data.length > 0);
 
   // Quick-filter chip counts — computed from the unfiltered day (like the
   // advanced FilterSheet, these ignore the active status chip itself so counts
   // don't collapse to zero once a chip is selected).
-  const statsRooms = selectedDay?.rooms ?? [];
+  const statsRooms = activeRooms;
   const statusCounts = STATUS_SECTION_ORDER.reduce((acc, status) => {
-    acc[status] = statsRooms.filter(r => (statusOverrides[r.room.id] ?? r.room.status) === status).length;
+    acc[status] = statsRooms.filter(r => (effectiveStatusOverrides[r.room.id] ?? r.room.status) === status).length;
     return acc;
   }, {} as Record<RoomStatus, number>);
 
@@ -436,7 +456,12 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     // Note: changing status moves the card into a different status section
     // in the grouped list below, so (unlike a flat list) there's no scroll
     // offset that keeps the card in view — the list reflows around it.
-    setStatusOverride(statusDropdown.roomId, newStatus);
+    if (flags.liveData) {
+      setStatusOverride(statusDropdown.roomId, newStatus);
+    } else {
+      // Mock rooms aren't real DB rows — update locally only, no mutation.
+      setMockStatusOverrides(prev => ({ ...prev, [statusDropdown.roomId]: newStatus }));
+    }
     setStatusDropdown(null);
   }
 
@@ -691,7 +716,8 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
       ) : (
         // Status-grouped list (Figma node 737:28827) — sections ordered
         // Dirty (deep) → Dirty (standard) → Skip clean → Inspection needed →
-        // Cleaned, each holding the live-synced rooms for that status.
+        // Cleaned, each holding either the live-synced rooms for that status
+        // or the fixed mock dataset, depending on flags.liveData.
         <SectionList
           sections={statusSections}
           keyExtractor={item => item.room.id}
@@ -702,7 +728,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
           )}
           renderSectionFooter={() => <View style={{ height: 24 }} />}
           renderItem={({ item }) => {
-            const effectiveStatus = statusOverrides[item.room.id] ?? item.room.status;
+            const effectiveStatus = effectiveStatusOverrides[item.room.id] ?? item.room.status;
             return (
               <AnimatedRoomWrapper id={item.room.id} positionsRef={roomPositionsRef} shouldAnimate={orderChanged}>
                 <RoomCard
@@ -741,7 +767,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                 : Dimensions.get('window').width) - statusDropdown.x - statusDropdown.width,
             }]}>
               {(Object.keys(STATUS_CONFIG) as RoomStatus[]).filter(s => !(housekeeperMode && s === 'CLEANED')).map((s, i) => {
-                const isActive = (statusOverrides[statusDropdown.roomId] ?? statusDropdown.currentStatus) === s;
+                const isActive = (effectiveStatusOverrides[statusDropdown.roomId] ?? statusDropdown.currentStatus) === s;
                 return (
                   <React.Fragment key={s}>
   
@@ -890,7 +916,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         dateRange={dateRange}
         schedule={schedule}
         singleRooms={singleRooms}
-        statusOverrides={statusOverrides}
+        statusOverrides={effectiveStatusOverrides}
         notes={notes}
         printSettingsVisible={printSettingsVisible}
         closePrintSettings={closePrintSettings}

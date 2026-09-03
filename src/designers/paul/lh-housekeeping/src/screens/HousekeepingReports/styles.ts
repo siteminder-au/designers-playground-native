@@ -359,8 +359,8 @@ const styles = StyleSheet.create({
   roomCardNoteEmptyText: { fontSize: 12, fontWeight: '700', color: ORANGE },
   roomCardViewNoteText:  { fontSize: 12, fontWeight: '700', color: ORANGE },
 
-  roomStatusBadge:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8, borderRadius: 8, height: 24 },
-  roomStatusBadgeText: { fontSize: 12, color: '#333333' },
+  roomStatusBadge:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8, paddingVertical: 0, borderRadius: 8 },
+  roomStatusBadgeText: { fontSize: 12, lineHeight: 12, color: '#333333' },
 
   // Modal
   modalContainer: { flex: 1, backgroundColor: '#fff' },

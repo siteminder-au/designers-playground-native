@@ -19,7 +19,7 @@ const styles = StyleSheet.create({
   headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 12,
   },
   headerBottom: {
     flexDirection: 'row',
@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#e5e8e8',
   },
-  headerLabel: { fontSize: 16, color: '#333', fontWeight: '600', position: 'absolute', left: 0, right: 0, textAlign: 'center' },
+  headerLabel: { fontSize: 16, lineHeight: 21, color: '#333', fontWeight: '600', position: 'absolute', left: 0, right: 0, textAlign: 'center' },
   headerDate:  { fontSize: 22, fontFamily: 'ValueSerifTrial-Medium', color: '#111', marginTop: 2, lineHeight: 30 },
   clearBtn:    { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 4, alignSelf: 'center' },
   clearBtnText: { fontSize: 13, color: '#9ca3af' },

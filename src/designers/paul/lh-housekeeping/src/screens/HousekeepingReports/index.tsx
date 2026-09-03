@@ -19,7 +19,7 @@ import { GET_HOUSEKEEPING_SCHEDULE } from '../../apollo/queries';
 import { useHousekeepingStatus, RoomStatus } from '../../context/HousekeepingStatus';
 import FLAGS from '../../config/featureFlags';
 import { COLORS } from '../../config/colors';
-import type { RoomDaySchedule, DaySchedule, LocalNote, NoteCategory } from './types';
+import type { RoomDaySchedule, DaySchedule, NoteCategory } from './types';
 import {
   ORANGE, NUM_DAYS,
   STATUS_CONFIG, STATUS_SECTION_ORDER, STATUS_SECTION_TITLE,
@@ -270,7 +270,6 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     sheetAnim: notesSheetAnim, translateY: notesSheetTranslateY, panResponder: notesSheetPanResponder,
   } = useBottomSheet(400);
   const [notesSheetItem, setNotesSheetItem] = useState<RoomDaySchedule | null>(null);
-  const [notesSheetEditing, setNotesSheetEditing] = useState(false);
   const [notesSheetDraft, setNotesSheetDraft] = useState('');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteCategory, setNoteCategory] = useState<NoteCategory>('Housekeeping');
@@ -479,8 +478,8 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
   function openNotesSheet(item: RoomDaySchedule, autoEditNoteId?: string) {
     setNotesSheetItem(item);
-    // When opened with autoEditNoteId, jump straight into edit mode for that
-    // note (used by the inline pencil on the card). Otherwise open in view mode.
+    // Pre-fill the draft with the room's current note (if any) so the sheet's
+    // single field opens ready to edit rather than blank.
     const noteToEdit = autoEditNoteId
       ? allRoomNotes.find(n => n.id === autoEditNoteId)
       : null;
@@ -488,9 +487,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
       setEditingNoteId(noteToEdit.id);
       setNotesSheetDraft(noteToEdit.text);
       setNoteCategory(noteToEdit.category);
-      setNotesSheetEditing(true);
     } else {
-      setNotesSheetEditing(false);
       setNotesSheetDraft('');
       setEditingNoteId(null);
       setNoteCategory('Housekeeping');
@@ -501,10 +498,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   function saveSheetNote() {
     if (!notesSheetItem) return;
     const trimmed = notesSheetDraft.trim();
-    if (!trimmed) {
-      setNotesSheetEditing(false);
-      return;
-    }
+    if (!trimmed) return;
     if (editingNoteId) {
       updateNote(editingNoteId, { text: trimmed, category: noteCategory });
     } else {
@@ -516,16 +510,9 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
       });
     }
     setNotesSheetDraft('');
-    setNotesSheetEditing(false);
     setEditingNoteId(null);
     setNoteCategory('Housekeeping');
   }
-
-  // Room notes are tied to the room, so the thread is every local note for this
-  // room (independent of the current reservation).
-  const sheetNotes: LocalNote[] = notesSheetItem
-    ? allRoomNotes.filter(n => n.roomId === notesSheetItem.room.id)
-    : [];
 
   function openNotesModal(noteKey: string) {
     setEditingRoomId(noteKey);
@@ -699,7 +686,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                   note={notes[item.room.id] ?? ''}
                   bedConfig={bedConfig}
                   flags={flags}
-                  onNotePress={() => openNotesSheet(item)}
+                  onNotePress={() => openNotesSheet(item, latestNoteIds[item.room.id])}
                   onEditNotePress={latestNoteIds[item.room.id]
                     ? () => openNotesSheet(item, latestNoteIds[item.room.id])
                     : undefined}
@@ -742,7 +729,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                   item={item}
                   status={effectiveStatus}
                   note={notes[item.room.id] ?? ''}
-                  onNotePress={() => openNotesSheet(item)}
+                  onNotePress={() => openNotesSheet(item, latestNoteIds[item.room.id])}
                   onStatusPress={(rect) => openStatusDropdown(item.room.id, effectiveStatus, rect)}
                 />
               </AnimatedRoomWrapper>
@@ -837,16 +824,8 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         translateY={notesSheetTranslateY}
         panResponder={notesSheetPanResponder}
         item={notesSheetItem}
-        flags={flags}
-        sheetNotes={sheetNotes}
-        notesSheetEditing={notesSheetEditing}
-        setNotesSheetEditing={setNotesSheetEditing}
         notesSheetDraft={notesSheetDraft}
         setNotesSheetDraft={setNotesSheetDraft}
-        noteCategory={noteCategory}
-        setNoteCategory={setNoteCategory}
-        editingNoteId={editingNoteId}
-        setEditingNoteId={setEditingNoteId}
         saveSheetNote={saveSheetNote}
         insetsBottom={insets.bottom}
       />

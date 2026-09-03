@@ -26,11 +26,12 @@ const FLAGS = {
 
   /**
    * Date selector variant — three options:
-   *  - 'range'     : default. Date header + calendar icon → opens range bottom sheet.
-   *  - 'strip'     : week strip below the header, no calendar icon, single-day only.
-   *  - 'monthSheet': tap the date header → opens single-date month-calendar sheet.
+   *  - 'range'     : date header only, no calendar icon (range sheet has no
+   *                  Top Nav entry point currently — kept for future rework).
+   *  - 'strip'     : week strip below the header, single-day only.
+   *  - 'monthSheet': default. Tap the date header → opens single-date month-calendar sheet.
    */
-  dateSelectorVariant: 'range' as 'range' | 'strip' | 'monthSheet',
+  dateSelectorVariant: 'monthSheet' as 'range' | 'strip' | 'monthSheet',
 
   /** Compact card variant — hides guest name, reservation ID, PAX, and bed
    *  config from the room card (moves them into the Notes sheet) and re-anchors

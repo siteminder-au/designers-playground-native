@@ -13,7 +13,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useQuery } from '@apollo/client';
 import { GET_HOUSEKEEPING_SCHEDULE } from '../../apollo/queries';
 import { useHousekeepingStatus, RoomStatus } from '../../context/HousekeepingStatus';
@@ -564,17 +564,6 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                 )}
               </View>
             </TouchableOpacity>
-
-            {!dateRange && dateSelectorVariant === 'range' && viewMode !== 'browser' && (
-              <TouchableOpacity style={{ padding: 4 }} onPress={openModal}>
-                <Ionicons name="calendar-outline" size={20} color="#333" />
-              </TouchableOpacity>
-            )}
-            {!housekeeperMode && (
-              <TouchableOpacity style={{ padding: 4 }} onPress={() => setAutoSheetVisible(true)}>
-                <MaterialCommunityIcons name="cog-sync-outline" size={22} color="#374151" />
-              </TouchableOpacity>
-            )}
           </View>
         </View>
       </View>

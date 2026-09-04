@@ -197,9 +197,14 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
   const CARD_GAP = 8;
   const CARD_WIDTH = (measuredWidth || windowWidth) - 32 - CARD_PEEK;
 
-  function handleCardScrollEnd(e: NativeSyntheticEvent<NativeScrollEvent>) {
+  // onMomentumScrollEnd alone is unreliable on React Native Web (the
+  // deployed target) — a slow drag-then-release often never fires it, so
+  // activeCard (and the CTA/dot indicators driven by it) silently stopped
+  // updating. onScroll fires continuously off the browser's native scroll
+  // event, so it tracks the real position on every platform.
+  function handleCardScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
     const index = Math.round(e.nativeEvent.contentOffset.x / (CARD_WIDTH + CARD_GAP));
-    setActiveCard(index === 1 ? 1 : 0);
+    setActiveCard(index >= 1 ? 1 : 0);
   }
 
   // The section link's label/destination follows whichever card is in view —
@@ -268,7 +273,8 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
               snapToAlignment="start"
               decelerationRate="fast"
               contentContainerStyle={{ paddingHorizontal: 16 }}
-              onMomentumScrollEnd={handleCardScrollEnd}
+              onScroll={handleCardScroll}
+              scrollEventThrottle={16}
             >
               {/* Card 0 — Reservations stats */}
               <View style={{ width: CARD_WIDTH, marginRight: CARD_GAP }}>

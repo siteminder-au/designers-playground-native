@@ -97,13 +97,13 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const [pendingEnd, setPendingEnd] = useState<string | null>(null);
 
   // Status overrides (shared via context for cross-screen sync)
-  const { statusOverrides, setStatusOverride, viewMode, setViewMode, housekeeperMode, cleaningStatusAsLabel, setCleaningStatusAsLabel } = useHousekeepingStatus();
+  const { statusOverrides, setStatusOverride, viewMode, setViewMode, housekeeperMode, cleaningStatusAsLabel, setCleaningStatusAsLabel, liveData, setLiveData } = useHousekeepingStatus();
   const [statusDropdown, setStatusDropdown] = useState<{
     roomId: string;
     currentStatus: RoomStatus;
     x: number; y: number; width: number; height: number;
   } | null>(null);
-  // Local-only status overrides for mock data (flags.liveData off) — kept
+  // Local-only status overrides for mock data (liveData off) — kept
   // separate from the shared context's statusOverrides so tapping a status
   // pill never fires the UPDATE_ROOM_STATUS mutation against fake room ids.
   const [mockStatusOverrides, setMockStatusOverrides] = useState<Record<string, RoomStatus>>({});
@@ -137,9 +137,9 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   // Feature flags (runtime toggles for demo)
   const [flags, setFlags] = useState({ ...FLAGS });
   // Whichever override map is live for the current data source — the shared
-  // context's (DB-synced) overrides when flags.liveData is on, or the local
+  // context's (DB-synced) overrides when liveData is on, or the local
   // mock-only overrides when it's off.
-  const effectiveStatusOverrides = flags.liveData ? statusOverrides : mockStatusOverrides;
+  const effectiveStatusOverrides = liveData ? statusOverrides : mockStatusOverrides;
   const {
     visible: demoSheetVisible, setVisible: setDemoSheetVisible, close: closeDemoSheet,
     sheetAnim: demoSheetAnim, translateY: demoTranslateY, panResponder: demoPanResponder,
@@ -253,7 +253,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const latestNoteIds: Record<string, string> = {};
   // Mock rooms start pre-seeded with the note text from the Figma design;
   // any note a demoer actually saves (below) still takes precedence.
-  if (!flags.liveData) Object.assign(notes, MOCK_ROOM_NOTES);
+  if (!liveData) Object.assign(notes, MOCK_ROOM_NOTES);
   for (const n of allRoomNotes) {
     notes[n.roomId] = n.text;
     latestNoteIds[n.roomId] = n.id;
@@ -281,13 +281,13 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   const { data, loading, error } = useQuery(GET_HOUSEKEEPING_SCHEDULE, {
     variables: { startDate: queryStart, endDate: queryEnd },
     pollInterval: 15000,
-    skip: !flags.liveData,
+    skip: !liveData,
   });
 
   const schedule: DaySchedule[] = data?.housekeepingSchedule ?? [];
   const visibleDates = Array.from({ length: NUM_DAYS }, (_, i) => addDays(weekStart, i));
 
-  // Mock rooms (flags.liveData off) — a fixed dataset matching the Figma
+  // Mock rooms (liveData off) — a fixed dataset matching the Figma
   // design exactly, identical every day and independent of `schedule`/`today`.
   const mockRooms = React.useMemo(() => buildMockRooms(today), [today]);
 
@@ -330,8 +330,8 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   // Single-day view
   const selectedDay = schedule.find(d => d.date === selectedDate);
   // The rooms actually rendered — live schedule for the selected day, or the
-  // fixed mock dataset when flags.liveData is off (same rooms every day).
-  const activeRooms: RoomDaySchedule[] = flags.liveData ? (selectedDay?.rooms ?? []) : mockRooms;
+  // fixed mock dataset when liveData is off (same rooms every day).
+  const activeRooms: RoomDaySchedule[] = liveData ? (selectedDay?.rooms ?? []) : mockRooms;
 
   const matchesActiveStatusFilter = (r: RoomDaySchedule): boolean =>
     !activeStatusFilters.length || activeStatusFilters.includes(effectiveStatusOverrides[r.room.id] ?? r.room.status);
@@ -462,7 +462,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     // Note: changing status moves the card into a different status section
     // in the grouped list below, so (unlike a flat list) there's no scroll
     // offset that keeps the card in view — the list reflows around it.
-    if (flags.liveData) {
+    if (liveData) {
       setStatusOverride(statusDropdown.roomId, newStatus);
     } else {
       // Mock rooms aren't real DB rows — update locally only, no mutation.
@@ -479,7 +479,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
   function openNotesSheet(item: RoomDaySchedule, autoEditNoteId?: string) {
     setNotesSheetItem(item);
     // Pre-fill the draft from `notes` (the merged display value — real local
-    // notes, or the static mock seed when flags.liveData is off) so the sheet
+    // notes, or the static mock seed when liveData is off) so the sheet
     // opens showing the room's current note rather than blank. A real
     // LocalNote match (if any) additionally lets Save update it in place
     // instead of creating a new entry.
@@ -712,7 +712,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         // Status-grouped list (Figma node 737:28827) — sections ordered
         // Dirty (deep) → Dirty (standard) → Skip clean → Inspection needed →
         // Cleaned, each holding either the live-synced rooms for that status
-        // or the fixed mock dataset, depending on flags.liveData.
+        // or the fixed mock dataset, depending on liveData.
         <SectionList
           sections={statusSections}
           keyExtractor={item => item.room.id}
@@ -876,6 +876,8 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         setViewMode={setViewMode}
         cleaningStatusAsLabel={cleaningStatusAsLabel}
         setCleaningStatusAsLabel={setCleaningStatusAsLabel}
+        liveData={liveData}
+        setLiveData={setLiveData}
         insetsBottom={insets.bottom}
       />
 

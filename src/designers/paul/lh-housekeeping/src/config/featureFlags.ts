@@ -3,13 +3,6 @@
  * Toggle these to show/hide UI elements on the Housekeeping screen.
  */
 const FLAGS = {
-  /** Live data — when on, the Housekeeping schedule/status/notes come from
-   *  Si's shared si_reservations/si_room_cleaning tables (requires the shared
-   *  DB to be kept populated). When off, the screen shows a fixed set of mock
-   *  rooms/statuses matching the Figma design exactly, identical every day,
-   *  with no shared-database dependency. */
-  liveData: false,
-
   /** Guest name + ID card icon in the guest info row */
   showGuestName: true,
 

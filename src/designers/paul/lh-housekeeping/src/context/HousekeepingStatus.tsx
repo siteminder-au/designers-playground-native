@@ -23,6 +23,12 @@ interface HousekeepingStatusContextValue {
   // the circular icon. Set from either screen's demo flags sheet.
   cleaningStatusAsLabel: boolean;
   setCleaningStatusAsLabel: (value: boolean) => void;
+  // Overarching data-source switch — ON reads every screen's live GraphQL
+  // data (Housekeeping schedule, Calendar reservations); OFF shows each
+  // screen's static mock dataset instead. One control for all screens,
+  // housed only in Housekeeping's Demo Flags sheet.
+  liveData: boolean;
+  setLiveData: (value: boolean) => void;
   // Dev tool: in-prototype annotation overlay for the current screen.
   reviewOverlayEnabled: boolean;
   setReviewOverlayEnabled: (value: boolean) => void;
@@ -36,6 +42,8 @@ const HousekeepingStatusContext = createContext<HousekeepingStatusContextValue>(
   housekeeperMode: false,
   cleaningStatusAsLabel: true,
   setCleaningStatusAsLabel: () => {},
+  liveData: false,
+  setLiveData: () => {},
   reviewOverlayEnabled: false,
   setReviewOverlayEnabled: () => {},
 });
@@ -50,6 +58,7 @@ export function HousekeepingStatusProvider({ children }: { children: React.React
   // 796:40656) is on by default; Housekeeping's DemoFlagsSheet still exposes
   // this toggle but doesn't currently read it for its own rendering.
   const [cleaningStatusAsLabel, setCleaningStatusAsLabel] = useState(true);
+  const [liveData, setLiveData] = useState(false);
   const [reviewOverlayEnabled, setReviewOverlayEnabled] = useState(false);
   const [updateRoomStatusMutation] = useMutation(UPDATE_ROOM_STATUS);
 
@@ -69,7 +78,7 @@ export function HousekeepingStatusProvider({ children }: { children: React.React
   }
 
   return (
-    <HousekeepingStatusContext.Provider value={{ statusOverrides, setStatusOverride, viewMode, setViewMode, housekeeperMode, cleaningStatusAsLabel, setCleaningStatusAsLabel, reviewOverlayEnabled, setReviewOverlayEnabled }}>
+    <HousekeepingStatusContext.Provider value={{ statusOverrides, setStatusOverride, viewMode, setViewMode, housekeeperMode, cleaningStatusAsLabel, setCleaningStatusAsLabel, liveData, setLiveData, reviewOverlayEnabled, setReviewOverlayEnabled }}>
       {children}
     </HousekeepingStatusContext.Provider>
   );

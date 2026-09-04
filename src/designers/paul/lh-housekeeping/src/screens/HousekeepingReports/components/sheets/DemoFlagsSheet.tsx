@@ -19,6 +19,8 @@ export function DemoFlagsSheet({
   setViewMode,
   cleaningStatusAsLabel,
   setCleaningStatusAsLabel,
+  liveData,
+  setLiveData,
   insetsBottom,
 }: {
   visible: boolean;
@@ -32,6 +34,8 @@ export function DemoFlagsSheet({
   setViewMode: (mode: ViewMode) => void;
   cleaningStatusAsLabel: boolean;
   setCleaningStatusAsLabel: (value: boolean) => void;
+  liveData: boolean;
+  setLiveData: (value: boolean) => void;
   insetsBottom: number;
 }) {
   return (
@@ -42,7 +46,7 @@ export function DemoFlagsSheet({
           <View style={styles.sheetHandleArea} {...panResponder.panHandlers}><View style={styles.sortSheetHandle} /></View>
           <View style={styles.sortSheetHeader}>
             <Text style={styles.sortSheetTitle}>Demo flags</Text>
-            <TouchableOpacity onPress={() => { setFlags({ ...FLAGS }); setViewMode('full'); setCleaningStatusAsLabel(false); }}>
+            <TouchableOpacity onPress={() => { setFlags({ ...FLAGS }); setViewMode('full'); setCleaningStatusAsLabel(false); setLiveData(false); }}>
               <Text style={styles.sortResetText}>Reset</Text>
             </TouchableOpacity>
           </View>
@@ -97,14 +101,15 @@ export function DemoFlagsSheet({
             </View>
             <View style={styles.dropdownDivider} />
 
-            {/* Live data — ON reads the shared si_reservations/si_room_cleaning
-                tables; OFF shows a fixed set of mock rooms matching the Figma
-                design exactly, the same every day, with no DB dependency. */}
+            {/* Live data — one overarching switch for every screen. ON reads
+                each screen's live shared-DB query (Housekeeping schedule,
+                Calendar reservations); OFF shows each screen's own static
+                mock dataset instead. Housed here only. */}
             <View style={styles.demoFlagRow}>
               <Text style={styles.demoFlagLabel}>Live data (shared database)</Text>
               <Switch
-                value={flags.liveData}
-                onValueChange={val => setFlags(prev => ({ ...prev, liveData: val } as typeof prev))}
+                value={liveData}
+                onValueChange={setLiveData}
                 trackColor={{ false: '#e5e7eb', true: ORANGE }}
                 thumbColor="#fff"
               />

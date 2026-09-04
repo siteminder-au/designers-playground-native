@@ -167,7 +167,7 @@ export default function CalendarScreen() {
   const insets = useSafeAreaInsets();
   const [selectedDate, setSelectedDate] = useState(today);
   const [weekStart, setWeekStart] = useState(today);
-  const { statusOverrides, cleaningStatusAsLabel, setCleaningStatusAsLabel } = useHousekeepingStatus();
+  const { statusOverrides, cleaningStatusAsLabel, setCleaningStatusAsLabel, liveData } = useHousekeepingStatus();
 
   // Demo flags sheet
   const {
@@ -186,19 +186,18 @@ export default function CalendarScreen() {
   const queryStart = addDays(weekStart, -7);
   const queryEnd = addDays(weekStart, NUM_DAYS + 7);
 
-  // The shared si_reservations table isn't reliably kept populated — what's
-  // there is often partial (e.g. one room type, all rooms the same cleaning
-  // status), which would silently take over from the always-empty check
-  // below. Skip the live query entirely and always show the mock dataset,
-  // which is authored to cover every cleaning status.
-  const { loading } = useQuery(GET_CALENDAR_DATA, {
+  // liveData is the same overarching switch Housekeeping's Demo Flags sheet
+  // controls — ON reads the shared si_reservations table directly (which
+  // isn't reliably kept populated day-to-day); OFF shows the mock dataset,
+  // authored to cover every cleaning status.
+  const { data, loading } = useQuery(GET_CALENDAR_DATA, {
     variables: { startDate: queryStart, endDate: queryEnd },
     pollInterval: 15000,
-    skip: true,
+    skip: !liveData,
   });
 
   const visibleDates = Array.from({ length: NUM_DAYS }, (_, i) => addDays(weekStart, i));
-  const groups: RoomGroup[] = buildMockCalendarGroups(today);
+  const groups: RoomGroup[] = liveData ? (data?.calendarData ?? []) : buildMockCalendarGroups(today);
 
   function getBlockProps(res: CalendarReservation) {
     const startOffset = daysBetween(weekStart, res.checkIn);

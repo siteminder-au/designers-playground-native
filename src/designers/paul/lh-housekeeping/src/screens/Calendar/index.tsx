@@ -186,15 +186,19 @@ export default function CalendarScreen() {
   const queryStart = addDays(weekStart, -7);
   const queryEnd = addDays(weekStart, NUM_DAYS + 7);
 
-  const { data, loading } = useQuery(GET_CALENDAR_DATA, {
+  // The shared si_reservations table isn't reliably kept populated — what's
+  // there is often partial (e.g. one room type, all rooms the same cleaning
+  // status), which would silently take over from the always-empty check
+  // below. Skip the live query entirely and always show the mock dataset,
+  // which is authored to cover every cleaning status.
+  const { loading } = useQuery(GET_CALENDAR_DATA, {
     variables: { startDate: queryStart, endDate: queryEnd },
     pollInterval: 15000,
+    skip: true,
   });
 
   const visibleDates = Array.from({ length: NUM_DAYS }, (_, i) => addDays(weekStart, i));
-  // The shared si_reservations table isn't reliably kept populated, so fall
-  // back to a static mock dataset whenever the live query comes back empty.
-  const groups: RoomGroup[] = data?.calendarData?.length ? data.calendarData : buildMockCalendarGroups(today);
+  const groups: RoomGroup[] = buildMockCalendarGroups(today);
 
   function getBlockProps(res: CalendarReservation) {
     const startOffset = daysBetween(weekStart, res.checkIn);

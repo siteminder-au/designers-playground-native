@@ -478,20 +478,17 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
   function openNotesSheet(item: RoomDaySchedule, autoEditNoteId?: string) {
     setNotesSheetItem(item);
-    // Pre-fill the draft with the room's current note (if any) so the sheet's
-    // single field opens ready to edit rather than blank.
+    // Pre-fill the draft from `notes` (the merged display value — real local
+    // notes, or the static mock seed when flags.liveData is off) so the sheet
+    // opens showing the room's current note rather than blank. A real
+    // LocalNote match (if any) additionally lets Save update it in place
+    // instead of creating a new entry.
     const noteToEdit = autoEditNoteId
       ? allRoomNotes.find(n => n.id === autoEditNoteId)
       : null;
-    if (noteToEdit) {
-      setEditingNoteId(noteToEdit.id);
-      setNotesSheetDraft(noteToEdit.text);
-      setNoteCategory(noteToEdit.category);
-    } else {
-      setNotesSheetDraft('');
-      setEditingNoteId(null);
-      setNoteCategory('Housekeeping');
-    }
+    setNotesSheetDraft(notes[item.room.id] ?? '');
+    setEditingNoteId(noteToEdit?.id ?? null);
+    setNoteCategory(noteToEdit?.category ?? 'Housekeeping');
     setNotesSheetVisible(true);
   }
 

@@ -494,8 +494,12 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
   function saveSheetNote() {
     if (!notesSheetItem) return;
+    // A trimmed-empty save (all characters, including whitespace-only,
+    // deleted) clears the note back to the empty "+ Room note" state rather
+    // than being a no-op — unless there was never a note here to begin with.
     const trimmed = notesSheetDraft.trim();
-    if (!trimmed) return;
+    const hadNote = !!notes[notesSheetItem.room.id];
+    if (!trimmed && !hadNote) return;
     if (editingNoteId) {
       updateNote(editingNoteId, { text: trimmed, category: noteCategory });
     } else {

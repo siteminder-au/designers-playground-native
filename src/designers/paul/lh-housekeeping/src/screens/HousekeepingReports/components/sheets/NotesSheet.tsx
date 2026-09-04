@@ -112,7 +112,6 @@ export function NotesSheet({
                   value={notesSheetDraft}
                   onChangeText={setNotesSheetDraft}
                   multiline
-                  autoFocus
                   placeholder="Type here"
                   placeholderTextColor={COLORS.Black[600]}
                   textAlignVertical="top"

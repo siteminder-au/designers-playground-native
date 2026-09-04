@@ -3,9 +3,14 @@ import { View, Text, TouchableOpacity, Modal, Animated, PanResponder } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../../../config/colors';
 import { ORANGE } from '../../constants';
+import { addDays } from '../../utils/dateFormat';
 import styles from '../../styles';
 
 const MONTH_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+// Housekeeping only schedules within a 2-week look-ahead — dates before today
+// or more than 14 days out aren't selectable (Figma node 1009:48794).
+const MAX_DAYS_AHEAD = 14;
 
 export function MonthSheet({
   visible,
@@ -60,8 +65,14 @@ export function MonthSheet({
   const isToday = (day: number) => day === todayDate.getDate() && month === todayDate.getMonth() && year === todayDate.getFullYear();
   const selDate = new Date(selectedDate + 'T12:00:00');
   const isSelected = (day: number) => day === selDate.getDate() && month === selDate.getMonth() && year === selDate.getFullYear();
+  const cellIso = (day: number) => `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const maxSelectableDate = addDays(today, MAX_DAYS_AHEAD);
+  const isDisabled = (day: number) => {
+    const iso = cellIso(day);
+    return iso < today || iso > maxSelectableDate;
+  };
   const pickDay = (day: number) => {
-    const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const iso = cellIso(day);
     setSelectedDate(iso);
     setWeekStart(iso);
     onClose();
@@ -75,8 +86,17 @@ export function MonthSheet({
           <View style={styles.sheetHandleArea} {...panResponder.panHandlers}>
             <View style={styles.dateSheetHandle} />
           </View>
+          <View style={styles.monthSheetTitleRow}>
+            <Text style={styles.monthSheetTitle}>Calendar</Text>
+            <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close" size={22} color={COLORS.Black[200]} />
+            </TouchableOpacity>
+          </View>
           <View style={styles.monthSheetHeader}>
-            <Text style={styles.monthSheetMonthYear}>{MONTH_LONG[month]} {year}</Text>
+            <View style={styles.monthSheetMonthYearRow}>
+              <Text style={styles.monthSheetMonthYear}>{MONTH_LONG[month]} {year}</Text>
+              <Ionicons name="chevron-forward" size={13} color={ORANGE} />
+            </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 24 }}>
               <TouchableOpacity onPress={goPrev}>
                 <Ionicons name="chevron-back" size={22} color={ORANGE} />
@@ -98,17 +118,20 @@ export function MonthSheet({
                   if (day === null) return <View key={ci} style={styles.monthSheetCell} />;
                   const sel = isSelected(day);
                   const td = isToday(day);
+                  const disabled = isDisabled(day);
                   return (
                     <TouchableOpacity
                       key={ci}
                       style={[styles.monthSheetCell, sel && styles.monthSheetCellSelected]}
                       onPress={() => pickDay(day)}
+                      disabled={disabled}
                       activeOpacity={0.6}
                     >
                       <Text style={[
                         styles.monthSheetDayNum,
-                        td && !sel && { color: ORANGE },
+                        td && !sel && !disabled && { color: ORANGE },
                         sel && styles.monthSheetDayNumSelected,
+                        disabled && styles.monthSheetDayNumDisabled,
                       ]}>
                         {day}
                       </Text>
@@ -119,9 +142,6 @@ export function MonthSheet({
             ))}
           </View>
           <View style={{ height: insetsBottom + 16 }} />
-          <TouchableOpacity onPress={onClose} style={styles.monthSheetCloseBtn}>
-            <Ionicons name="close" size={20} color={COLORS.Black[200]} />
-          </TouchableOpacity>
         </Animated.View>
       </Animated.View>
     </Modal>

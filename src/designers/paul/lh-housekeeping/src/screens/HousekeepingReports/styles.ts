@@ -487,12 +487,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     maxHeight: '85%',
   },
+  monthSheetTitleRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingTop: 4, paddingBottom: 4, paddingHorizontal: 3,
+  },
+  monthSheetTitle: { fontSize: 18, lineHeight: 22, fontWeight: '600', color: '#000000' },
   monthSheetHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingTop: 12, paddingBottom: 9, paddingHorizontal: 3,
   },
+  monthSheetMonthYearRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
   monthSheetMonthYear: {
-    fontSize: 17, fontWeight: '600', color: '#484b4b', letterSpacing: -0.408,
+    fontSize: 17, fontWeight: '600', color: '#6d7272', letterSpacing: -0.408,
   },
   monthSheetDayRow: {
     flexDirection: 'row', justifyContent: 'space-between',
@@ -511,10 +517,7 @@ const styles = StyleSheet.create({
   monthSheetCellSelected: { backgroundColor: '#FFE2D7' },
   monthSheetDayNum: { fontSize: 20, fontWeight: '400', color: '#484b4b', letterSpacing: 0.38 },
   monthSheetDayNumSelected: { color: ORANGE, fontWeight: '600' },
-  monthSheetCloseBtn: {
-    position: 'absolute', top: 16, right: 16,
-    width: 24, height: 24, alignItems: 'center', justifyContent: 'center',
-  },
+  monthSheetDayNumDisabled: { color: '#9ba0a0' },
 
   // Sort bottom sheet
   sortSheetOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.35)' },

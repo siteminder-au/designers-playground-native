@@ -190,10 +190,15 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
   // Calendar's screen already works around this way).
   const { width: windowWidth } = useWindowDimensions();
   const [measuredWidth, setMeasuredWidth] = useState(0);
-  const CARD_WIDTH = (measuredWidth || windowWidth) - 32;
+  // Card is narrower than the available width so the next card always peeks
+  // in at the trailing edge; CARD_GAP (fixed, not proportional) is the exact
+  // gap between cards regardless of screen size.
+  const CARD_PEEK = 32;
+  const CARD_GAP = 8;
+  const CARD_WIDTH = (measuredWidth || windowWidth) - 32 - CARD_PEEK;
 
   function handleCardScrollEnd(e: NativeSyntheticEvent<NativeScrollEvent>) {
-    const index = Math.round(e.nativeEvent.contentOffset.x / CARD_WIDTH);
+    const index = Math.round(e.nativeEvent.contentOffset.x / (CARD_WIDTH + CARD_GAP));
     setActiveCard(index === 1 ? 1 : 0);
   }
 
@@ -251,18 +256,22 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
             </TouchableOpacity>
           </View>
 
-          {/* Today stats — horizontal swipeable carousel, one page per card */}
-          <View>
+          {/* Today stats — horizontal swipeable carousel, one page per card.
+              Escapes topSection's side padding (negative margin) so the next
+              card can peek in at the right edge; padding is reinstated via
+              contentContainerStyle so the first card still sits flush left. */}
+          <View style={{ marginHorizontal: -16 }}>
             <ScrollView
               horizontal
-              pagingEnabled
               showsHorizontalScrollIndicator={false}
-              snapToInterval={CARD_WIDTH}
+              snapToInterval={CARD_WIDTH + CARD_GAP}
+              snapToAlignment="start"
               decelerationRate="fast"
+              contentContainerStyle={{ paddingHorizontal: 16 }}
               onMomentumScrollEnd={handleCardScrollEnd}
             >
               {/* Card 0 — Reservations stats */}
-              <View style={{ width: CARD_WIDTH }}>
+              <View style={{ width: CARD_WIDTH, marginRight: CARD_GAP }}>
                 <View style={styles.todayCard}>
                   <View style={styles.todayTopRow}>
                     <View style={styles.todayStat}>

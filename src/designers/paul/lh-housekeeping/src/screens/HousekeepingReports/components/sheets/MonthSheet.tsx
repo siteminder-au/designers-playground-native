@@ -8,9 +8,10 @@ import styles from '../../styles';
 
 const MONTH_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-// Housekeeping only schedules within a 2-week look-ahead — dates before today
-// or more than 14 days out aren't selectable (Figma node 1009:48794).
-const MAX_DAYS_AHEAD = 14;
+// Housekeeping only schedules within a 4-week window centered on today —
+// dates more than 14 days before or after today aren't selectable
+// (Figma node 1009:48794).
+const WINDOW_DAYS = 14;
 
 export function MonthSheet({
   visible,
@@ -66,10 +67,11 @@ export function MonthSheet({
   const selDate = new Date(selectedDate + 'T12:00:00');
   const isSelected = (day: number) => day === selDate.getDate() && month === selDate.getMonth() && year === selDate.getFullYear();
   const cellIso = (day: number) => `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  const maxSelectableDate = addDays(today, MAX_DAYS_AHEAD);
+  const minSelectableDate = addDays(today, -WINDOW_DAYS);
+  const maxSelectableDate = addDays(today, WINDOW_DAYS);
   const isDisabled = (day: number) => {
     const iso = cellIso(day);
-    return iso < today || iso > maxSelectableDate;
+    return iso < minSelectableDate || iso > maxSelectableDate;
   };
   const pickDay = (day: number) => {
     const iso = cellIso(day);

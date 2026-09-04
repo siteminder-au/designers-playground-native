@@ -64,14 +64,14 @@ const STATUS_ICON: Record<RoomStatus, { name: React.ComponentProps<typeof Ionico
   AWAITING_INSPECTION: { name: 'help-circle',      color: COLORS.Blue[200], bg: COLORS.Blue[600] },
 };
 
-// Text-label variant of the cleaning status (toggleable via demo flag).
-// Colors mirror STATUS_ICON.color so the visual treatment stays consistent.
+// Text-label variant of the cleaning status — a colour-matched dot + label,
+// per Figma node 796:40656.
 const STATUS_LABEL_TEXT: Record<RoomStatus, { label: string; color: string }> = {
-  CLEANED:             { label: 'Clean',          color: '#2d7d46'        },
-  UNCLEANED:           { label: 'Needs clean',    color: '#b91c1c'        },
-  DEEP_CLEAN:          { label: 'Deep clean',     color: '#b91c1c'        },
-  SKIP_CLEANING:       { label: 'Skip',           color: '#a16207'        },
-  AWAITING_INSPECTION: { label: 'Inspection',     color: COLORS.Blue[200] },
+  CLEANED:             { label: 'Clean',            color: '#0e5431' },
+  UNCLEANED:           { label: 'Dirty (standard)', color: '#b81919' },
+  DEEP_CLEAN:          { label: 'Dirty (deep)',     color: '#b81919' },
+  SKIP_CLEANING:       { label: 'Skip clean',       color: '#b27700' },
+  AWAITING_INSPECTION: { label: 'Inspection',       color: '#0d7af0' },
 };
 
 // 'symbol' variant — MaterialCommunityIcons with housekeeping-semantic meaning
@@ -295,40 +295,6 @@ export default function CalendarScreen() {
                 <View key={room.id} style={styles.roomRow}>
                   {/* Room label */}
                   <View style={[styles.roomLabel, { width: ROOM_COL_WIDTH }]}>
-                    {/* Status keyline — overlays the left edge of the room
-                        label so it never bleeds outside the container. Only
-                        rendered with the text-label variant. UNCLEANED uses a
-                        column of small segments (more distinctive than CSS
-                        border-style:dashed which looks near-solid at 3px).
-                        Other statuses get a solid bar. */}
-                    {cleaningStatusAsLabel && (() => {
-                      const color = STATUS_LABEL_TEXT[effectiveStatus].color;
-                      const isDashed = effectiveStatus === 'UNCLEANED';
-                      if (isDashed) {
-                        // Diagonal stripes inside the keyline column. Each
-                        // stripe is a thin rectangle rotated −45°; the parent's
-                        // overflow:hidden clips them to the 3px-wide column.
-                        return (
-                          <View style={[styles.statusKeyline, { overflow: 'hidden' }]}>
-                            {Array.from({ length: 10 }, (_, i) => (
-                              <View
-                                key={i}
-                                style={{
-                                  position: 'absolute',
-                                  top: i * 6 - 3,
-                                  left: -3,
-                                  width: 9,
-                                  height: 1.5,
-                                  backgroundColor: color,
-                                  transform: [{ rotate: '-45deg' }],
-                                }}
-                              />
-                            ))}
-                          </View>
-                        );
-                      }
-                      return <View style={[styles.statusKeyline, { backgroundColor: color }]} />;
-                    })()}
                     <View style={styles.roomLabelRow}>
                       <Text
                         style={styles.roomLabelName}
@@ -367,9 +333,12 @@ export default function CalendarScreen() {
                       )}
                     </View>
                     {cleaningStatusAsLabel && (
-                      <Text style={[styles.roomLabelStatus, { color: STATUS_LABEL_TEXT[effectiveStatus].color }]} numberOfLines={1}>
-                        {STATUS_LABEL_TEXT[effectiveStatus].label}
-                      </Text>
+                      <View style={styles.roomLabelStatusRow}>
+                        <View style={[styles.roomLabelStatusDot, { backgroundColor: STATUS_LABEL_TEXT[effectiveStatus].color }]} />
+                        <Text style={[styles.roomLabelStatus, { color: STATUS_LABEL_TEXT[effectiveStatus].color }]} numberOfLines={1}>
+                          {STATUS_LABEL_TEXT[effectiveStatus].label}
+                        </Text>
+                      </View>
                     )}
                   </View>
 
@@ -565,13 +534,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#f0f0f0',
   },
-  statusKeyline: {
-    position: 'absolute',
-    left: 0,
-    top: 4,
-    bottom: 4,
-    width: 3,
-  },
   roomLabel: {
     justifyContent: 'center',
     paddingLeft: 8,
@@ -583,7 +545,9 @@ const styles = StyleSheet.create({
   },
   roomLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   roomLabelName: { fontSize: 14, fontWeight: '400', color: '#000', flex: 1, lineHeight: 18 },
-  roomLabelStatus: { fontSize: 12, fontWeight: '400', marginTop: 2 },
+  roomLabelStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  roomLabelStatusDot: { width: 6, height: 6, borderRadius: 3 },
+  roomLabelStatus: { fontSize: 12, fontWeight: '400', flexShrink: 1 },
   abbrPill: {
     borderWidth: 1.5,
     borderRadius: 4,

@@ -34,7 +34,7 @@ const HousekeepingStatusContext = createContext<HousekeepingStatusContextValue>(
   viewMode: 'full',
   setViewMode: () => {},
   housekeeperMode: false,
-  cleaningStatusAsLabel: false,
+  cleaningStatusAsLabel: true,
   setCleaningStatusAsLabel: () => {},
   reviewOverlayEnabled: false,
   setReviewOverlayEnabled: () => {},
@@ -46,7 +46,10 @@ export function HousekeepingStatusProvider({ children }: { children: React.React
   // Browser view renders the same limited UI as 'limited' — it just sits inside
   // a faux browser window — so both map to housekeeper (limited) mode.
   const housekeeperMode = viewMode === 'limited' || viewMode === 'browser';
-  const [cleaningStatusAsLabel, setCleaningStatusAsLabel] = useState(false);
+  // Calendar's cleaning-status treatment (dot + coloured label, Figma node
+  // 796:40656) is on by default; Housekeeping's DemoFlagsSheet still exposes
+  // this toggle but doesn't currently read it for its own rendering.
+  const [cleaningStatusAsLabel, setCleaningStatusAsLabel] = useState(true);
   const [reviewOverlayEnabled, setReviewOverlayEnabled] = useState(false);
   const [updateRoomStatusMutation] = useMutation(UPDATE_ROOM_STATUS);
 

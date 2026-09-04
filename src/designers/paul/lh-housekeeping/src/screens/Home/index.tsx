@@ -529,6 +529,8 @@ const styles = StyleSheet.create({
 
   // Today card
   todayCard: {
+    flex: 1,
+    justifyContent: 'center',
     backgroundColor: '#fff',
     borderRadius: 12,
     paddingHorizontal: 16,

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Modal, Animated, PanResponder, ScrollView, Keyboard, Platform, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../../../config/colors';
+import { ORANGE } from '../../constants';
 import type { RoomDaySchedule } from '../../types';
 import styles from '../../styles';
 
@@ -54,6 +55,28 @@ export function NotesSheet({
     ? (/^\d+$/.test(item.room.number) ? `Room ${item.room.number}` : item.room.number)
     : '';
 
+  // View state (Figma node 806:37656) shows the existing note read-only with
+  // a pencil to edit it; Edit state (742:56218) is the composer. A room with
+  // no note yet skips straight to the composer. Snapshot the note text each
+  // time the sheet opens so Cancel-while-editing can revert to it.
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [originalText, setOriginalText] = React.useState('');
+  React.useEffect(() => {
+    if (!visible) return;
+    setIsEditing(!notesSheetDraft.trim());
+    setOriginalText(notesSheetDraft);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  function handleCancel() {
+    if (originalText) {
+      setNotesSheetDraft(originalText);
+      setIsEditing(false);
+    } else {
+      onClose();
+    }
+  }
+
   function handleSave() {
     saveSheetNote();
     onClose();
@@ -81,28 +104,40 @@ export function NotesSheet({
           </View>
 
           <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insetsBottom + 24 }} keyboardShouldPersistTaps="handled">
-            <Text style={styles.notesSheetLabel}>Add note</Text>
-            <TextInput
-              style={styles.notesSheetInput}
-              value={notesSheetDraft}
-              onChangeText={setNotesSheetDraft}
-              multiline
-              placeholder="Type here"
-              placeholderTextColor={COLORS.Black[600]}
-              textAlignVertical="top"
-              maxLength={NOTE_MAX}
-            />
-            <Text style={[styles.notesCharCount, notesSheetDraft.length >= NOTE_MAX && styles.notesCharCountMax]}>
-              {notesSheetDraft.length}/{NOTE_MAX}
-            </Text>
-            <View style={styles.notesSheetSaveRow}>
-              <TouchableOpacity onPress={onClose}>
-                <Text style={styles.notesSheetCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.filterSaveBtn} onPress={handleSave} activeOpacity={0.85}>
-                <Text style={styles.filterSaveBtnText}>Save</Text>
-              </TouchableOpacity>
-            </View>
+            {isEditing ? (
+              <>
+                <Text style={styles.notesSheetLabel}>Add note</Text>
+                <TextInput
+                  style={styles.notesSheetInput}
+                  value={notesSheetDraft}
+                  onChangeText={setNotesSheetDraft}
+                  multiline
+                  autoFocus
+                  placeholder="Type here"
+                  placeholderTextColor={COLORS.Black[600]}
+                  textAlignVertical="top"
+                  maxLength={NOTE_MAX}
+                />
+                <Text style={[styles.notesCharCount, notesSheetDraft.length >= NOTE_MAX && styles.notesCharCountMax]}>
+                  {notesSheetDraft.length}/{NOTE_MAX}
+                </Text>
+                <View style={styles.notesSheetSaveRow}>
+                  <TouchableOpacity onPress={handleCancel}>
+                    <Text style={styles.notesSheetCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.filterSaveBtn} onPress={handleSave} activeOpacity={0.85}>
+                    <Text style={styles.filterSaveBtnText}>Save</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <View style={styles.notesSheetViewRow}>
+                <Text style={styles.notesSheetViewText}>{notesSheetDraft}</Text>
+                <TouchableOpacity onPress={() => setIsEditing(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="pencil-outline" size={16} color={ORANGE} />
+                </TouchableOpacity>
+              </View>
+            )}
           </ScrollView>
         </Animated.View>
       </Animated.View>

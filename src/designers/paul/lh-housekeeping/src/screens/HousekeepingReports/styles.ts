@@ -264,6 +264,8 @@ const styles = StyleSheet.create({
   notesCharCountMax: { color: '#b81919', fontWeight: '600' as const },
   notesSheetSaveRow: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'center' as const, marginTop: 12 },
   notesSheetCancelText: { fontSize: 15, lineHeight: 20, fontWeight: '700' as const, color: ORANGE },
+  notesSheetViewRow:  { flexDirection: 'row' as const, alignItems: 'flex-start' as const, gap: 8 },
+  notesSheetViewText: { flex: 1, fontSize: 15, lineHeight: 20, color: '#333333' },
 
   // Bed config
   bedConfigRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },

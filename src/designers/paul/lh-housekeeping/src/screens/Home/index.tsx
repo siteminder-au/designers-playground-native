@@ -5,7 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from 'react-native';
@@ -16,10 +16,6 @@ import { useReviewContext } from '../../context/ReviewContext';
 import homeAnnotations from '../../annotations/Home.json';
 
 // ── Tokens ────────────────────────────────────────────────────────────────────
-
-// Today stats carousel card — one page per card, matches the ScrollView's own
-// width (topSection's 16px side padding is outside the ScrollView).
-const CARD_WIDTH = Dimensions.get('window').width - 32;
 
 const ORANGE       = '#ff6842';
 const ORANGE_MED   = '#ffa078'; // LHPrimary/500
@@ -187,6 +183,14 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
   const [perfTab, setPerfTab] = useState<'rooms' | 'revenue'>('rooms');
   // Which page of the Today stats carousel is currently in view.
   const [activeCard, setActiveCard] = useState<0 | 1>(0);
+  // Measure the actual rendered container width via onLayout. Using
+  // useWindowDimensions() alone is unreliable on Expo Web's static prerender
+  // (returns a stale/default width before hydration), which made the
+  // carousel's card width wrong and clipped the row content (same issue
+  // Calendar's screen already works around this way).
+  const { width: windowWidth } = useWindowDimensions();
+  const [measuredWidth, setMeasuredWidth] = useState(0);
+  const CARD_WIDTH = (measuredWidth || windowWidth) - 32;
 
   function handleCardScrollEnd(e: NativeSyntheticEvent<NativeScrollEvent>) {
     const index = Math.round(e.nativeEvent.contentOffset.x / CARD_WIDTH);
@@ -209,7 +213,11 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
   }, [isFocused]);
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView
+      style={styles.safeArea}
+      edges={['top']}
+      onLayout={(e) => setMeasuredWidth(e.nativeEvent.layout.width)}
+    >
       <ScrollView
         showsVerticalScrollIndicator={false}
         onScroll={e => setScrollY(e.nativeEvent.contentOffset.y)}

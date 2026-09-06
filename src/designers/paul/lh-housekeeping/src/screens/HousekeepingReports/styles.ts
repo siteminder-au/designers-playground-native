@@ -325,14 +325,18 @@ const styles = StyleSheet.create({
 
   dropdownDivider:    { height: 1, backgroundColor: '#f3f4f6' },
 
-  // Cleaning status bottom sheet (Figma node 742:55649)
+  // Cleaning status bottom sheet (Figma node 742:55649, selected state 886:63441)
   cleaningStatusList: { paddingHorizontal: 20, paddingBottom: 4, gap: 8 },
   cleaningStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#f2f2f7',
     borderRadius: 4,
     paddingVertical: 16,
-    paddingLeft: 16,
+    paddingHorizontal: 16,
   },
+  cleaningStatusRowActive: { backgroundColor: '#fff5ee' },
   cleaningStatusRowText: { fontSize: 16, fontWeight: '700', letterSpacing: -0.31 },
 
   separator:       { height: 1, backgroundColor: '#f3f4f6' },

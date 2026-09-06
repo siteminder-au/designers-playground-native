@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Modal, Animated, PanResponder } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { RoomStatus } from '../../../../context/HousekeepingStatus';
-import { STATUS_CONFIG } from '../../constants';
+import { STATUS_CONFIG, ORANGE } from '../../constants';
 import styles from '../../styles';
 
 // Matches the Figma bottom sheet (node 742:55649) exactly — every status
@@ -23,6 +23,7 @@ export function CleaningStatusSheet({
   translateY,
   panResponder,
   statuses,
+  activeStatus,
   onSelect,
 }: {
   visible: boolean;
@@ -31,6 +32,7 @@ export function CleaningStatusSheet({
   translateY: Animated.Value;
   panResponder: ReturnType<typeof PanResponder.create>;
   statuses: RoomStatus[];
+  activeStatus: RoomStatus;
   onSelect: (status: RoomStatus) => void;
 }) {
   return (
@@ -48,18 +50,22 @@ export function CleaningStatusSheet({
             </TouchableOpacity>
           </View>
           <View style={styles.cleaningStatusList}>
-            {statuses.map(s => (
-              <TouchableOpacity
-                key={s}
-                style={styles.cleaningStatusRow}
-                activeOpacity={0.7}
-                onPress={() => onSelect(s)}
-              >
-                <Text style={[styles.cleaningStatusRowText, { color: SHEET_TEXT_COLOR[s] }]}>
-                  {STATUS_CONFIG[s].label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {statuses.map(s => {
+              const isActive = s === activeStatus;
+              return (
+                <TouchableOpacity
+                  key={s}
+                  style={[styles.cleaningStatusRow, isActive && styles.cleaningStatusRowActive]}
+                  activeOpacity={0.7}
+                  onPress={() => onSelect(s)}
+                >
+                  <Text style={[styles.cleaningStatusRowText, { color: SHEET_TEXT_COLOR[s] }]}>
+                    {STATUS_CONFIG[s].label}
+                  </Text>
+                  {isActive && <Ionicons name="checkmark" size={16} color={ORANGE} />}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </Animated.View>
       </Animated.View>

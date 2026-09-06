@@ -98,7 +98,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
   // Status overrides (shared via context for cross-screen sync)
   const { statusOverrides, setStatusOverride, viewMode, setViewMode, housekeeperMode, cleaningStatusAsLabel, setCleaningStatusAsLabel, liveData, setLiveData } = useHousekeepingStatus();
-  const [statusDropdown, setStatusDropdown] = useState<{ roomId: string } | null>(null);
+  const [statusDropdown, setStatusDropdown] = useState<{ roomId: string; currentStatus: RoomStatus } | null>(null);
   const {
     visible: statusSheetVisible, setVisible: setStatusSheetVisible, close: closeStatusSheet,
     sheetAnim: statusSheetAnim, translateY: statusSheetTranslateY, panResponder: statusSheetPanResponder,
@@ -453,8 +453,8 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     setWeekStart(today);
   }
 
-  function openStatusDropdown(roomId: string) {
-    setStatusDropdown({ roomId });
+  function openStatusDropdown(roomId: string, currentStatus: RoomStatus) {
+    setStatusDropdown({ roomId, currentStatus });
     setStatusSheetVisible(true);
   }
 
@@ -692,7 +692,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                   onEditNotePress={latestNoteIds[item.room.id]
                     ? () => openNotesSheet(item, latestNoteIds[item.room.id])
                     : undefined}
-                  onStatusPress={() => openStatusDropdown(item.room.id)}
+                  onStatusPress={() => openStatusDropdown(item.room.id, effectiveStatus)}
                   assignedTo={assignments[item.room.id] ?? null}
                   onAssignPress={() => openAssignModal(item.room.id)}
                 />
@@ -732,7 +732,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                   status={effectiveStatus}
                   note={notes[item.room.id] ?? ''}
                   onNotePress={() => openNotesSheet(item, latestNoteIds[item.room.id])}
-                  onStatusPress={() => openStatusDropdown(item.room.id)}
+                  onStatusPress={() => openStatusDropdown(item.room.id, effectiveStatus)}
                 />
               </AnimatedRoomWrapper>
             );
@@ -748,16 +748,19 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         />
       )}
 
-      {/* ── Cleaning status bottom sheet (Figma node 742:55649) ── */}
-      <CleaningStatusSheet
-        visible={statusSheetVisible}
-        onClose={closeStatusSheet}
-        sheetAnim={statusSheetAnim}
-        translateY={statusSheetTranslateY}
-        panResponder={statusSheetPanResponder}
-        statuses={(Object.keys(STATUS_CONFIG) as RoomStatus[]).filter(s => !(housekeeperMode && s === 'CLEANED'))}
-        onSelect={applyStatusChange}
-      />
+      {/* ── Cleaning status bottom sheet (Figma node 742:55649, selected state 886:63441) ── */}
+      {statusDropdown && (
+        <CleaningStatusSheet
+          visible={statusSheetVisible}
+          onClose={closeStatusSheet}
+          sheetAnim={statusSheetAnim}
+          translateY={statusSheetTranslateY}
+          panResponder={statusSheetPanResponder}
+          statuses={(Object.keys(STATUS_CONFIG) as RoomStatus[]).filter(s => !(housekeeperMode && s === 'CLEANED'))}
+          activeStatus={effectiveStatusOverrides[statusDropdown.roomId] ?? statusDropdown.currentStatus}
+          onSelect={applyStatusChange}
+        />
+      )}
 
 
       {/* ── Notes modal ── */}

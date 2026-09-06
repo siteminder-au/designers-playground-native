@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { View, Text, TouchableOpacity, Platform } from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import type { RoomStatus } from '../../../context/HousekeepingStatus';
 import { STATUS_VARIANT, SYMBOL_CONTAINER } from '../../../config/statusVariant';
@@ -7,36 +7,16 @@ import { STATUS_CONFIG, STATUS_SVG_ICON, STATUS_SYMBOL, STATUS_ABBR } from '../c
 import { SymbolIcon } from './SymbolIcon';
 import styles from '../styles';
 
-export type BadgeRect = { x: number; y: number; width: number; height: number };
-
 export function CleaningControl({
   status,
   onPress,
   showIcon = true,
 }: {
   status: RoomStatus;
-  onPress: (rect: BadgeRect) => void;
+  onPress: () => void;
   showIcon?: boolean;
 }) {
-  const ref = useRef<View>(null);
   const { label, bg, border, text, icon } = STATUS_CONFIG[status];
-
-  function handlePress() {
-    ref.current?.measure((_x, _y, width, height, pageX, pageY) => {
-      // On web the App.tsx wrapper applies transform:translateZ(0) to body
-      // so RNW Modals are anchored inside the iPhone frame. That makes body
-      // the containing block for the dropdown's absolute positioning, so we
-      // must convert page (viewport) coords to body-relative coords here.
-      let x = pageX;
-      let y = pageY;
-      if (Platform.OS === 'web' && typeof document !== 'undefined') {
-        const bodyRect = document.body.getBoundingClientRect();
-        x -= bodyRect.left;
-        y -= bodyRect.top;
-      }
-      onPress({ x, y, width, height });
-    });
-  }
 
   if (STATUS_VARIANT === 'symbol') {
     const sym = STATUS_SYMBOL[status];
@@ -48,8 +28,8 @@ export function CleaningControl({
       : styles.symbolChip;
 
     return (
-      <TouchableOpacity activeOpacity={0.7} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} onPress={handlePress}>
-        <View ref={ref} style={[styles.badgeInteractive, styles.badgeNeutral, { backgroundColor: sym.tint }]}>
+      <TouchableOpacity activeOpacity={0.7} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} onPress={onPress}>
+        <View style={[styles.badgeInteractive, styles.badgeNeutral, { backgroundColor: sym.tint }]}>
           {isChip ? (
             <View style={[styles.symbolChip, { backgroundColor: sym.tint, paddingHorizontal: 10, width: 'auto' }]}>
               <SymbolIcon entry={sym} size={14} />
@@ -73,8 +53,8 @@ export function CleaningControl({
     // Short text label is the primary signal; coloured left border is secondary.
     const abbr = STATUS_ABBR[status];
     return (
-      <TouchableOpacity activeOpacity={0.7} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} onPress={handlePress}>
-        <View ref={ref} style={[styles.badgeInteractive, styles.badgeNeutral, { borderLeftWidth: 3, borderLeftColor: abbr.color }]}>
+      <TouchableOpacity activeOpacity={0.7} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} onPress={onPress}>
+        <View style={[styles.badgeInteractive, styles.badgeNeutral, { borderLeftWidth: 3, borderLeftColor: abbr.color }]}>
           <Text style={[styles.badgeText, { color: '#374151', marginRight: 4 }]}>{abbr.fullLabel}</Text>
           <Ionicons name="chevron-down" size={10} color="#9ca3af" />
         </View>
@@ -88,9 +68,9 @@ export function CleaningControl({
     <TouchableOpacity
       activeOpacity={0.7}
       hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-      onPress={handlePress}
+      onPress={onPress}
     >
-      <View ref={ref} style={[styles.cleaningBtn, { backgroundColor: bg, borderColor: border }]}>
+      <View style={[styles.cleaningBtn, { backgroundColor: bg, borderColor: border }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           {showIcon && (
             SvgIcon

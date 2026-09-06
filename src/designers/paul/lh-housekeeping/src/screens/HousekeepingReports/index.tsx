@@ -39,7 +39,6 @@ import {
 import { shouldShowBedConfig } from './utils/bedConfig';
 import { buildMockRooms, MOCK_ROOM_NOTES } from './mockSchedule';
 import styles from './styles';
-import { type BadgeRect } from './components/CleaningControl';
 import { RoomRow } from './components/RoomRow';
 import { RoomCard } from './components/RoomCard';
 import { AnimatedRoomWrapper } from './components/AnimatedRoomWrapper';
@@ -58,6 +57,7 @@ import { PrintPreviewModal } from './components/sheets/PrintPreviewModal';
 import { BrowserChrome } from './components/BrowserView';
 import { DateRangeSheet } from './components/sheets/DateRangeSheet';
 import { MonthSheet } from './components/sheets/MonthSheet';
+import { CleaningStatusSheet } from './components/sheets/CleaningStatusSheet';
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 
@@ -98,11 +98,11 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
 
   // Status overrides (shared via context for cross-screen sync)
   const { statusOverrides, setStatusOverride, viewMode, setViewMode, housekeeperMode, cleaningStatusAsLabel, setCleaningStatusAsLabel, liveData, setLiveData } = useHousekeepingStatus();
-  const [statusDropdown, setStatusDropdown] = useState<{
-    roomId: string;
-    currentStatus: RoomStatus;
-    x: number; y: number; width: number; height: number;
-  } | null>(null);
+  const [statusDropdown, setStatusDropdown] = useState<{ roomId: string } | null>(null);
+  const {
+    visible: statusSheetVisible, setVisible: setStatusSheetVisible, close: closeStatusSheet,
+    sheetAnim: statusSheetAnim, translateY: statusSheetTranslateY, panResponder: statusSheetPanResponder,
+  } = useBottomSheet(400);
   // Local-only status overrides for mock data (liveData off) — kept
   // separate from the shared context's statusOverrides so tapping a status
   // pill never fires the UPDATE_ROOM_STATUS mutation against fake room ids.
@@ -453,8 +453,9 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
     setWeekStart(today);
   }
 
-  function openStatusDropdown(roomId: string, currentStatus: RoomStatus, rect: BadgeRect) {
-    setStatusDropdown({ roomId, currentStatus, ...rect });
+  function openStatusDropdown(roomId: string) {
+    setStatusDropdown({ roomId });
+    setStatusSheetVisible(true);
   }
 
   function applyStatusChange(newStatus: RoomStatus) {
@@ -468,7 +469,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
       // Mock rooms aren't real DB rows — update locally only, no mutation.
       setMockStatusOverrides(prev => ({ ...prev, [statusDropdown.roomId]: newStatus }));
     }
-    setStatusDropdown(null);
+    closeStatusSheet();
   }
 
 
@@ -691,7 +692,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                   onEditNotePress={latestNoteIds[item.room.id]
                     ? () => openNotesSheet(item, latestNoteIds[item.room.id])
                     : undefined}
-                  onStatusPress={(rect) => openStatusDropdown(item.room.id, effectiveStatus, rect)}
+                  onStatusPress={() => openStatusDropdown(item.room.id)}
                   assignedTo={assignments[item.room.id] ?? null}
                   onAssignPress={() => openAssignModal(item.room.id)}
                 />
@@ -731,7 +732,7 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
                   status={effectiveStatus}
                   note={notes[item.room.id] ?? ''}
                   onNotePress={() => openNotesSheet(item, latestNoteIds[item.room.id])}
-                  onStatusPress={(rect) => openStatusDropdown(item.room.id, effectiveStatus, rect)}
+                  onStatusPress={() => openStatusDropdown(item.room.id)}
                 />
               </AnimatedRoomWrapper>
             );
@@ -747,41 +748,16 @@ export default function HousekeepingScreen({ navigation }: { navigation: any }) 
         />
       )}
 
-      {/* ── Status dropdown ── */}
-      {statusDropdown && (
-        <Modal transparent animationType="none" visible onRequestClose={() => setStatusDropdown(null)}>
-          <TouchableOpacity style={styles.dropdownOverlay} activeOpacity={1} onPress={() => setStatusDropdown(null)}>
-            <View style={[styles.dropdownCard, {
-              top: statusDropdown.y + statusDropdown.height + 6,
-              // body is the modal's containing block (App.tsx applies a
-              // transform on web for the iPhone frame). statusDropdown.x is
-              // already body-relative (see CleaningControl), so use body's
-              // width here, not the desktop viewport width.
-              right: (Platform.OS === 'web' && typeof document !== 'undefined'
-                ? document.body.getBoundingClientRect().width
-                : Dimensions.get('window').width) - statusDropdown.x - statusDropdown.width,
-            }]}>
-              {(Object.keys(STATUS_CONFIG) as RoomStatus[]).filter(s => !(housekeeperMode && s === 'CLEANED')).map((s, i) => {
-                const isActive = (effectiveStatusOverrides[statusDropdown.roomId] ?? statusDropdown.currentStatus) === s;
-                return (
-                  <React.Fragment key={s}>
-  
-                    <TouchableOpacity
-                      style={[styles.dropdownItem, isActive && styles.dropdownItemActive]}
-                      onPress={() => applyStatusChange(s)}
-                    >
-                      <Text style={[styles.dropdownItemText, { color: STATUS_CONFIG[s].text }]}>
-                        {STATUS_CONFIG[s].label}
-                      </Text>
-                      {isActive && <Ionicons name="checkmark" size={16} color={ORANGE} />}
-                    </TouchableOpacity>
-                  </React.Fragment>
-                );
-              })}
-            </View>
-          </TouchableOpacity>
-        </Modal>
-      )}
+      {/* ── Cleaning status bottom sheet (Figma node 742:55649) ── */}
+      <CleaningStatusSheet
+        visible={statusSheetVisible}
+        onClose={closeStatusSheet}
+        sheetAnim={statusSheetAnim}
+        translateY={statusSheetTranslateY}
+        panResponder={statusSheetPanResponder}
+        statuses={(Object.keys(STATUS_CONFIG) as RoomStatus[]).filter(s => !(housekeeperMode && s === 'CLEANED'))}
+        onSelect={applyStatusChange}
+      />
 
 
       {/* ── Notes modal ── */}

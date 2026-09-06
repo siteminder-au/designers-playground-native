@@ -8,7 +8,7 @@ import { ORANGE } from '../constants';
 import type { RoomDaySchedule } from '../types';
 import { formatTime, toBookingRef } from '../utils/dateFormat';
 import { shouldShowBedConfig } from '../utils/bedConfig';
-import { CleaningControl, type BadgeRect } from './CleaningControl';
+import { CleaningControl } from './CleaningControl';
 import { BedConfigDisplay } from './BedConfigDisplay';
 import styles from '../styles';
 
@@ -32,7 +32,7 @@ export function RoomRow({
   flags: typeof FLAGS;
   onNotePress: () => void;
   onEditNotePress?: () => void;
-  onStatusPress: (rect: BadgeRect) => void;
+  onStatusPress: () => void;
   onAssignPress: () => void;
 }) {
   return (

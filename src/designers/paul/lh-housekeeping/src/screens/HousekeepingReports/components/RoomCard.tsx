@@ -4,7 +4,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { RoomStatus } from '../../../context/HousekeepingStatus';
 import type { RoomDaySchedule } from '../types';
 import { ORANGE } from '../constants';
-import { CleaningControl, type BadgeRect } from './CleaningControl';
+import { CleaningControl } from './CleaningControl';
 import styles from '../styles';
 
 // Room status badge colours match the Figma "Room status badges" component
@@ -37,7 +37,7 @@ export function RoomCard({
   status: RoomStatus;
   note: string;
   onNotePress: () => void;
-  onStatusPress: (rect: BadgeRect) => void;
+  onStatusPress: () => void;
 }) {
   const badge = roomStatusBadge(item);
   const showGuestRow = !item.room.isClosed && !!item.guestName;

@@ -323,30 +323,17 @@ const styles = StyleSheet.create({
   // Occupancy status text (plain, inline with room number)
   occupancyStatusText: { fontSize: 12, fontWeight: '700' },
 
-  // Status dropdown
-  dropdownOverlay: { flex: 1 },
-  dropdownCard: {
-    position: 'absolute',
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    minWidth: 170,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.14,
-    shadowRadius: 10,
-    elevation: 10,
-  },
-  dropdownItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-  },
-  dropdownItemActive: { backgroundColor: '#fef9f5' },
-  dropdownItemText:   { fontSize: 14, fontWeight: '500' },
   dropdownDivider:    { height: 1, backgroundColor: '#f3f4f6' },
+
+  // Cleaning status bottom sheet (Figma node 742:55649)
+  cleaningStatusList: { paddingHorizontal: 20, paddingBottom: 4, gap: 8 },
+  cleaningStatusRow: {
+    backgroundColor: '#f2f2f7',
+    borderRadius: 4,
+    paddingVertical: 16,
+    paddingLeft: 16,
+  },
+  cleaningStatusRowText: { fontSize: 16, fontWeight: '700', letterSpacing: -0.31 },
 
   separator:       { height: 1, backgroundColor: '#f3f4f6' },
   errorText:       { textAlign: 'center', color: 'red', marginTop: 40 },

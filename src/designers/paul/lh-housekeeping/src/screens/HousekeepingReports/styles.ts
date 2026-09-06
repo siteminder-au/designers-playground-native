@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   cleaningStatusRowActive: { backgroundColor: '#fff5ee' },
-  cleaningStatusRowText: { fontSize: 16, fontWeight: '700', letterSpacing: -0.31 },
+  cleaningStatusRowText: { fontSize: 15, fontWeight: '700', letterSpacing: -0.31 },
 
   separator:       { height: 1, backgroundColor: '#f3f4f6' },
   errorText:       { textAlign: 'center', color: 'red', marginTop: 40 },

@@ -202,11 +202,11 @@ export default function PaulLHHousekeepingApp() {
 
 function AppShell() {
   const { reviewOverlayEnabled } = useHousekeepingStatus();
-  const { annotations, scrollY } = useReviewContext();
+  const { annotations, scrollY, statusBarColor } = useReviewContext();
   const hasMarkers = (annotations?.markers.length ?? 0) > 0;
   return (
     <View style={{ flex: 1 }}>
-      <FakeStatusBar />
+      <FakeStatusBar backgroundColor={statusBarColor} />
       <AppNavigator />
       <ReviewToggleFab />
       {reviewOverlayEnabled && hasMarkers && (

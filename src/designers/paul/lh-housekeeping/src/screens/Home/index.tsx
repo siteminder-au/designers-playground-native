@@ -23,6 +23,7 @@ const ORANGE_DARK  = '#f87850'; // LHPrimary/300
 const ORANGE_LIGHT = '#ffe2d7'; // LHPrimary/800
 const RED_WEEKEND  = '#b81919';
 const AMBER        = '#ffb74a';
+const HERO_BG      = '#ffd0ba'; // topSection background, also used behind the status bar
 
 // ── Placeholder data ──────────────────────────────────────────────────────────
 
@@ -178,7 +179,7 @@ function CardHeader({
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function HomeScreen({ navigation }: { navigation: any }) {
-  const { setAnnotations, setScrollY } = useReviewContext();
+  const { setAnnotations, setScrollY, setStatusBarColor } = useReviewContext();
   const isFocused = useIsFocused();
   const [perfTab, setPerfTab] = useState<'rooms' | 'revenue'>('rooms');
   // Which page of the Today stats carousel is currently in view.
@@ -229,7 +230,11 @@ export default function HomeScreen({ navigation }: { navigation: any }) {
     if (!isFocused) return;
     setAnnotations(homeAnnotations as any);
     setScrollY(0);
-    return () => setAnnotations(null);
+    setStatusBarColor(HERO_BG);
+    return () => {
+      setAnnotations(null);
+      setStatusBarColor('#fff');
+    };
   }, [isFocused]);
 
   return (
@@ -490,7 +495,7 @@ const styles = StyleSheet.create({
 
   // ── Top gradient section
   topSection: {
-    backgroundColor: '#ffd0ba',
+    backgroundColor: HERO_BG,
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 24,

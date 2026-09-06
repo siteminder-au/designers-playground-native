@@ -7,9 +7,9 @@ import { Ionicons } from '@expo/vector-icons';
 // Enhancements Initiative). This is a static 9:41/wifi/battery mock, not a
 // real OS status bar — the app runs as React Native Web with no device
 // chrome of its own, so every screen needs this drawn in.
-export function FakeStatusBar() {
+export function FakeStatusBar({ backgroundColor = '#fff' }: { backgroundColor?: string }) {
   return (
-    <View style={styles.bar}>
+    <View style={[styles.bar, { backgroundColor }]}>
       <Text style={styles.time}>9:41</Text>
       <View style={styles.right}>
         <Ionicons name="wifi" size={15} color="#000" />
@@ -26,7 +26,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fff',
     paddingLeft: 28,
     paddingRight: 24,
     paddingTop: 16,

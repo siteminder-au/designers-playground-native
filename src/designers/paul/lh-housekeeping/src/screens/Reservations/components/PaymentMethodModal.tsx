@@ -6,6 +6,7 @@ import { CardBrandIcon, CardBrand } from './CardBrandIcon';
 import { useBottomSheet } from '../../HousekeepingReports/hooks/useBottomSheet';
 import { PaymentMethodDemoFlagsSheet } from './PaymentMethodDemoFlagsSheet';
 import PM_FLAGS from '../../../config/paymentMethodFeatureFlags';
+import { SHOW_TAP_TO_PAY_ENTRY_POINTS } from '../../../config/tapToPayVisibility';
 
 const ORANGE = '#ff6842';
 
@@ -36,6 +37,7 @@ export function PaymentMethodModal({
   const insets = useSafeAreaInsets();
   const [subTab, setSubTab] = useState<SubTab>('existing');
   const [flags, setFlags] = useState(PM_FLAGS);
+  const tapToPaySetupVariant = SHOW_TAP_TO_PAY_ENTRY_POINTS ? flags.tapToPaySetupVariant : undefined;
   const {
     visible: demoSheetVisible, setVisible: setDemoSheetVisible, close: closeDemoSheet,
     sheetAnim: demoSheetAnim, translateY: demoTranslateY, panResponder: demoPanResponder,
@@ -85,7 +87,7 @@ export function PaymentMethodModal({
           ) : (
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
               {/* Set up Tap to Pay */}
-              {flags.tapToPaySetupVariant === 'row' && (
+              {tapToPaySetupVariant === 'row' && (
                 <View style={styles.ttpContainer}>
                   <TouchableOpacity style={styles.ttpRow} activeOpacity={0.7} onPress={onSetUpTapToPay}>
                     <MaterialCommunityIcons name="contactless-payment-circle-outline" size={20} color={ORANGE} style={{ marginRight: 8 }} />
@@ -96,7 +98,7 @@ export function PaymentMethodModal({
                 </View>
               )}
 
-              {flags.tapToPaySetupVariant === 'button' && (
+              {tapToPaySetupVariant === 'button' && (
                 <View style={styles.ttpContainer}>
                   <TouchableOpacity style={styles.ttpButton} activeOpacity={0.8} onPress={onSetUpTapToPay}>
                     <MaterialCommunityIcons name="contactless-payment-circle-outline" size={18} color={ORANGE} style={{ marginRight: 8 }} />
@@ -105,7 +107,7 @@ export function PaymentMethodModal({
                 </View>
               )}
 
-              {flags.tapToPaySetupVariant === 'banner' && (
+              {tapToPaySetupVariant === 'banner' && (
                 <View style={styles.ttpContainer}>
                   <View style={styles.ttpBanner}>
                     <MaterialCommunityIcons name="contactless-payment-circle-outline" size={20} color={ORANGE} style={{ marginRight: 10 }} />
@@ -120,7 +122,7 @@ export function PaymentMethodModal({
                 </View>
               )}
 
-              {flags.tapToPaySetupVariant === 'badge' && (
+              {tapToPaySetupVariant === 'badge' && (
                 <View style={styles.ttpContainer}>
                   <TouchableOpacity style={styles.ttpBadge} activeOpacity={0.7} onPress={onSetUpTapToPay}>
                     <MaterialCommunityIcons name="contactless-payment-circle-outline" size={12} color={ORANGE} style={{ marginRight: 4 }} />

@@ -20,6 +20,7 @@ import { useBottomSheet } from '../HousekeepingReports/hooks/useBottomSheet';
 import { DemoFlagsSheet } from './components/DemoFlagsSheet';
 import { TakePaymentModal } from './components/TakePaymentModal';
 import RES_FLAGS from '../../config/reservationsFeatureFlags';
+import { SHOW_TAP_TO_PAY_ENTRY_POINTS } from '../../config/tapToPayVisibility';
 
 const ORANGE = '#ff6842';
 const GREEN = '#1b7b3e';
@@ -260,6 +261,7 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
   const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
   const [flags, setFlags] = useState(RES_FLAGS);
+  const tapToPayEntryVariant = SHOW_TAP_TO_PAY_ENTRY_POINTS ? flags.tapToPayEntryVariant : undefined;
   const {
     visible: demoSheetVisible, setVisible: setDemoSheetVisible, close: closeDemoSheet,
     sheetAnim: demoSheetAnim, translateY: demoTranslateY, panResponder: demoPanResponder,
@@ -419,7 +421,7 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
         )}
 
         {/* ── Tap to Pay entry point ── */}
-        {flags.tapToPayEntryVariant === 'banner' && showTapToPayBanner && (
+        {tapToPayEntryVariant === 'banner' && showTapToPayBanner && (
           <View style={styles.tapToPayBanner}>
             <View style={styles.tapToPayAccent} />
             <MaterialCommunityIcons name="contactless-payment-circle-outline" size={20} color="#333" style={{ marginRight: 8 }} />
@@ -437,7 +439,7 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
           </View>
         )}
 
-        {flags.tapToPayEntryVariant === 'chip' && (
+        {tapToPayEntryVariant === 'chip' && (
           <TouchableOpacity
             style={styles.tapToPayChip}
             activeOpacity={0.7}
@@ -464,7 +466,7 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
                     key={r.id}
                     res={r}
                     variant="check-in"
-                    showTapToPayTag={flags.tapToPayEntryVariant === 'contextual'}
+                    showTapToPayTag={tapToPayEntryVariant === 'contextual'}
                     onTapToPayPress={() => navigation.navigate('TapToPay')}
                     onTakePayment={() => setPaymentModalRes(r)}
                   />
@@ -504,7 +506,7 @@ export default function ReservationsScreen({ navigation }: { navigation: any }) 
         </TouchableOpacity>
 
         {/* ── Tap to Pay entry point: full-screen hero variant ── */}
-        {flags.tapToPayEntryVariant === 'hero' && showTapToPayHero && (
+        {tapToPayEntryVariant === 'hero' && showTapToPayHero && (
           <View style={styles.heroOverlay}>
             <TouchableOpacity
               style={styles.heroClose}

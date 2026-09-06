@@ -18,6 +18,7 @@ import { TakePaymentDemoFlagsSheet } from './TakePaymentDemoFlagsSheet';
 import { PaymentMethodModal, PaymentCard } from './PaymentMethodModal';
 import { CardBrandIcon } from './CardBrandIcon';
 import TP_FLAGS from '../../../config/takePaymentFeatureFlags';
+import { SHOW_TAP_TO_PAY_ENTRY_POINTS } from '../../../config/tapToPayVisibility';
 
 const ORANGE = '#ff6842';
 
@@ -49,6 +50,7 @@ export function TakePaymentModal({
   const [applySurcharge, setApplySurcharge] = useState(false);
   const [emailInvoice, setEmailInvoice] = useState(false);
   const [flags, setFlags] = useState(TP_FLAGS);
+  const tapToPaySetupVariant = SHOW_TAP_TO_PAY_ENTRY_POINTS ? flags.tapToPaySetupVariant : undefined;
   const {
     visible: demoSheetVisible, setVisible: setDemoSheetVisible, close: closeDemoSheet,
     sheetAnim: demoSheetAnim, translateY: demoTranslateY, panResponder: demoPanResponder,
@@ -150,14 +152,14 @@ export function TakePaymentModal({
                     <Ionicons name="chevron-expand-outline" size={18} color="#9ca3af" />
                   </TouchableOpacity>
 
-                  {flags.tapToPaySetupVariant === 'badge' && (
+                  {tapToPaySetupVariant === 'badge' && (
                     <TouchableOpacity style={styles.ttpBadge} activeOpacity={0.7} onPress={onSetUpTapToPay}>
                       <MaterialCommunityIcons name="contactless-payment-circle-outline" size={12} color={ORANGE} style={{ marginRight: 4 }} />
                       <Text style={styles.ttpBadgeText}>Tap to Pay available</Text>
                     </TouchableOpacity>
                   )}
 
-                  {flags.tapToPaySetupVariant === 'row' && (
+                  {tapToPaySetupVariant === 'row' && (
                     <TouchableOpacity style={styles.ttpRow} activeOpacity={0.7} onPress={onSetUpTapToPay}>
                       <MaterialCommunityIcons name="contactless-payment-circle-outline" size={18} color={ORANGE} style={{ marginRight: 6 }} />
                       <Text style={styles.ttpText}>Set up Tap to Pay</Text>
@@ -165,14 +167,14 @@ export function TakePaymentModal({
                     </TouchableOpacity>
                   )}
 
-                  {flags.tapToPaySetupVariant === 'button' && (
+                  {tapToPaySetupVariant === 'button' && (
                     <TouchableOpacity style={styles.ttpButton} activeOpacity={0.8} onPress={onSetUpTapToPay}>
                       <MaterialCommunityIcons name="contactless-payment-circle-outline" size={18} color={ORANGE} style={{ marginRight: 8 }} />
                       <Text style={styles.ttpButtonText}>Set up Tap to Pay</Text>
                     </TouchableOpacity>
                   )}
 
-                  {flags.tapToPaySetupVariant === 'banner' && (
+                  {tapToPaySetupVariant === 'banner' && (
                     <View style={styles.ttpBanner}>
                       <MaterialCommunityIcons name="contactless-payment-circle-outline" size={20} color={ORANGE} style={{ marginRight: 10 }} />
                       <View style={{ flex: 1 }}>

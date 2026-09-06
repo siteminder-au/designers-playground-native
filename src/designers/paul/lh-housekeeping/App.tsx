@@ -21,6 +21,9 @@ import { ReviewProvider, useReviewContext } from './src/context/ReviewContext';
 // NavigationContainer is handled by the playground root (App.tsx).
 // This component renders Paul's prototype as a nested bottom-tab navigator.
 
+// Hides the design-review eye FAB without removing the feature — flip back to true to restore it.
+const SHOW_REVIEW_FAB = false;
+
 const Tab = createBottomTabNavigator();
 
 function AppNavigator() {
@@ -208,7 +211,7 @@ function AppShell() {
     <View style={{ flex: 1 }}>
       <FakeStatusBar backgroundColor={statusBarColor} />
       <AppNavigator />
-      <ReviewToggleFab />
+      {SHOW_REVIEW_FAB && <ReviewToggleFab />}
       {reviewOverlayEnabled && hasMarkers && (
         <ReviewOverlay data={annotations!} scrollOffset={scrollY} />
       )}
